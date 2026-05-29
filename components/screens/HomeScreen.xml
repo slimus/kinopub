@@ -1,0 +1,213 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="HomeScreen" extends="Group">
+  <interface>
+    <field id="signOutRequested" type="boolean" alwaysNotify="true" />
+    <field id="exitRequested" type="boolean" alwaysNotify="true" />
+    <field id="videoSelected" type="assocarray" alwaysNotify="true" />
+  </interface>
+  <children>
+    <Rectangle width="1280" height="720" color="#101010" />
+
+    <Group id="collapsedMenu" translation="[0,0]">
+      <Rectangle width="84" height="720" color="#171717" />
+      <Label id="collapsedWatchAgain" text="W" translation="[0,118]" width="84" horizAlign="center" color="#F5F5F5" />
+      <Label id="collapsedHome" text="H" translation="[0,178]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedSearch" text="S" translation="[0,238]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedAccount" text="A" translation="[0,298]" width="84" horizAlign="center" color="#9CA3AF" />
+    </Group>
+
+    <Group id="expandedMenu" translation="[0,0]" visible="false">
+      <Rectangle width="284" height="720" color="#181818" />
+      <Label text="KinoPub" translation="[28,42]" color="#F5F5F5" />
+      <Rectangle id="navFocusBg" translation="[12,112]" width="260" height="44" color="#E5E7EB" />
+      <Label id="watchAgainNav" text="W  Watch Again" translation="[32,124]" color="#111827" />
+      <Label id="homeNav" text="H  Home" translation="[32,184]" color="#D1D5DB" />
+      <Label id="searchNav" text="S  Search" translation="[32,244]" color="#D1D5DB" />
+      <Label id="accountNav" text="A  Account" translation="[32,304]" color="#D1D5DB" />
+      <Rectangle id="signOutFocusBg" translation="[12,616]" width="260" height="44" color="#181818" />
+      <Label id="signOutNav" text="Sign out" translation="[32,628]" color="#9CA3AF" />
+    </Group>
+
+    <Group id="contentHost" translation="[116,44]">
+      <Group id="watchAgainContent">
+        <Label text="Watch Again" translation="[0,0]" color="#F5F5F5" />
+        <Label id="historyCountLabel" text="" translation="[0,38]" color="#9CA3AF" />
+
+        <Group id="historyLoadingGroup" translation="[0,96]">
+          <Label text="Loading Watch Again..." translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="historyEmptyGroup" translation="[0,96]" visible="false">
+          <Label text="No Watch Again history yet" translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="historyErrorGroup" translation="[0,96]" visible="false">
+          <Label id="historyErrorLabel" text="Unable to load Watch Again" translation="[0,0]" color="#FCA5A5" />
+          <Group id="historyRetryGroup" translation="[0,54]">
+            <Rectangle id="historyRetryFocus" width="196" height="44" color="#374151" />
+            <Label text="Retry" translation="[52,12]" color="#F5F5F5" />
+          </Group>
+        </Group>
+
+        <Group id="historyGridGroup" visible="false">
+          <Group id="historyGridHost" translation="[0,82]" />
+          <Group id="historyCursor" translation="[0,82]" visible="false">
+            <Rectangle id="historyCursorTop" width="220" height="6" color="#F5F5F5" />
+            <Rectangle id="historyCursorBottom" translation="[0,162]" width="220" height="6" color="#F5F5F5" />
+            <Rectangle id="historyCursorLeft" width="6" height="168" color="#F5F5F5" />
+            <Rectangle id="historyCursorRight" translation="[214,0]" width="6" height="168" color="#F5F5F5" />
+          </Group>
+          <Label id="historyScrollUpChevron" text="^" translation="[938,82]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="historyScrollDownChevron" text="v" translation="[938,460]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="historyNextPageStatus" text="" translation="[0,520]" color="#9CA3AF" />
+        </Group>
+      </Group>
+
+      <Group id="homeContent" visible="false">
+        <Label text="Home" translation="[0,0]" color="#F5F5F5" />
+
+        <Group id="homeLoadingGroup" translation="[0,96]" visible="false">
+          <Label text="Loading Home..." translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="homeEmptyGroup" translation="[0,96]" visible="false">
+          <Label text="No Home items available" translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="homeErrorGroup" translation="[0,96]" visible="false">
+          <Label id="homeErrorLabel" text="Unable to load Home" translation="[0,0]" width="900" color="#FCA5A5" />
+          <Group id="homeRetryGroup" translation="[0,54]">
+            <Rectangle id="homeRetryFocus" width="196" height="44" color="#374151" />
+            <Label text="Retry" translation="[52,12]" color="#F5F5F5" />
+          </Group>
+        </Group>
+
+        <Group id="homeRailsGroup" visible="false">
+          <Group id="homeRailsHost" translation="[0,58]" />
+          <Group id="homeCursor" translation="[0,96]" visible="false">
+            <Rectangle width="220" height="6" color="#F5F5F5" />
+            <Rectangle translation="[0,162]" width="220" height="6" color="#F5F5F5" />
+            <Rectangle width="6" height="168" color="#F5F5F5" />
+            <Rectangle translation="[214,0]" width="6" height="168" color="#F5F5F5" />
+          </Group>
+          <Label id="homeScrollUpChevron" text="^" translation="[938,72]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="homeScrollDownChevron" text="v" translation="[938,586]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="homeRailLeftChevron" text="&lt;" translation="[0,310]" width="28" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="homeRailRightChevron" text="&gt;" translation="[1092,310]" width="28" horizAlign="center" color="#D1D5DB" visible="false" />
+        </Group>
+      </Group>
+
+      <Group id="searchContent" visible="false">
+        <Label text="Search" translation="[0,0]" color="#F5F5F5" />
+
+        <Group id="searchBoxGroup" translation="[0,58]">
+          <Rectangle id="searchBoxFocusBg" width="760" height="58" color="#374151" />
+          <Label id="searchQueryLabel" text="Search KinoPub" translation="[28,16]" width="704" color="#D1D5DB" />
+        </Group>
+        <Group id="searchYearSortGroup" translation="[0,122]">
+          <Rectangle id="searchYearSortFocusBg" width="286" height="36" color="#374151" opacity="0" />
+          <Label id="searchYearSortCheckLabel" text="[x]" translation="[10,8]" width="42" color="#D1D5DB" />
+          <Label text="Newest year first" translation="[58,8]" width="220" color="#D1D5DB" />
+        </Group>
+
+        <Label id="searchMessageLabel" text="" translation="[0,164]" width="900" color="#FCA5A5" />
+
+        <Group id="recentSearchesGroup" translation="[0,198]" visible="false">
+          <Label text="Recent searches" translation="[0,0]" color="#D1D5DB" />
+          <Group id="recentSearchesHost" translation="[0,42]" />
+        </Group>
+
+        <Group id="searchKeyboardGroup" translation="[0,198]" visible="false">
+          <Group id="searchKeyboardHost" />
+          <Group id="searchKeyboardCursor" visible="false">
+            <Rectangle id="searchKeyboardCursorBg" width="56" height="42" color="#F5F5F5" opacity="0.22" />
+          </Group>
+        </Group>
+
+        <Group id="searchLoadingGroup" translation="[0,198]" visible="false">
+          <Label text="Searching..." translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="searchEmptyGroup" translation="[0,198]" visible="false">
+          <Label text="Enter a search term" translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="searchNoResultsGroup" translation="[0,198]" visible="false">
+          <Label id="searchNoResultsLabel" text="No results" translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="searchErrorGroup" translation="[0,198]" visible="false">
+          <Label id="searchErrorLabel" text="Unable to search" translation="[0,0]" color="#FCA5A5" />
+          <Group id="searchRetryGroup" translation="[0,54]">
+            <Rectangle id="searchRetryFocus" width="196" height="44" color="#374151" />
+            <Label text="Retry" translation="[52,12]" color="#F5F5F5" />
+          </Group>
+        </Group>
+
+        <Group id="searchResultsGroup" visible="false">
+          <Label id="searchResultsTitleLabel" text="Results" translation="[0,198]" color="#D1D5DB" />
+          <Label id="searchResultsCountLabel" text="" translation="[112,198]" width="500" color="#9CA3AF" />
+          <Group id="searchResultGridHost" translation="[0,236]" />
+          <Group id="searchResultCursor" translation="[0,236]" visible="false">
+            <Rectangle width="220" height="6" color="#F5F5F5" />
+            <Rectangle translation="[0,162]" width="220" height="6" color="#F5F5F5" />
+            <Rectangle width="6" height="168" color="#F5F5F5" />
+            <Rectangle translation="[214,0]" width="6" height="168" color="#F5F5F5" />
+          </Group>
+          <Label id="searchScrollUpChevron" text="^" translation="[938,236]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="searchScrollDownChevron" text="v" translation="[938,614]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="searchNextPageStatus" text="" translation="[0,640]" color="#9CA3AF" />
+        </Group>
+      </Group>
+
+      <Group id="accountContent" visible="false">
+        <Label text="Account" translation="[0,0]" color="#F5F5F5" />
+
+        <Group id="accountLoadingGroup" translation="[0,96]" visible="false">
+          <Label text="Loading account..." translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="accountErrorGroup" translation="[0,96]" visible="false">
+          <Label id="accountErrorLabel" text="Unable to load account information" translation="[0,0]" width="900" color="#FCA5A5" />
+          <Group id="accountRetryGroup" translation="[0,54]">
+            <Rectangle id="accountRetryFocus" width="196" height="44" color="#374151" />
+            <Label text="Retry" translation="[52,12]" color="#F5F5F5" />
+          </Group>
+        </Group>
+
+        <Group id="accountDetailsGroup" translation="[0,86]" visible="false">
+          <Label id="accountDisplayNameLabel" text="Account" translation="[0,0]" width="920" color="#F5F5F5" />
+          <Label id="accountUsernameLabel" text="" translation="[0,38]" width="920" color="#9CA3AF" />
+
+          <Rectangle translation="[0,102]" width="760" height="238" color="#242424" />
+          <Label id="accountSubscriptionTitleLabel" text="Subscription" translation="[28,126]" color="#D1D5DB" />
+          <Label id="accountSubscriptionStatusLabel" text="" translation="[28,166]" width="700" color="#F5F5F5" />
+          <Label id="accountSubscriptionDaysLabel" text="" translation="[28,206]" width="700" color="#9CA3AF" />
+          <Label id="accountSubscriptionEndLabel" text="" translation="[28,246]" width="700" color="#9CA3AF" />
+          <Label id="accountRegisteredLabel" text="" translation="[28,286]" width="700" color="#9CA3AF" />
+        </Group>
+      </Group>
+    </Group>
+
+    <Group id="exitDialog" visible="false">
+      <Rectangle width="1280" height="720" color="#000000" opacity="0.68" />
+      <Group translation="[410,248]">
+        <Rectangle width="460" height="224" color="#181818" />
+        <Label text="Exit KinoPub?" translation="[32,28]" width="396" color="#F5F5F5" />
+        <Label text="Are you sure you want to exit the app?" translation="[32,78]" width="396" color="#D1D5DB" />
+
+        <Group id="exitYesButton" translation="[92,148]">
+          <Rectangle id="exitYesFocusBg" width="120" height="48" color="#2A2A2A" />
+          <Label id="exitYesLabel" text="Yes" translation="[0,14]" width="120" horizAlign="center" color="#D1D5DB" />
+        </Group>
+
+        <Group id="exitNoButton" translation="[248,148]">
+          <Rectangle id="exitNoFocusBg" width="120" height="48" color="#E5E7EB" />
+          <Label id="exitNoLabel" text="No" translation="[0,14]" width="120" horizAlign="center" color="#111827" />
+        </Group>
+      </Group>
+    </Group>
+  </children>
+  <script type="text/brightscript" uri="pkg:/source/services/SearchHistoryStore.brs" />
+  <script type="text/brightscript" uri="pkg:/components/screens/HomeScreen.brs" />
+</component>

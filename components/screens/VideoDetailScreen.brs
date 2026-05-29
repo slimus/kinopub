@@ -1,0 +1,1204 @@
+sub init()
+    m.loadingGroup = m.top.findNode("loadingGroup")
+    m.errorGroup = m.top.findNode("errorGroup")
+    m.errorLabel = m.top.findNode("errorLabel")
+    m.retryFocusBg = m.top.findNode("retryFocusBg")
+    m.detailGroup = m.top.findNode("detailGroup")
+    m.heroArtworkPoster = m.top.findNode("heroArtworkPoster")
+    m.poster = m.top.findNode("poster")
+    m.posterFallback = m.top.findNode("posterFallback")
+    m.detailFactsGroup = m.top.findNode("detailFactsGroup")
+    m.detailFactsHost = m.top.findNode("detailFactsHost")
+    m.titleLabel = m.top.findNode("titleLabel")
+    m.metadataLabel = m.top.findNode("metadataLabel")
+    m.historyMetaGroup = m.top.findNode("historyMetaGroup")
+    m.historyMetaLabel = m.top.findNode("historyMetaLabel")
+    m.descriptionFocusBg = m.top.findNode("descriptionFocusBg")
+    m.descriptionLabel = m.top.findNode("descriptionLabel")
+    m.playFocusBg = m.top.findNode("playFocusBg")
+    m.playButtonLabel = m.top.findNode("playButtonLabel")
+    m.playbackErrorLabel = m.top.findNode("playbackErrorLabel")
+    m.panelTitleLabel = m.top.findNode("panelTitleLabel")
+    m.seasonTabsHost = m.top.findNode("seasonTabsHost")
+    m.episodeListHost = m.top.findNode("episodeListHost")
+    m.episodeCursor = m.top.findNode("episodeCursor")
+    m.episodeScrollUpChevron = m.top.findNode("episodeScrollUpChevron")
+    m.episodeScrollDownChevron = m.top.findNode("episodeScrollDownChevron")
+    m.noMediaLabel = m.top.findNode("noMediaLabel")
+    m.trailerGroup = m.top.findNode("trailerGroup")
+    m.trailerFocusBg = m.top.findNode("trailerFocusBg")
+    m.trailerLabel = m.top.findNode("trailerLabel")
+    m.similarGroup = m.top.findNode("similarGroup")
+    m.similarHost = m.top.findNode("similarHost")
+    m.similarCursor = m.top.findNode("similarCursor")
+    m.descriptionOverlayGroup = m.top.findNode("descriptionOverlayGroup")
+    m.descriptionOverlayTextLabel = m.top.findNode("descriptionOverlayTextLabel")
+    m.descriptionOverlayScrollUpChevron = m.top.findNode("descriptionOverlayScrollUpChevron")
+    m.descriptionOverlayScrollDownChevron = m.top.findNode("descriptionOverlayScrollDownChevron")
+
+    m.selection = invalid
+    m.item = invalid
+    m.trailer = invalid
+    m.similarItems = []
+    m.seasons = []
+    m.currentSeasonIndex = 0
+    m.currentEpisodeIndex = 0
+    m.focusArea = "episodes"
+    m.episodeRows = []
+    m.episodeRowIndexes = []
+    m.seasonTabBgs = []
+    m.visibleEpisodeStart = 0
+    m.defaultMaxVisibleEpisodes = 6
+    m.maxVisibleEpisodes = m.defaultMaxVisibleEpisodes
+    m.seasonTabWidth = 78
+    m.seasonTabHeight = 38
+    m.seasonTabGap = 14
+    m.seasonTabRowHeight = 48
+    m.seasonTabPanelWidth = 380
+    m.baseEpisodeListY = 104
+    m.episodeListY = m.baseEpisodeListY
+    m.episodeListBottomY = 604
+    m.descriptionOverlayScrollStart = 0
+    m.descriptionOverlayMaxLines = 11
+    m.descriptionOverlayLineLength = 76
+    m.selectedSimilarIndex = 0
+    m.similarCardWidth = 118
+    m.similarCardSpacing = 130
+    m.maxVisibleSimilarItems = 3
+
+    m.top.observeField("selection", "onSelectionChanged")
+    m.top.observeField("playbackError", "onPlaybackError")
+    m.top.observeField("reloadRequested", "onReloadRequested")
+    m.top.setFocus(true)
+end sub
+
+sub onSelectionChanged(event as Object)
+    m.selection = event.getData()
+    loadDetail()
+end sub
+
+sub onReloadRequested(event as Object)
+    if event.getData() = true then loadDetail()
+end sub
+
+sub onPlaybackError(event as Object)
+    message = event.getData()
+    if message <> invalid and message <> "" then m.playbackErrorLabel.text = message
+end sub
+
+sub loadDetail()
+    if m.selection = invalid or m.selection.itemId = invalid or m.selection.itemId <= 0
+        showError("Unable to open this video.")
+        return
+    end if
+
+    showState("loading")
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadItemDetail"
+    task.request = {
+        itemId: m.selection.itemId
+        mediaId: selectedMediaId()
+    }
+    task.observeField("response", "onDetailResponse")
+    task.control = "RUN"
+    m.detailTask = task
+end sub
+
+sub onDetailResponse(event as Object)
+    response = event.getData()
+    if response = invalid or response.ok <> true
+        message = "Unable to load video details."
+        if response <> invalid and response.message <> invalid and response.message <> ""
+            message = response.message
+        end if
+        showError(message)
+        return
+    end if
+
+    if response.item = invalid
+        showError("Video details were not available.")
+        return
+    end if
+
+    m.item = response.item
+    m.trailer = invalid
+    if m.item.trailer <> invalid then m.trailer = m.item.trailer
+    m.similarItems = []
+    if m.item.similarItems <> invalid then m.similarItems = m.item.similarItems
+    m.selectedSimilarIndex = 0
+    buildPlayableModel()
+    m.focusArea = "episodes"
+    renderDetail()
+    showState("detail")
+end sub
+
+function selectedMediaId() as Integer
+    if m.selection = invalid or m.selection.mediaId = invalid then return 0
+    return m.selection.mediaId
+end function
+
+sub buildPlayableModel()
+    m.seasons = []
+
+    if m.item = invalid
+        m.currentSeasonIndex = 0
+        m.currentEpisodeIndex = 0
+        return
+    end if
+
+    if m.item.seasons <> invalid and m.item.seasons.Count() > 0
+        for each season in m.item.seasons
+            if season <> invalid then m.seasons.Push(season)
+        end for
+    else
+        videos = []
+        if m.item.videos <> invalid then videos = m.item.videos
+        m.seasons.Push({
+            title: "Video"
+            number: 0
+            episodes: videos
+        })
+    end if
+
+    m.currentSeasonIndex = 0
+    m.currentEpisodeIndex = 0
+    targetMediaId = selectedMediaId()
+
+    if targetMediaId > 0
+        for seasonIndex = 0 to m.seasons.Count() - 1
+            episodes = playableEpisodesForSeason(seasonIndex)
+
+            for episodeIndex = 0 to episodes.Count() - 1
+                if episodes[episodeIndex].mediaId = targetMediaId
+                    m.currentSeasonIndex = seasonIndex
+                    m.currentEpisodeIndex = episodeIndex
+                    return
+                end if
+            end for
+        end for
+    end if
+
+    for seasonIndex = 0 to m.seasons.Count() - 1
+        episodes = playableEpisodesForSeason(seasonIndex)
+
+        for episodeIndex = 0 to episodes.Count() - 1
+            if episodes[episodeIndex].isPlayable = true
+                m.currentSeasonIndex = seasonIndex
+                m.currentEpisodeIndex = episodeIndex
+                return
+            end if
+        end for
+    end for
+end sub
+
+function playableEpisodesForSeason(seasonIndex as Integer) as Object
+    if seasonIndex < 0 or seasonIndex >= m.seasons.Count() then return []
+    if m.seasons[seasonIndex].episodes = invalid then return []
+    return m.seasons[seasonIndex].episodes
+end function
+
+sub renderDetail()
+    title = ""
+    metadata = []
+    description = ""
+    backdropUrl = ""
+    posterUrl = ""
+
+    if m.item.title <> invalid then title = m.item.title
+    if m.item.metadata <> invalid then metadata = m.item.metadata
+    if m.item.description <> invalid then description = m.item.description
+    if m.item.backdropUrl <> invalid then backdropUrl = m.item.backdropUrl
+    if m.item.posterUrl <> invalid then posterUrl = m.item.posterUrl
+
+    m.titleLabel.text = title
+    m.metadataLabel.text = joinMetadata(metadata)
+    m.descriptionLabel.text = description
+    renderHistoryMetadata()
+    renderDetailFacts()
+    closeDescriptionOverlay()
+    m.heroArtworkPoster.uri = backdropUrl
+    m.heroArtworkPoster.visible = backdropUrl <> ""
+    m.poster.uri = posterUrl
+    m.poster.visible = posterUrl <> ""
+    m.posterFallback.visible = true
+    m.playbackErrorLabel.text = ""
+
+    applyDetailExtrasLayout()
+    renderSeasonTabs()
+    renderEpisodeList()
+    renderDetailExtras()
+    updateSelectedMediaVisuals()
+    updateDescriptionFocusVisual()
+    updateDetailExtrasFocusVisuals()
+end sub
+
+sub renderDetailFacts()
+    if m.detailFactsGroup = invalid or m.detailFactsHost = invalid then return
+
+    childCount = m.detailFactsHost.getChildCount()
+    if childCount > 0 then m.detailFactsHost.removeChildrenIndex(childCount, 0)
+
+    if m.item = invalid
+        m.detailFactsGroup.visible = false
+        return
+    end if
+    if m.item.detailFacts = invalid or type(m.item.detailFacts) <> "roArray" or m.item.detailFacts.Count() = 0
+        m.detailFactsGroup.visible = false
+        return
+    end if
+
+    maxRows = m.item.detailFacts.Count()
+    if maxRows > 7 then maxRows = 7
+
+    for index = 0 to maxRows - 1
+        m.detailFactsHost.appendChild(createDetailFactRow(m.item.detailFacts[index], index))
+    end for
+
+    m.detailFactsGroup.visible = true
+end sub
+
+function createDetailFactRow(fact as Object, index as Integer) as Object
+    row = CreateObject("roSGNode", "Group")
+    row.translation = [0, index * 32]
+
+    label = CreateObject("roSGNode", "Label")
+    label.text = fact.label
+    label.width = 96
+    label.color = "#9CA3AF"
+    row.appendChild(label)
+
+    value = CreateObject("roSGNode", "Label")
+    value.text = fact.value
+    value.translation = [108, 0]
+    value.width = 340
+    value.color = "#D1D5DB"
+    row.appendChild(value)
+
+    return row
+end function
+
+sub renderHistoryMetadata()
+    if m.historyMetaGroup = invalid or m.historyMetaLabel = invalid then return
+
+    text = historyMetadataText()
+    if text = ""
+        applyHistoryMetadataLayout(false)
+        m.historyMetaGroup.visible = false
+        m.historyMetaLabel.text = ""
+        return
+    end if
+
+    applyHistoryMetadataLayout(true)
+    m.historyMetaLabel.text = text
+    m.historyMetaGroup.visible = true
+end sub
+
+sub applyHistoryMetadataLayout(hasHistoryMetadata as Boolean)
+    if m.descriptionFocusBg = invalid or m.descriptionLabel = invalid then return
+
+    if hasHistoryMetadata
+        m.descriptionFocusBg.translation = [-10, 424]
+        m.descriptionFocusBg.height = 102
+        m.descriptionLabel.translation = [0, 434]
+        m.descriptionLabel.height = 84
+    else
+        m.descriptionFocusBg.translation = [-10, 402]
+        m.descriptionFocusBg.height = 134
+        m.descriptionLabel.translation = [0, 412]
+        m.descriptionLabel.height = 112
+    end if
+end sub
+
+function historyMetadataText() as String
+    if m.selection = invalid then return ""
+
+    watchCount = selectionIntegerField("watchCount", 0)
+    firstSeenSeconds = selectionIntegerField("firstSeenSeconds", 0)
+    lastSeenSeconds = selectionIntegerField("lastSeenSeconds", 0)
+    if watchCount <= 0 and firstSeenSeconds <= 0 and lastSeenSeconds <= 0 then return ""
+
+    parts = []
+    if watchCount > 0
+        countText = StrI(watchCount).Trim() + " watch"
+        if watchCount <> 1 then countText = countText + "es"
+        parts.Push(countText)
+    end if
+
+    if firstSeenSeconds > 0 then parts.Push("First " + formatHistoryDate(firstSeenSeconds))
+    if lastSeenSeconds > 0 then parts.Push("Last " + formatHistoryDate(lastSeenSeconds))
+
+    return joinMetadata(parts)
+end function
+
+function selectionIntegerField(key as String, fallback as Integer) as Integer
+    if m.selection = invalid or type(m.selection) <> "roAssociativeArray" then return fallback
+    if m.selection.DoesExist(key) <> true or m.selection[key] = invalid then return fallback
+
+    value = m.selection[key]
+    valueType = type(value)
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value
+    if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble" then return Int(value)
+    return fallback
+end function
+
+function formatHistoryDate(seconds as Integer) as String
+    if seconds <= 0 then return ""
+
+    dateTime = CreateObject("roDateTime")
+    dateTime.FromSeconds(seconds)
+
+    monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    month = dateTime.GetMonth()
+    if month < 1 or month > 12 then return ""
+
+    return monthNames[month - 1] + " " + StrI(dateTime.GetDayOfMonth()).Trim() + ", " + StrI(dateTime.GetYear()).Trim()
+end function
+
+sub applyDetailExtrasLayout()
+    if hasDetailExtras()
+        m.episodeListBottomY = 422
+    else
+        m.episodeListBottomY = 604
+    end if
+end sub
+
+function hasDetailExtras() as Boolean
+    return hasPlayableTrailer() or hasSimilarItems()
+end function
+
+function hasPlayableTrailer() as Boolean
+    if m.trailer = invalid then return false
+    if m.trailer.streamUrl = invalid or m.trailer.streamUrl = "" then return false
+    return true
+end function
+
+function hasSimilarItems() as Boolean
+    return m.similarItems <> invalid and m.similarItems.Count() > 0
+end function
+
+sub renderDetailExtras()
+    renderTrailerAction()
+    renderSimilarItems()
+    updateDetailExtrasFocusVisuals()
+end sub
+
+sub renderTrailerAction()
+    if m.trailerGroup = invalid then return
+
+    if hasPlayableTrailer() <> true
+        m.trailerGroup.visible = false
+        return
+    end if
+
+    m.trailerLabel.text = "Play trailer"
+    m.trailerGroup.visible = true
+end sub
+
+sub renderSimilarItems()
+    if m.similarGroup = invalid or m.similarHost = invalid then return
+
+    childCount = m.similarHost.getChildCount()
+    if childCount > 0 then m.similarHost.removeChildrenIndex(childCount, 0)
+
+    if hasSimilarItems() <> true
+        m.similarGroup.visible = false
+        if m.similarCursor <> invalid then m.similarCursor.visible = false
+        return
+    end if
+
+    if m.selectedSimilarIndex < 0 then m.selectedSimilarIndex = 0
+    if m.selectedSimilarIndex >= m.similarItems.Count() then m.selectedSimilarIndex = m.similarItems.Count() - 1
+
+    lastIndex = m.maxVisibleSimilarItems - 1
+    if lastIndex >= m.similarItems.Count() then lastIndex = m.similarItems.Count() - 1
+
+    for index = 0 to lastIndex
+        m.similarHost.appendChild(createSimilarCard(m.similarItems[index], index))
+    end for
+
+    m.similarGroup.visible = true
+end sub
+
+function createSimilarCard(item as Object, index as Integer) as Object
+    card = CreateObject("roSGNode", "Group")
+    card.translation = [index * m.similarCardSpacing, 0]
+
+    bg = CreateObject("roSGNode", "Rectangle")
+    bg.width = 118
+    bg.height = 92
+    bg.color = "#1F2937"
+    card.appendChild(bg)
+
+    poster = CreateObject("roSGNode", "Poster")
+    poster.translation = [6, 6]
+    poster.width = 44
+    poster.height = 66
+    poster.uri = item.posterUrl
+    poster.loadDisplayMode = "scaleToFit"
+    card.appendChild(poster)
+
+    title = CreateObject("roSGNode", "Label")
+    title.text = item.title
+    title.translation = [56, 10]
+    title.width = 56
+    title.height = 38
+    title.wrap = true
+    title.color = "#F5F5F5"
+    card.appendChild(title)
+
+    subtitle = CreateObject("roSGNode", "Label")
+    subtitle.text = item.subtitle
+    subtitle.translation = [56, 56]
+    subtitle.width = 56
+    subtitle.color = "#9CA3AF"
+    card.appendChild(subtitle)
+
+    return card
+end function
+
+sub updateDetailExtrasFocusVisuals()
+    if m.trailerFocusBg <> invalid
+        if m.focusArea = "trailer" and m.trailerGroup.visible = true
+            m.trailerFocusBg.color = "#E5E7EB"
+            m.trailerLabel.color = "#111827"
+        else
+            m.trailerFocusBg.color = "#374151"
+            m.trailerLabel.color = "#D1D5DB"
+        end if
+    end if
+
+    if m.similarCursor <> invalid
+        showCursor = m.focusArea = "similar" and m.similarGroup.visible = true and hasSimilarItems()
+        if showCursor
+            visibleIndex = m.selectedSimilarIndex
+            if visibleIndex >= m.maxVisibleSimilarItems then visibleIndex = m.maxVisibleSimilarItems - 1
+            m.similarCursor.translation = [visibleIndex * m.similarCardSpacing, 34]
+            m.similarCursor.visible = true
+        else
+            m.similarCursor.visible = false
+        end if
+    end if
+end sub
+
+function firstDetailExtrasFocusArea() as String
+    if hasPlayableTrailer() then return "trailer"
+    if hasSimilarItems() then return "similar"
+    return ""
+end function
+
+sub moveSimilar(delta as Integer)
+    if hasSimilarItems() <> true then return
+
+    nextIndex = m.selectedSimilarIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    maxIndex = m.similarItems.Count() - 1
+    if maxIndex >= m.maxVisibleSimilarItems then maxIndex = m.maxVisibleSimilarItems - 1
+    if nextIndex > maxIndex then nextIndex = maxIndex
+    m.selectedSimilarIndex = nextIndex
+    updateDetailExtrasFocusVisuals()
+end sub
+
+sub startTrailerPlayback()
+    if hasPlayableTrailer() <> true
+        m.playbackErrorLabel.text = "No playable trailer is available."
+        return
+    end if
+
+    m.top.playbackRequested = {
+        itemId: m.item.itemId
+        mediaId: 0
+        itemTitle: m.item.title
+        title: "Trailer"
+        subtitle: ""
+        seasonNumber: 0
+        episodeNumber: 0
+        videoNumber: 0
+        durationSeconds: 0
+        progressSeconds: 0
+        watchStatus: -1
+        watched: false
+        streamUrl: m.trailer.streamUrl
+        streamFormat: m.trailer.streamFormat
+        qualityOptions: m.trailer.qualityOptions
+        audioTracks: []
+        subtitleTracks: []
+    }
+end sub
+
+sub selectSimilarItem()
+    if hasSimilarItems() <> true then return
+    if m.selectedSimilarIndex < 0 or m.selectedSimilarIndex >= m.similarItems.Count() then return
+
+    item = m.similarItems[m.selectedSimilarIndex]
+    if item.itemId = invalid or item.itemId <= 0 then return
+
+    m.top.selection = {
+        itemId: item.itemId
+        mediaId: item.mediaId
+        source: "similar"
+    }
+end sub
+
+function joinMetadata(values as Dynamic) as String
+    if values = invalid or values.Count() = 0 then return ""
+
+    text = ""
+    for index = 0 to values.Count() - 1
+        if values[index] <> invalid and values[index] <> ""
+            if text <> "" then text = text + "  |  "
+            text = text + values[index]
+        end if
+    end for
+    return text
+end function
+
+function descriptionOverlayLines() as Object
+    lines = []
+    if m.descriptionLabel = invalid or m.descriptionLabel.text = invalid or m.descriptionLabel.text = "" then return lines
+
+    text = m.descriptionLabel.text
+    lineLength = m.descriptionOverlayLineLength
+    if lineLength < 20 then lineLength = 20
+
+    position = 1
+    while position <= Len(text)
+        lines.Push(Mid(text, position, lineLength))
+        position = position + lineLength
+    end while
+
+    return lines
+end function
+
+sub openDescriptionOverlay()
+    lines = descriptionOverlayLines()
+    if lines.Count() = 0 then return
+
+    m.descriptionOverlayScrollStart = 0
+    m.descriptionOverlayGroup.visible = true
+    renderDescriptionOverlayText()
+end sub
+
+sub closeDescriptionOverlay()
+    if m.descriptionOverlayGroup = invalid then return
+    m.descriptionOverlayGroup.visible = false
+    m.descriptionOverlayScrollStart = 0
+    updateDescriptionFocusVisual()
+end sub
+
+sub scrollDescriptionOverlay(delta as Integer)
+    if m.descriptionOverlayGroup = invalid or m.descriptionOverlayGroup.visible <> true then return
+
+    lines = descriptionOverlayLines()
+    maxStart = lines.Count() - m.descriptionOverlayMaxLines
+    if maxStart < 0 then maxStart = 0
+
+    nextStart = m.descriptionOverlayScrollStart + delta
+    if nextStart < 0 then nextStart = 0
+    if nextStart > maxStart then nextStart = maxStart
+
+    m.descriptionOverlayScrollStart = nextStart
+    renderDescriptionOverlayText()
+end sub
+
+sub renderDescriptionOverlayText()
+    lines = descriptionOverlayLines()
+    text = ""
+    if lines.Count() > 0
+        startIndex = m.descriptionOverlayScrollStart
+        lastIndex = startIndex + m.descriptionOverlayMaxLines - 1
+        if lastIndex >= lines.Count() then lastIndex = lines.Count() - 1
+
+        for index = startIndex to lastIndex
+            if text <> "" then text = text + Chr(10)
+            text = text + lines[index]
+        end for
+    end if
+
+    m.descriptionOverlayTextLabel.text = text
+    m.descriptionOverlayScrollUpChevron.visible = m.descriptionOverlayScrollStart > 0
+    m.descriptionOverlayScrollDownChevron.visible = (m.descriptionOverlayScrollStart + m.descriptionOverlayMaxLines) < lines.Count()
+end sub
+
+sub updateDescriptionFocusVisual()
+    if m.descriptionFocusBg = invalid then return
+    if m.focusArea = "description" and m.detailGroup.visible = true and m.descriptionOverlayGroup.visible <> true
+        m.descriptionFocusBg.opacity = 0.92
+    else
+        m.descriptionFocusBg.opacity = 0
+    end if
+end sub
+
+sub renderSeasonTabs()
+    childCount = m.seasonTabsHost.getChildCount()
+    if childCount > 0 then m.seasonTabsHost.removeChildrenIndex(childCount, 0)
+    m.seasonTabBgs = []
+    tabRows = 0
+
+    if m.seasons.Count() = 0
+        m.panelTitleLabel.text = "Video"
+        updateEpisodeListLayout(0)
+        return
+    end if
+
+    if m.seasons.Count() <= 1
+        m.panelTitleLabel.text = m.seasons[0].title
+        updateEpisodeListLayout(0)
+        return
+    end if
+
+    m.panelTitleLabel.text = "Episodes"
+    tabX = 0
+    tabY = 0
+    tabRows = 1
+
+    for index = 0 to m.seasons.Count() - 1
+        if tabX > 0 and tabX + m.seasonTabWidth > m.seasonTabPanelWidth
+            tabX = 0
+            tabY = tabY + m.seasonTabRowHeight
+            tabRows = tabRows + 1
+        end if
+
+        tabGroup = CreateObject("roSGNode", "Group")
+        tabGroup.translation = [tabX, tabY]
+
+        bg = CreateObject("roSGNode", "Rectangle")
+        bg.width = m.seasonTabWidth
+        bg.height = m.seasonTabHeight
+        bg.color = "#374151"
+        tabGroup.appendChild(bg)
+
+        label = CreateObject("roSGNode", "Label")
+        label.text = "S" + StrI(m.seasons[index].number).Trim()
+        label.translation = [20, 10]
+        label.color = "#D1D5DB"
+        tabGroup.appendChild(label)
+
+        m.seasonTabsHost.appendChild(tabGroup)
+        m.seasonTabBgs.Push(bg)
+        tabX = tabX + m.seasonTabWidth + m.seasonTabGap
+    end for
+
+    updateEpisodeListLayout(tabRows)
+end sub
+
+sub updateEpisodeListLayout(tabRows as Integer)
+    m.episodeListY = m.baseEpisodeListY
+    if tabRows > 1
+        m.episodeListY = m.baseEpisodeListY + ((tabRows - 1) * m.seasonTabRowHeight)
+    end if
+
+    m.episodeListHost.translation = [0, m.episodeListY]
+    m.episodeCursor.translation = [0, m.episodeListY]
+    if m.episodeScrollUpChevron <> invalid
+        m.episodeScrollUpChevron.translation = [396, m.episodeListY]
+    end if
+    m.noMediaLabel.translation = [0, m.episodeListY + 14]
+
+    availableHeight = m.episodeListBottomY - m.episodeListY
+    maxVisible = Int((availableHeight + 10) / 84)
+    if maxVisible < 1 then maxVisible = 1
+    if maxVisible > m.defaultMaxVisibleEpisodes then maxVisible = m.defaultMaxVisibleEpisodes
+    m.maxVisibleEpisodes = maxVisible
+    if m.episodeScrollDownChevron <> invalid
+        downY = m.episodeListY + ((m.maxVisibleEpisodes - 1) * 84)
+        if downY < m.episodeListY then downY = m.episodeListY
+        m.episodeScrollDownChevron.translation = [396, downY]
+    end if
+    updateEpisodeScrollChevrons()
+end sub
+
+sub renderEpisodeList()
+    childCount = m.episodeListHost.getChildCount()
+    if childCount > 0 then m.episodeListHost.removeChildrenIndex(childCount, 0)
+    m.episodeRows = []
+    m.episodeRowIndexes = []
+
+    if m.seasons.Count() = 0
+        showNoPlayableMedia()
+        return
+    end if
+
+    if m.currentSeasonIndex < 0 then m.currentSeasonIndex = 0
+    if m.currentSeasonIndex >= m.seasons.Count()
+        m.currentSeasonIndex = m.seasons.Count() - 1
+    end if
+
+    episodes = []
+    if m.seasons[m.currentSeasonIndex].episodes <> invalid
+        episodes = m.seasons[m.currentSeasonIndex].episodes
+    end if
+
+    if episodes.Count() = 0
+        showNoPlayableMedia()
+        return
+    end if
+
+    if m.currentEpisodeIndex < 0 then m.currentEpisodeIndex = 0
+    if m.currentEpisodeIndex >= episodes.Count()
+        m.currentEpisodeIndex = episodes.Count() - 1
+    end if
+    updateVisibleEpisodeWindow()
+
+    m.noMediaLabel.visible = false
+    m.playbackErrorLabel.text = ""
+    startIndex = m.visibleEpisodeStart
+    lastIndex = startIndex + m.maxVisibleEpisodes - 1
+    if lastIndex >= episodes.Count() then lastIndex = episodes.Count() - 1
+
+    for index = startIndex to lastIndex
+        episode = episodes[index]
+        visibleIndex = index - startIndex
+        row = CreateObject("roSGNode", "Group")
+        row.translation = [0, visibleIndex * 84]
+
+        bg = CreateObject("roSGNode", "Rectangle")
+        bg.width = 380
+        bg.height = 74
+        bg.color = "#1F2937"
+        row.appendChild(bg)
+
+        title = CreateObject("roSGNode", "Label")
+        title.text = episode.title
+        title.translation = [16, 10]
+        title.width = 292
+        title.color = "#F5F5F5"
+        row.appendChild(title)
+
+        subtitle = CreateObject("roSGNode", "Label")
+        subtitle.text = mediaSubtitle(episode)
+        progressText = episodeProgressText(episode)
+        if progressText <> ""
+            if subtitle.text <> "" then subtitle.text = subtitle.text + "  |  " + progressText else subtitle.text = progressText
+        end if
+        subtitle.translation = [16, 42]
+        subtitle.width = 330
+        subtitle.color = "#9CA3AF"
+        if episodeWatchStatus(episode) = 0 and progressText <> "" then subtitle.color = "#34D399"
+        row.appendChild(subtitle)
+
+        if episodeWatchStatus(episode) = 1 then appendWatchedCheck(row)
+
+        m.episodeListHost.appendChild(row)
+        m.episodeRows.Push(bg)
+        m.episodeRowIndexes.Push(index)
+    end for
+    updateEpisodeScrollChevrons()
+end sub
+
+sub updateVisibleEpisodeWindow()
+    episodes = playableEpisodesForSeason(m.currentSeasonIndex)
+    if episodes.Count() = 0
+        m.visibleEpisodeStart = 0
+        return
+    end if
+
+    if m.currentEpisodeIndex < m.visibleEpisodeStart
+        m.visibleEpisodeStart = m.currentEpisodeIndex
+    else if m.currentEpisodeIndex >= m.visibleEpisodeStart + m.maxVisibleEpisodes
+        m.visibleEpisodeStart = m.currentEpisodeIndex - m.maxVisibleEpisodes + 1
+    end if
+
+    maxStart = episodes.Count() - m.maxVisibleEpisodes
+    if maxStart < 0 then maxStart = 0
+    if m.visibleEpisodeStart > maxStart then m.visibleEpisodeStart = maxStart
+    if m.visibleEpisodeStart < 0 then m.visibleEpisodeStart = 0
+end sub
+
+sub updateEpisodeScrollChevrons()
+    if m.episodeScrollUpChevron = invalid or m.episodeScrollDownChevron = invalid then return
+
+    episodes = playableEpisodesForSeason(m.currentSeasonIndex)
+    showEpisodeHints = m.detailGroup.visible and episodes.Count() > 0 and episodes.Count() > m.maxVisibleEpisodes
+    if showEpisodeHints <> true
+        m.episodeScrollUpChevron.visible = false
+        m.episodeScrollDownChevron.visible = false
+        return
+    end if
+
+    m.episodeScrollUpChevron.visible = m.visibleEpisodeStart > 0
+    m.episodeScrollDownChevron.visible = (m.visibleEpisodeStart + m.maxVisibleEpisodes) < episodes.Count()
+end sub
+
+function mediaSubtitle(media as Object) as String
+    parts = []
+    if media.seasonNumber > 0
+        seasonText = "S" + StrI(media.seasonNumber).Trim()
+        episodeText = " E" + StrI(media.episodeNumber).Trim()
+        parts.Push(seasonText + episodeText)
+    end if
+    if media.durationSeconds > 0
+        parts.Push(StrI(Int(media.durationSeconds / 60)).Trim() + " min")
+    end if
+    if media.isPlayable <> true then parts.Push("Unavailable")
+    return joinMetadata(parts)
+end function
+
+function episodeWatchStatus(media as Dynamic) as Integer
+    if media = invalid then return -1
+    if media.watchStatus <> invalid then return media.watchStatus
+    if media.watched = true then return 1
+    if media.progressSeconds <> invalid and media.progressSeconds > 0 then return 0
+    return -1
+end function
+
+function episodeProgressText(media as Dynamic) as String
+    if media = invalid then return ""
+    if episodeWatchStatus(media) <> 0 then return ""
+    if media.progressSeconds = invalid or media.progressSeconds <= 0 then return ""
+
+    if media.durationSeconds <> invalid and media.durationSeconds > 0
+        percent = Int((media.progressSeconds * 100) / media.durationSeconds)
+        if percent < 1 then percent = 1
+        if percent > 99 then percent = 99
+        return StrI(percent).Trim() + "%"
+    end if
+
+    return formatEpisodeProgressTime(media.progressSeconds)
+end function
+
+function formatEpisodeProgressTime(seconds as Integer) as String
+    if seconds < 0 then seconds = 0
+    minutes = Int(seconds / 60)
+    remaining = seconds - (minutes * 60)
+    remainingText = StrI(remaining).Trim()
+    if remaining < 10 then remainingText = "0" + remainingText
+    return StrI(minutes).Trim() + ":" + remainingText
+end function
+
+sub appendWatchedCheck(row as Object)
+    check = CreateObject("roSGNode", "Label")
+    check.text = "✓"
+    check.translation = [338, 10]
+    check.width = 26
+    check.horizAlign = "center"
+    check.color = "#34D399"
+    row.appendChild(check)
+end sub
+
+sub showState(state as String)
+    m.loadingGroup.visible = state = "loading"
+    m.errorGroup.visible = state = "error"
+    m.detailGroup.visible = state = "detail"
+    updateEpisodeScrollChevrons()
+    updateDetailExtrasFocusVisuals()
+end sub
+
+sub showError(message as String)
+    m.errorLabel.text = message
+    m.focusArea = "retry"
+    showState("error")
+end sub
+
+function currentMedia() as Dynamic
+    if m.seasons.Count() = 0 then return invalid
+
+    if m.currentSeasonIndex < 0 then m.currentSeasonIndex = 0
+    if m.currentSeasonIndex >= m.seasons.Count()
+        m.currentSeasonIndex = m.seasons.Count() - 1
+    end if
+
+    episodes = []
+    if m.seasons[m.currentSeasonIndex].episodes <> invalid
+        episodes = m.seasons[m.currentSeasonIndex].episodes
+    end if
+    if episodes.Count() = 0 then return invalid
+
+    if m.currentEpisodeIndex < 0 then m.currentEpisodeIndex = 0
+    if m.currentEpisodeIndex >= episodes.Count()
+        m.currentEpisodeIndex = episodes.Count() - 1
+    end if
+
+    return episodes[m.currentEpisodeIndex]
+end function
+
+function currentEpisodeIsLast() as Boolean
+    episodes = playableEpisodesForSeason(m.currentSeasonIndex)
+    if episodes.Count() = 0 then return false
+    return m.currentEpisodeIndex >= episodes.Count() - 1
+end function
+
+sub updateSelectedMediaVisuals()
+    media = currentMedia()
+    oldVisibleStart = m.visibleEpisodeStart
+    updateVisibleEpisodeWindow()
+    if oldVisibleStart <> m.visibleEpisodeStart
+        renderEpisodeList()
+    end if
+    updateEpisodeScrollChevrons()
+
+    for index = 0 to m.seasonTabBgs.Count() - 1
+        if index = m.currentSeasonIndex
+            m.seasonTabBgs[index].color = "#E5E7EB"
+        else
+            m.seasonTabBgs[index].color = "#374151"
+        end if
+    end for
+
+    for index = 0 to m.episodeRows.Count() - 1
+        rowIndex = m.episodeRowIndexes[index]
+        if rowIndex = m.currentEpisodeIndex
+            m.episodeRows[index].color = "#374151"
+        else
+            m.episodeRows[index].color = "#1F2937"
+        end if
+    end for
+
+    if media = invalid
+        m.playButtonLabel.text = "Unavailable"
+        m.playFocusBg.color = "#374151"
+        m.episodeCursor.visible = false
+        return
+    end if
+
+    if media.isPlayable
+        m.playButtonLabel.text = "Play"
+        m.playbackErrorLabel.text = ""
+    else
+        m.playButtonLabel.text = "Unavailable"
+        m.playbackErrorLabel.text = "No playable video is available."
+    end if
+
+    if m.focusArea = "play"
+        m.playFocusBg.color = "#E5E7EB"
+    else
+        m.playFocusBg.color = "#374151"
+    end if
+    updateDescriptionFocusVisual()
+    updateDetailExtrasFocusVisuals()
+
+    visibleIndex = m.currentEpisodeIndex - m.visibleEpisodeStart
+    m.episodeCursor.translation = [0, m.episodeListY + (visibleIndex * 84)]
+    m.episodeCursor.visible = m.focusArea = "episodes" and m.episodeRows.Count() > 0
+end sub
+
+sub showNoPlayableMedia()
+    m.noMediaLabel.visible = true
+    m.playbackErrorLabel.text = "No playable video is available."
+    m.episodeCursor.visible = false
+    updateEpisodeScrollChevrons()
+end sub
+
+sub moveEpisode(delta as Integer)
+    if m.seasons.Count() = 0 then return
+    if m.currentSeasonIndex < 0 or m.currentSeasonIndex >= m.seasons.Count() then return
+
+    episodes = []
+    if m.seasons[m.currentSeasonIndex].episodes <> invalid
+        episodes = m.seasons[m.currentSeasonIndex].episodes
+    end if
+    if episodes.Count() = 0 then return
+
+    nextIndex = m.currentEpisodeIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex >= episodes.Count() then nextIndex = episodes.Count() - 1
+
+    m.currentEpisodeIndex = nextIndex
+    m.playbackErrorLabel.text = ""
+    updateSelectedMediaVisuals()
+end sub
+
+sub moveSeason(delta as Integer)
+    if m.seasons.Count() <= 1 then return
+
+    nextIndex = m.currentSeasonIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex >= m.seasons.Count() then nextIndex = m.seasons.Count() - 1
+    if nextIndex = m.currentSeasonIndex then return
+
+    m.currentSeasonIndex = nextIndex
+    m.currentEpisodeIndex = 0
+    m.playbackErrorLabel.text = ""
+    renderEpisodeList()
+    updateSelectedMediaVisuals()
+end sub
+
+sub startSelectedPlayback()
+    media = currentMedia()
+    if media = invalid
+        m.playbackErrorLabel.text = "No playable video is available."
+        return
+    end if
+    if media.isPlayable <> true
+        m.playbackErrorLabel.text = "No playable video is available."
+        return
+    end if
+
+    streamUrl = ""
+    if media.streamUrl <> invalid then streamUrl = media.streamUrl
+    if streamUrl = ""
+        m.playbackErrorLabel.text = "No playable video is available."
+        return
+    end if
+
+    m.top.playbackRequested = playbackPayloadForMedia(media)
+end sub
+
+function playbackPayloadForMedia(media as Object) as Object
+    videoNumber = 1
+    if media.videoNumber <> invalid then videoNumber = media.videoNumber else videoNumber = media.episodeNumber
+
+    return {
+        itemId: m.item.itemId
+        mediaId: media.mediaId
+        itemTitle: m.item.title
+        title: media.title
+        subtitle: media.subtitle
+        seasonNumber: media.seasonNumber
+        episodeNumber: media.episodeNumber
+        videoNumber: videoNumber
+        durationSeconds: media.durationSeconds
+        progressSeconds: media.progressSeconds
+        watchStatus: media.watchStatus
+        watched: media.watched
+        streamUrl: media.streamUrl
+        streamFormat: media.streamFormat
+        qualityOptions: media.qualityOptions
+        audioTracks: media.audioTracks
+        subtitleTracks: media.subtitleTracks
+    }
+end function
+
+function onKeyEvent(key as String, press as Boolean) as Boolean
+    if press <> true then return false
+
+    if m.descriptionOverlayGroup.visible
+        if key = "back" or key = "OK"
+            closeDescriptionOverlay()
+            return true
+        else if key = "up"
+            scrollDescriptionOverlay(-1)
+            return true
+        else if key = "down"
+            scrollDescriptionOverlay(1)
+            return true
+        end if
+        return true
+    end if
+
+    if key = "back"
+        m.top.backRequested = true
+        return true
+    end if
+
+    if m.errorGroup.visible
+        if key = "OK"
+            loadDetail()
+            return true
+        end if
+        return false
+    end if
+
+    if m.detailGroup.visible <> true then return false
+
+    if m.focusArea = "episodes"
+        if key = "up"
+            moveEpisode(-1)
+            return true
+        else if key = "down"
+            if currentEpisodeIsLast() and firstDetailExtrasFocusArea() <> ""
+                m.focusArea = firstDetailExtrasFocusArea()
+                updateSelectedMediaVisuals()
+                return true
+            end if
+            moveEpisode(1)
+            return true
+        else if key = "left"
+            if m.seasons.Count() > 1 and m.currentSeasonIndex > 0
+                moveSeason(-1)
+            else
+                m.focusArea = "play"
+                updateSelectedMediaVisuals()
+            end if
+            return true
+        else if key = "right"
+            moveSeason(1)
+            return true
+        else if key = "OK"
+            startSelectedPlayback()
+            return true
+        end if
+    else if m.focusArea = "play"
+        if key = "up"
+            m.focusArea = "description"
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "down"
+            extrasFocus = firstDetailExtrasFocusArea()
+            if extrasFocus <> ""
+                m.focusArea = extrasFocus
+                updateSelectedMediaVisuals()
+                return true
+            end if
+        else if key = "right"
+            m.focusArea = "episodes"
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "OK"
+            startSelectedPlayback()
+            return true
+        end if
+    else if m.focusArea = "description"
+        if key = "down"
+            m.focusArea = "play"
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "right"
+            m.focusArea = "episodes"
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "OK"
+            openDescriptionOverlay()
+            return true
+        end if
+    else if m.focusArea = "trailer"
+        if key = "up"
+            m.focusArea = "episodes"
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "down"
+            if hasSimilarItems()
+                m.focusArea = "similar"
+            else
+                m.focusArea = "play"
+            end if
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "left"
+            m.focusArea = "play"
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "right"
+            if hasSimilarItems()
+                m.focusArea = "similar"
+            else
+                m.focusArea = "episodes"
+            end if
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "OK"
+            startTrailerPlayback()
+            return true
+        end if
+    else if m.focusArea = "similar"
+        if key = "up"
+            if hasPlayableTrailer()
+                m.focusArea = "trailer"
+            else
+                m.focusArea = "episodes"
+            end if
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "left"
+            moveSimilar(-1)
+            return true
+        else if key = "right"
+            moveSimilar(1)
+            return true
+        else if key = "OK"
+            selectSimilarItem()
+            return true
+        end if
+    end if
+
+    return false
+end function

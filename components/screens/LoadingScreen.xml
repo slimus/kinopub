@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="LoadingScreen" extends="Group">
+  <children>
+    <Rectangle width="1280" height="720" color="#111827" />
+    <Label id="brandLabel" text="KinoPub" translation="[64,44]" color="#F9FAFB" />
+    <Label text="Loading..." translation="[0,336]" width="1280" horizAlign="center" color="#D1D5DB" />
+  </children>
+</component>

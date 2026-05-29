@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="AppScene" extends="Scene">
+  <interface>
+    <field id="exitRequested" type="boolean" alwaysNotify="true" />
+  </interface>
+  <children>
+    <Group id="screenHost" />
+    <Timer id="routeFallbackTimer" repeat="false" duration="20" />
+  </children>
+  <script type="text/brightscript" uri="pkg:/components/AppScene.brs" />
+</component>

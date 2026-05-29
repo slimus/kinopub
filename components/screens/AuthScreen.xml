@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="AuthScreen" extends="Group">
+  <interface>
+    <field id="authCompleted" type="boolean" alwaysNotify="true" />
+  </interface>
+  <children>
+    <Rectangle width="1280" height="720" color="#111827" />
+    <Label id="brandLabel" text="KinoPub" translation="[64,44]" color="#F9FAFB" />
+    <Label id="modeLabel" text="Sign in" translation="[1120,44]" color="#9CA3AF" />
+    <Label id="instructionLabel" translation="[0,142]" width="1280" horizAlign="center" text="Go to kino.pub/device and enter" color="#E5E7EB" font="font:LargeBoldSystemFont" />
+    <Rectangle id="codePanel" translation="[140,190]" width="1000" height="300" color="#F9FAFB" />
+    <Label id="codeLabel" translation="[140,230]" width="1000" height="220" horizAlign="center" vertAlign="center" text="------" color="#030712" font="font:ExtraLargeBoldSystemFont" />
+    <Label id="statusLabel" translation="[0,528]" width="1280" horizAlign="center" text="Requesting code..." color="#D1D5DB" font="font:MediumBoldSystemFont" />
+    <Rectangle id="progressTrack" translation="[320,594]" width="640" height="10" color="#374151" />
+    <Rectangle id="progressFill" translation="[320,594]" width="0" height="10" color="#22C55E" />
+    <Timer id="pollTimer" repeat="true" />
+    <Timer id="expiryTimer" repeat="true" duration="1" />
+    <Timer id="requestTimer" repeat="false" duration="20" />
+  </children>
+  <script type="text/brightscript" uri="pkg:/components/screens/AuthScreen.brs" />
+</component>

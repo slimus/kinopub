@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="ContentTask" extends="Task">
+  <interface>
+    <field id="command" type="string" />
+    <field id="request" type="assocarray" />
+    <field id="response" type="assocarray" alwaysNotify="true" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/tasks/ContentTask.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/TokenStore.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoApiClient.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoAuthService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoContentTypeService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoHistoryService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoHomeService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoItemService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoSearchService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoUserService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoWatchingService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/config/KinoConfig.brs" />
+</component>

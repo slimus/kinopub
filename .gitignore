@@ -1,0 +1,8 @@
+.superpowers/
+config/kinoapi.local.json
+dist/
+source/config/KinoConfig.brs
+.DS_Store
+out
+docs
+.vscode

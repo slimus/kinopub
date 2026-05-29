@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="AuthTask" extends="Task">
+  <interface>
+    <field id="command" type="string" />
+    <field id="request" type="assocarray" />
+    <field id="response" type="assocarray" alwaysNotify="true" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/components/tasks/AuthTask.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/TokenStore.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoApiClient.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoAuthService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/config/KinoConfig.brs" />
+</component>

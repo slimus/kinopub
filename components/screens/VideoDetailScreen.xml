@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="VideoDetailScreen" extends="Group">
+  <interface>
+    <field id="selection" type="assocarray" />
+    <field id="backRequested" type="boolean" alwaysNotify="true" />
+    <field id="playbackRequested" type="assocarray" alwaysNotify="true" />
+    <field id="playbackError" type="string" alwaysNotify="true" />
+    <field id="reloadRequested" type="boolean" alwaysNotify="true" />
+  </interface>
+  <children>
+    <Rectangle width="1280" height="720" color="#101010" />
+
+    <Group id="loadingGroup" translation="[96,72]">
+      <Label text="Loading video..." color="#D1D5DB" />
+    </Group>
+
+    <Group id="errorGroup" translation="[96,72]" visible="false">
+      <Label id="errorLabel" text="Unable to load video details" color="#FCA5A5" width="900" />
+      <Group id="retryButton" translation="[0,64]">
+        <Rectangle id="retryFocusBg" width="190" height="48" color="#E5E7EB" />
+        <Label text="Retry" translation="[58,14]" color="#111827" />
+      </Group>
+    </Group>
+
+    <Group id="detailGroup" visible="false">
+      <Rectangle width="1280" height="360" color="#141414" opacity="0.9" />
+      <Poster id="heroArtworkPoster" width="1280" height="360" opacity="0.22" loadDisplayMode="scaleToFit" />
+      <Rectangle width="1280" height="720" color="#101010" opacity="0.72" />
+
+      <Group id="leftPanel" translation="[80,58]">
+        <Rectangle id="posterFallback" width="190" height="286" color="#1F2937" visible="true" />
+        <Poster id="poster" width="190" height="286" loadDisplayMode="scaleToFit" />
+        <Group id="detailFactsGroup" translation="[220,2]" visible="false">
+          <Label text="Details" color="#F5F5F5" />
+          <Group id="detailFactsHost" translation="[0,34]" />
+        </Group>
+        <Label id="titleLabel" translation="[0,318]" width="680" color="#F5F5F5" />
+        <Label id="metadataLabel" translation="[0,364]" width="680" color="#D1D5DB" />
+        <Group id="historyMetaGroup" translation="[0,394]" visible="false">
+          <Label id="historyMetaLabel" width="680" color="#9CA3AF" />
+        </Group>
+        <Rectangle id="descriptionFocusBg" translation="[-10,402]" width="700" height="134" color="#374151" opacity="0" />
+        <Label id="descriptionLabel" translation="[0,412]" width="680" height="112" wrap="true" color="#D1D5DB" />
+        <Label text="OK for full description" translation="[0,526]" width="680" color="#9CA3AF" />
+        <Group id="playButton" translation="[0,560]">
+          <Rectangle id="playFocusBg" width="232" height="52" color="#E5E7EB" />
+          <Label id="playButtonLabel" text="Play" translation="[74,16]" color="#111827" />
+        </Group>
+        <Label id="playbackErrorLabel" translation="[0,626]" width="680" color="#FCA5A5" />
+      </Group>
+
+      <Group id="rightPanel" translation="[780,76]">
+        <Label id="panelTitleLabel" text="Video" color="#F5F5F5" />
+        <Group id="seasonTabsHost" translation="[0,48]" />
+        <Group id="episodeListHost" translation="[0,104]" />
+        <Group id="episodeCursor" translation="[0,104]" visible="false">
+          <Rectangle width="380" height="4" color="#F5F5F5" />
+          <Rectangle translation="[0,70]" width="380" height="4" color="#F5F5F5" />
+          <Rectangle width="4" height="74" color="#F5F5F5" />
+          <Rectangle translation="[376,0]" width="4" height="74" color="#F5F5F5" />
+        </Group>
+        <Label id="episodeScrollUpChevron" text="^" translation="[396,104]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+        <Label id="episodeScrollDownChevron" text="v" translation="[396,524]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+        <Label id="noMediaLabel" text="No playable video is available" translation="[0,118]" width="380" color="#D1D5DB" visible="false" />
+        <Group id="trailerGroup" translation="[0,438]" visible="false">
+          <Label text="Trailer" color="#F5F5F5" />
+          <Rectangle id="trailerFocusBg" translation="[0,32]" width="380" height="48" color="#374151" />
+          <Label id="trailerLabel" text="Play trailer" translation="[16,46]" width="340" color="#D1D5DB" />
+        </Group>
+        <Group id="similarGroup" translation="[0,520]" visible="false">
+          <Label text="Similar" color="#F5F5F5" />
+          <Group id="similarHost" translation="[0,34]" />
+          <Group id="similarCursor" translation="[0,34]" visible="false">
+            <Rectangle width="118" height="4" color="#F5F5F5" />
+            <Rectangle translation="[0,88]" width="118" height="4" color="#F5F5F5" />
+            <Rectangle width="4" height="92" color="#F5F5F5" />
+            <Rectangle translation="[114,0]" width="4" height="92" color="#F5F5F5" />
+          </Group>
+        </Group>
+      </Group>
+    </Group>
+
+    <Group id="descriptionOverlayGroup" visible="false">
+      <Rectangle width="1280" height="720" color="#000000" opacity="0.78" />
+      <Rectangle translation="[126,82]" width="1028" height="556" color="#111827" />
+      <Rectangle translation="[126,82]" width="1028" height="4" color="#E5E7EB" />
+      <Label text="Description" translation="[170,122]" width="900" color="#F5F5F5" font="font:LargeBoldSystemFont" />
+      <Label id="descriptionOverlayTextLabel" translation="[170,178]" width="940" height="374" wrap="true" color="#D1D5DB" />
+      <Label id="descriptionOverlayScrollUpChevron" text="^" translation="[1076,178]" width="34" horizAlign="center" color="#D1D5DB" visible="false" />
+      <Label id="descriptionOverlayScrollDownChevron" text="v" translation="[1076,532]" width="34" horizAlign="center" color="#D1D5DB" visible="false" />
+      <Label text="Back to close" translation="[170,582]" width="940" color="#9CA3AF" />
+    </Group>
+  </children>
+  <script type="text/brightscript" uri="pkg:/components/screens/VideoDetailScreen.brs" />
+</component>
