@@ -46,6 +46,10 @@
           <Rectangle id="playFocusBg" width="232" height="52" color="#E5E7EB" />
           <Label id="playButtonLabel" text="Play" translation="[74,16]" color="#111827" />
         </Group>
+        <Group id="bookmarkActionGroup" translation="[252,560]">
+          <Rectangle id="bookmarkFocusBg" width="232" height="52" color="#374151" />
+          <Label id="bookmarkLabel" text="Bookmarks" translation="[52,16]" color="#D1D5DB" />
+        </Group>
         <Label id="playbackErrorLabel" translation="[0,626]" width="680" color="#FCA5A5" />
       </Group>
 
@@ -89,6 +93,17 @@
       <Label id="descriptionOverlayScrollUpChevron" text="^" translation="[1076,178]" width="34" horizAlign="center" color="#D1D5DB" visible="false" />
       <Label id="descriptionOverlayScrollDownChevron" text="v" translation="[1076,532]" width="34" horizAlign="center" color="#D1D5DB" visible="false" />
       <Label text="Back to close" translation="[170,582]" width="940" color="#9CA3AF" />
+    </Group>
+
+    <Group id="bookmarkOverlayGroup" visible="false">
+      <Rectangle width="1280" height="720" color="#000000" opacity="0.72" />
+      <Group translation="[360,120]">
+        <Rectangle width="560" height="480" color="#181818" />
+        <Label text="Add to Bookmarks" translation="[28,24]" width="500" color="#F5F5F5" />
+        <Label id="bookmarkOverlayStatusLabel" text="" translation="[28,68]" width="500" color="#9CA3AF" />
+        <Group id="bookmarkOverlayFoldersHost" translation="[28,112]" />
+        <Label text="OK toggles folder  |  Back closes" translation="[28,430]" width="500" color="#9CA3AF" />
+      </Group>
     </Group>
   </children>
   <script type="text/brightscript" uri="pkg:/components/screens/VideoDetailScreen.brs" />

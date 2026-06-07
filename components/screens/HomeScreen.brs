@@ -6,6 +6,7 @@ sub init()
     m.watchAgainNav = m.top.findNode("watchAgainNav")
     m.homeNav = m.top.findNode("homeNav")
     m.searchNav = m.top.findNode("searchNav")
+    m.bookmarksNav = m.top.findNode("bookmarksNav")
     m.accountNav = m.top.findNode("accountNav")
     m.signOutNav = m.top.findNode("signOutNav")
     m.contentHost = m.top.findNode("contentHost")
@@ -24,6 +25,23 @@ sub init()
     m.homeRailLeftChevron = m.top.findNode("homeRailLeftChevron")
     m.homeRailRightChevron = m.top.findNode("homeRailRightChevron")
     m.searchContent = m.top.findNode("searchContent")
+    m.bookmarksContent = m.top.findNode("bookmarksContent")
+    m.bookmarksLoadingGroup = m.top.findNode("bookmarksLoadingGroup")
+    m.bookmarksEmptyGroup = m.top.findNode("bookmarksEmptyGroup")
+    m.bookmarksErrorGroup = m.top.findNode("bookmarksErrorGroup")
+    m.bookmarksErrorLabel = m.top.findNode("bookmarksErrorLabel")
+    m.bookmarksRetryGroup = m.top.findNode("bookmarksRetryGroup")
+    m.bookmarksBodyGroup = m.top.findNode("bookmarksBodyGroup")
+    m.bookmarkFoldersHost = m.top.findNode("bookmarkFoldersHost")
+    m.bookmarkFolderScrollUpChevron = m.top.findNode("bookmarkFolderScrollUpChevron")
+    m.bookmarkFolderScrollDownChevron = m.top.findNode("bookmarkFolderScrollDownChevron")
+    m.bookmarkFolderStatusLabel = m.top.findNode("bookmarkFolderStatusLabel")
+    m.bookmarkItemsTitleLabel = m.top.findNode("bookmarkItemsTitleLabel")
+    m.bookmarkItemsHost = m.top.findNode("bookmarkItemsHost")
+    m.bookmarksCursor = m.top.findNode("bookmarksCursor")
+    m.bookmarkItemsScrollUpChevron = m.top.findNode("bookmarkItemsScrollUpChevron")
+    m.bookmarkItemsScrollDownChevron = m.top.findNode("bookmarkItemsScrollDownChevron")
+    m.bookmarksNextPageStatus = m.top.findNode("bookmarksNextPageStatus")
     m.accountContent = m.top.findNode("accountContent")
     m.searchBoxFocusBg = m.top.findNode("searchBoxFocusBg")
     m.searchQueryLabel = m.top.findNode("searchQueryLabel")
@@ -75,6 +93,7 @@ sub init()
     m.collapsedWatchAgain = m.top.findNode("collapsedWatchAgain")
     m.collapsedHome = m.top.findNode("collapsedHome")
     m.collapsedSearch = m.top.findNode("collapsedSearch")
+    m.collapsedBookmarks = m.top.findNode("collapsedBookmarks")
     m.collapsedAccount = m.top.findNode("collapsedAccount")
     m.exitDialog = m.top.findNode("exitDialog")
     m.exitYesFocusBg = m.top.findNode("exitYesFocusBg")
@@ -150,6 +169,32 @@ sub init()
     m.recentSearchNodes = []
     m.recentSearchBgNodes = []
     m.selectedRecentSearchIndex = 0
+    m.bookmarksLoaded = false
+    m.isLoadingBookmarks = false
+    m.isLoadingBookmarkItems = false
+    m.isLoadingBookmarkNextPage = false
+    m.bookmarkReachedEnd = false
+    m.bookmarkFailedNextPage = false
+    m.bookmarkFolders = []
+    m.bookmarkItems = []
+    m.bookmarkFolderNodes = []
+    m.bookmarkFolderBgNodes = []
+    m.bookmarkFolderIndexes = []
+    m.bookmarkItemNodes = []
+    m.bookmarkItemBgNodes = []
+    m.bookmarkItemIndexes = []
+    m.selectedBookmarkFolderIndex = 0
+    m.selectedBookmarkItemIndex = 0
+    m.bookmarkCurrentFolderId = 0
+    m.bookmarkCurrentPage = 0
+    m.bookmarkTotalPages = 0
+    m.bookmarkTotalItems = 0
+    m.bookmarkPerPage = 20
+    m.bookmarkColumns = 4
+    m.bookmarkVisiblePagePair = 0
+    m.bookmarkFolderVisibleStart = 0
+    m.bookmarkMaxVisibleFolders = 8
+    m.bookmarksFocusArea = "folders"
     m.accountLoaded = false
     m.isLoadingAccount = false
     m.accountInfo = invalid
@@ -426,6 +471,443 @@ function listCountText(totalItems as Integer, loadedItems as Integer, hasMore as
     if count = 1 then label = " video"
     return StrI(count).Trim() + suffix + label
 end function
+
+sub showBookmarksState(state as String)
+    m.bookmarksLoadingGroup.visible = state = "loading"
+    m.bookmarksEmptyGroup.visible = state = "empty"
+    m.bookmarksErrorGroup.visible = state = "error"
+    m.bookmarksBodyGroup.visible = state = "body"
+    updateBookmarksFocusVisuals()
+end sub
+
+sub loadBookmarkFoldersIfNeeded(force as Boolean)
+    if m.isLoadingBookmarks then return
+    if force <> true and m.bookmarksLoaded then return
+
+    m.isLoadingBookmarks = true
+    m.bookmarksFocusArea = "folders"
+    showBookmarksState("loading")
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadBookmarkFolders"
+    task.request = {}
+    task.observeField("response", "onBookmarkFoldersResponse")
+    task.control = "RUN"
+    m.bookmarkFoldersTask = task
+end sub
+
+sub onBookmarkFoldersResponse(event as Object)
+    response = event.getData()
+    m.isLoadingBookmarks = false
+
+    if response = invalid or response.ok <> true
+        message = "Unable to load bookmarks"
+        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+        m.bookmarksErrorLabel.text = message
+        showBookmarksState("error")
+        return
+    end if
+
+    m.bookmarkFolders = []
+    if response.folders <> invalid then m.bookmarkFolders = response.folders
+    m.bookmarksLoaded = true
+    m.selectedBookmarkFolderIndex = 0
+    m.selectedBookmarkItemIndex = 0
+    m.bookmarkFolderVisibleStart = 0
+    m.bookmarksFocusArea = "folders"
+    renderBookmarkFolders()
+
+    if m.bookmarkFolders.Count() = 0
+        m.bookmarkItems = []
+        clearBookmarkItemsGrid()
+        showBookmarksState("empty")
+    else
+        showBookmarksState("body")
+        loadSelectedBookmarkFolderItems()
+    end if
+end sub
+
+sub renderBookmarkFolders()
+    childCount = m.bookmarkFoldersHost.getChildCount()
+    if childCount > 0 then m.bookmarkFoldersHost.removeChildrenIndex(childCount, 0)
+    m.bookmarkFolderNodes = []
+    m.bookmarkFolderBgNodes = []
+    m.bookmarkFolderIndexes = []
+
+    normalizeBookmarkFolderWindow()
+    lastIndex = m.bookmarkFolderVisibleStart + m.bookmarkMaxVisibleFolders - 1
+    if lastIndex >= m.bookmarkFolders.Count() then lastIndex = m.bookmarkFolders.Count() - 1
+
+    for index = m.bookmarkFolderVisibleStart to lastIndex
+        folder = m.bookmarkFolders[index]
+        row = CreateObject("roSGNode", "Group")
+        row.translation = [0, (index - m.bookmarkFolderVisibleStart) * 52]
+
+        bg = CreateObject("roSGNode", "Rectangle")
+        bg.width = 260
+        bg.height = 48
+        bg.color = "#2A2A2A"
+        row.appendChild(bg)
+
+        title = CreateObject("roSGNode", "Label")
+        title.text = folder.title
+        title.translation = [16, 8]
+        title.width = 228
+        title.color = "#F5F5F5"
+        row.appendChild(title)
+
+        count = CreateObject("roSGNode", "Label")
+        count.text = bookmarkFolderCountText(folder)
+        count.translation = [16, 30]
+        count.width = 228
+        count.color = "#9CA3AF"
+        row.appendChild(count)
+
+        m.bookmarkFoldersHost.appendChild(row)
+        m.bookmarkFolderNodes.Push(row)
+        m.bookmarkFolderBgNodes.Push(bg)
+        m.bookmarkFolderIndexes.Push(index)
+    end for
+
+    updateBookmarkFolderStatus()
+    updateBookmarksFocusVisuals()
+end sub
+
+sub normalizeBookmarkFolderWindow()
+    if m.selectedBookmarkFolderIndex < m.bookmarkFolderVisibleStart
+        m.bookmarkFolderVisibleStart = m.selectedBookmarkFolderIndex
+    else if m.selectedBookmarkFolderIndex >= m.bookmarkFolderVisibleStart + m.bookmarkMaxVisibleFolders
+        m.bookmarkFolderVisibleStart = m.selectedBookmarkFolderIndex - m.bookmarkMaxVisibleFolders + 1
+    end if
+    maxStart = m.bookmarkFolders.Count() - m.bookmarkMaxVisibleFolders
+    if maxStart < 0 then maxStart = 0
+    if m.bookmarkFolderVisibleStart > maxStart then m.bookmarkFolderVisibleStart = maxStart
+    if m.bookmarkFolderVisibleStart < 0 then m.bookmarkFolderVisibleStart = 0
+end sub
+
+function bookmarkFolderCountText(folder as Dynamic) as String
+    if folder = invalid or folder.count = invalid then return ""
+    count = folder.count
+    label = " items"
+    if count = 1 then label = " item"
+    return StrI(count).Trim() + label
+end function
+
+sub updateBookmarkFolderStatus()
+    if m.bookmarkFolderStatusLabel = invalid then return
+    if m.bookmarkFolders.Count() = 0
+        m.bookmarkFolderStatusLabel.text = ""
+    else
+        m.bookmarkFolderStatusLabel.text = StrI(m.selectedBookmarkFolderIndex + 1).Trim() + " / " + StrI(m.bookmarkFolders.Count()).Trim()
+    end if
+end sub
+
+sub loadSelectedBookmarkFolderItems()
+    if m.bookmarkFolders.Count() = 0 then return
+    if m.isLoadingBookmarkItems or m.isLoadingBookmarkNextPage then return
+
+    folder = m.bookmarkFolders[m.selectedBookmarkFolderIndex]
+    m.bookmarkCurrentFolderId = folder.folderId
+    m.bookmarkItemsTitleLabel.text = folder.title
+    requestBookmarkFolderItems(folder.folderId, 1, false)
+end sub
+
+sub requestBookmarkFolderItems(folderId as Integer, page as Integer, append as Boolean)
+    if m.isLoadingBookmarkItems or m.isLoadingBookmarkNextPage then return
+
+    if append
+        m.isLoadingBookmarkNextPage = true
+        m.bookmarkFailedNextPage = false
+        m.bookmarksNextPageStatus.text = "Loading more..."
+    else
+        m.isLoadingBookmarkItems = true
+        m.bookmarkItems = []
+        m.selectedBookmarkItemIndex = 0
+        m.bookmarkVisiblePagePair = 0
+        m.bookmarkCurrentPage = 0
+        m.bookmarkTotalPages = 0
+        m.bookmarkTotalItems = 0
+        m.bookmarkReachedEnd = false
+        m.bookmarkFailedNextPage = false
+        m.bookmarksNextPageStatus.text = "Loading..."
+    end if
+    if append <> true then clearBookmarkItemsGrid()
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadBookmarkFolderItems"
+    task.request = { folderId: folderId, page: page, perpage: m.bookmarkPerPage }
+    task.observeField("response", "onBookmarkFolderItemsResponse")
+    task.control = "RUN"
+    m.bookmarkItemsTask = task
+end sub
+
+sub onBookmarkFolderItemsResponse(event as Object)
+    response = event.getData()
+    wasNextPage = m.isLoadingBookmarkNextPage
+    m.isLoadingBookmarkItems = false
+    m.isLoadingBookmarkNextPage = false
+    m.bookmarksNextPageStatus.text = ""
+
+    if response <> invalid and response.folderId <> invalid and response.folderId <> m.bookmarkCurrentFolderId
+        return
+    end if
+
+    if response = invalid or response.ok <> true
+        message = "Unable to load bookmark folder."
+        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+        if wasNextPage
+            m.bookmarkFailedNextPage = true
+            m.bookmarksNextPageStatus.text = "Unable to load more. Press OK to retry."
+        else
+            m.bookmarksNextPageStatus.text = message
+        end if
+        updateBookmarksFocusVisuals()
+        return
+    end if
+
+    appendBookmarkItems(response.items)
+    updateBookmarkPagination(response)
+    renderBookmarkItems()
+    showBookmarksState("body")
+end sub
+
+sub appendBookmarkItems(items as Dynamic)
+    if items = invalid then return
+    for each item in items
+        m.bookmarkItems.Push(item)
+    end for
+    if items.Count() = 0 then m.bookmarkReachedEnd = true
+end sub
+
+sub updateBookmarkPagination(response as Object)
+    if response.pagination <> invalid
+        pagination = response.pagination
+        if pagination.current <> invalid then m.bookmarkCurrentPage = pagination.current
+        if pagination.total <> invalid then m.bookmarkTotalPages = pagination.total
+        if pagination.total_items <> invalid then m.bookmarkTotalItems = pagination.total_items
+        if pagination.perpage <> invalid then m.bookmarkPerPage = pagination.perpage
+    end if
+    if m.bookmarkTotalItems <= 0 then m.bookmarkTotalItems = m.bookmarkItems.Count()
+    if m.bookmarkTotalPages > 0 and m.bookmarkCurrentPage >= m.bookmarkTotalPages then m.bookmarkReachedEnd = true
+
+    countText = listCountText(m.bookmarkTotalItems, m.bookmarkItems.Count(), hasMoreBookmarkPages())
+    if countText <> "" then m.bookmarksNextPageStatus.text = countText
+    m.bookmarkFailedNextPage = false
+end sub
+
+sub clearBookmarkItemsGrid()
+    childCount = m.bookmarkItemsHost.getChildCount()
+    if childCount > 0 then m.bookmarkItemsHost.removeChildrenIndex(childCount, 0)
+    m.bookmarkItemNodes = []
+    m.bookmarkItemBgNodes = []
+    m.bookmarkItemIndexes = []
+    m.bookmarksCursor.visible = false
+end sub
+
+sub renderBookmarkItems()
+    clearBookmarkItemsGrid()
+    if m.bookmarkItems.Count() = 0
+        m.bookmarksNextPageStatus.text = "This folder is empty."
+        updateBookmarkScrollChevrons()
+        return
+    end if
+
+    m.bookmarkVisiblePagePair = Int(m.selectedBookmarkItemIndex / (m.bookmarkColumns * 2))
+    startIndex = m.bookmarkVisiblePagePair * m.bookmarkColumns * 2
+    lastIndex = startIndex + (m.bookmarkColumns * 2) - 1
+    if lastIndex >= m.bookmarkItems.Count() then lastIndex = m.bookmarkItems.Count() - 1
+
+    for index = startIndex to lastIndex
+        cardInfo = createBookmarkCard(m.bookmarkItems[index], index)
+        m.bookmarkItemsHost.appendChild(cardInfo.node)
+        m.bookmarkItemNodes.Push(cardInfo.node)
+        m.bookmarkItemBgNodes.Push(cardInfo.focusBg)
+        m.bookmarkItemIndexes.Push(index)
+    end for
+
+    updateBookmarksFocusVisuals()
+    updateBookmarkScrollChevrons()
+end sub
+
+function bookmarkVisibleWindowLastIndex() as Integer
+    return ((m.bookmarkVisiblePagePair + 1) * m.bookmarkColumns * 2) - 1
+end function
+
+function hasMoreBookmarkPages() as Boolean
+    if m.bookmarkReachedEnd then return false
+    if m.bookmarkTotalPages > 0 and m.bookmarkCurrentPage >= m.bookmarkTotalPages then return false
+    return m.bookmarkItems.Count() > 0
+end function
+
+sub updateBookmarkScrollChevrons()
+    if m.bookmarkFolderScrollUpChevron <> invalid
+        showFolderHints = m.bookmarksBodyGroup.visible and m.bookmarkFolders.Count() > 0
+        m.bookmarkFolderScrollUpChevron.visible = showFolderHints and m.bookmarkFolderVisibleStart > 0
+        m.bookmarkFolderScrollDownChevron.visible = showFolderHints and (m.bookmarkFolderVisibleStart + m.bookmarkMaxVisibleFolders) < m.bookmarkFolders.Count()
+    end if
+
+    if m.bookmarkItemsScrollUpChevron = invalid or m.bookmarkItemsScrollDownChevron = invalid then return
+    showItemHints = m.bookmarksBodyGroup.visible and m.bookmarkItems.Count() > 0
+    if showItemHints <> true
+        m.bookmarkItemsScrollUpChevron.visible = false
+        m.bookmarkItemsScrollDownChevron.visible = false
+        return
+    end if
+
+    m.bookmarkItemsScrollUpChevron.visible = m.bookmarkVisiblePagePair > 0
+    hasLoadedItemsBelow = bookmarkVisibleWindowLastIndex() < (m.bookmarkItems.Count() - 1)
+    m.bookmarkItemsScrollDownChevron.visible = hasLoadedItemsBelow or hasMoreBookmarkPages()
+end sub
+
+function createBookmarkCard(item as Object, index as Integer) as Object
+    visibleSlot = index MOD (m.bookmarkColumns * 2)
+    column = visibleSlot MOD m.bookmarkColumns
+    row = Int(visibleSlot / m.bookmarkColumns)
+    x = column * 190
+    y = row * 210
+
+    card = CreateObject("roSGNode", "Group")
+    card.translation = [x, y]
+
+    focusBg = CreateObject("roSGNode", "Rectangle")
+    focusBg.width = 180
+    focusBg.height = 168
+    focusBg.color = "#2A2A2A"
+    card.appendChild(focusBg)
+
+    fallback = CreateObject("roSGNode", "Rectangle")
+    fallback.translation = [8, 8]
+    fallback.width = 82
+    fallback.height = 124
+    fallback.color = "#1F2937"
+    card.appendChild(fallback)
+
+    poster = CreateObject("roSGNode", "Poster")
+    poster.translation = [8, 8]
+    poster.width = 82
+    poster.height = 124
+    poster.uri = item.posterUrl
+    poster.loadDisplayMode = "scaleToFit"
+    card.appendChild(poster)
+    appendTypeBadge(card, item)
+
+    title = CreateObject("roSGNode", "Label")
+    title.text = item.title
+    title.translation = [102, 16]
+    title.width = 70
+    title.color = "#F5F5F5"
+    card.appendChild(title)
+
+    subtitle = CreateObject("roSGNode", "Label")
+    subtitle.text = item.subtitle
+    subtitle.translation = [102, 58]
+    subtitle.width = 70
+    subtitle.color = "#9CA3AF"
+    card.appendChild(subtitle)
+
+    return { node: card, focusBg: focusBg }
+end function
+
+sub moveBookmarkFolderFocus(delta as Integer)
+    if m.bookmarkFolders.Count() = 0 then return
+    nextIndex = m.selectedBookmarkFolderIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex >= m.bookmarkFolders.Count() then nextIndex = m.bookmarkFolders.Count() - 1
+    if nextIndex = m.selectedBookmarkFolderIndex then return
+    m.selectedBookmarkFolderIndex = nextIndex
+    m.bookmarksFocusArea = "folders"
+    renderBookmarkFolders()
+    updateBookmarkFolderStatus()
+    updateBookmarksFocusVisuals()
+    loadSelectedBookmarkFolderItems()
+end sub
+
+sub moveBookmarkItemFocus(delta as Integer)
+    if m.bookmarkItems.Count() = 0 then return
+    oldPagePair = Int(m.selectedBookmarkItemIndex / (m.bookmarkColumns * 2))
+    nextIndex = m.selectedBookmarkItemIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex >= m.bookmarkItems.Count() then nextIndex = m.bookmarkItems.Count() - 1
+    if nextIndex = m.selectedBookmarkItemIndex then return
+    m.selectedBookmarkItemIndex = nextIndex
+    newPagePair = Int(m.selectedBookmarkItemIndex / (m.bookmarkColumns * 2))
+    if newPagePair <> oldPagePair
+        renderBookmarkItems()
+    else
+        updateBookmarksFocusVisuals()
+    end if
+    loadNextBookmarkPageIfNeeded()
+end sub
+
+sub updateBookmarksFocusVisuals()
+    for index = 0 to m.bookmarkFolderBgNodes.Count() - 1
+        bg = m.bookmarkFolderBgNodes[index]
+        folderIndex = m.bookmarkFolderIndexes[index]
+        if folderIndex = m.selectedBookmarkFolderIndex and m.selectedSection = "bookmarks" and m.focusArea = "content" and m.bookmarksFocusArea = "folders"
+            bg.color = "#3B82F6"
+        else if folderIndex = m.selectedBookmarkFolderIndex
+            bg.color = "#4B5563"
+        else
+            bg.color = "#2A2A2A"
+        end if
+    end for
+
+    for nodeIndex = 0 to m.bookmarkItemBgNodes.Count() - 1
+        bg = m.bookmarkItemBgNodes[nodeIndex]
+        index = m.bookmarkItemIndexes[nodeIndex]
+        if index = m.selectedBookmarkItemIndex and m.selectedSection = "bookmarks" and m.focusArea = "content" and m.bookmarksFocusArea = "items"
+            bg.color = "#3B82F6"
+        else
+            bg.color = "#2A2A2A"
+        end if
+    end for
+
+    updateBookmarksCursor()
+    updateBookmarkScrollChevrons()
+end sub
+
+sub updateBookmarksCursor()
+    if m.bookmarksCursor = invalid then return
+    showCursor = m.bookmarksBodyGroup.visible and m.focusArea = "content" and m.selectedSection = "bookmarks" and m.bookmarksFocusArea = "items" and m.bookmarkItems.Count() > 0
+    if showCursor <> true
+        m.bookmarksCursor.visible = false
+        return
+    end if
+
+    visibleSlot = m.selectedBookmarkItemIndex MOD (m.bookmarkColumns * 2)
+    column = visibleSlot MOD m.bookmarkColumns
+    row = Int(visibleSlot / m.bookmarkColumns)
+    m.bookmarksCursor.translation = [300 + (column * 190), 96 + (row * 210)]
+    m.bookmarksCursor.visible = true
+end sub
+
+sub retryBookmarks()
+    loadBookmarkFoldersIfNeeded(true)
+end sub
+
+sub selectBookmarkItem()
+    if m.bookmarkFailedNextPage
+        requestBookmarkFolderItems(m.bookmarkCurrentFolderId, m.bookmarkCurrentPage + 1, true)
+        return
+    end if
+
+    if m.bookmarkItems.Count() = 0 then return
+    item = m.bookmarkItems[m.selectedBookmarkItemIndex]
+    if item = invalid or item.itemId <= 0 then return
+    m.top.videoSelected = item
+end sub
+
+sub loadNextBookmarkPageIfNeeded()
+    if m.bookmarkReachedEnd then return
+    if m.bookmarkFailedNextPage then return
+    if m.isLoadingBookmarkItems or m.isLoadingBookmarkNextPage then return
+    if m.bookmarkItems.Count() = 0 then return
+    thresholdIndex = m.bookmarkItems.Count() - 4
+    if thresholdIndex < 0 then thresholdIndex = 0
+    if m.selectedBookmarkItemIndex >= thresholdIndex
+        requestBookmarkFolderItems(m.bookmarkCurrentFolderId, m.bookmarkCurrentPage + 1, true)
+    end if
+end sub
 
 sub updateSearchFocusVisuals()
     if m.searchBoxFocusBg <> invalid
@@ -1676,6 +2158,7 @@ sub showSection(section as String)
     m.watchAgainContent.visible = section = "watchAgain"
     m.homeContent.visible = section = "home"
     m.searchContent.visible = section = "search"
+    m.bookmarksContent.visible = section = "bookmarks"
     m.accountContent.visible = section = "account"
 
     if section = "watchAgain"
@@ -1685,13 +2168,17 @@ sub showSection(section as String)
         loadHomeIfNeeded(false)
     else if section = "search"
         m.menuIndex = 2
-    else if section = "account"
+    else if section = "bookmarks"
         m.menuIndex = 3
+        loadBookmarkFoldersIfNeeded(false)
+    else if section = "account"
+        m.menuIndex = 4
         loadAccountInfo(false)
     end if
 
     updateMenuVisuals()
     updateSearchFocusVisuals()
+    updateBookmarksFocusVisuals()
 end sub
 
 sub setMenuExpanded(expanded as Boolean)
@@ -1714,12 +2201,14 @@ sub setMenuExpanded(expanded as Boolean)
     updateSearchScrollChevrons()
     updateHomeCursor()
     updateHomeChevrons()
+    updateBookmarksFocusVisuals()
 end sub
 
 sub updateMenuVisuals()
     m.watchAgainNav.color = "#D1D5DB"
     m.homeNav.color = "#D1D5DB"
     m.searchNav.color = "#D1D5DB"
+    m.bookmarksNav.color = "#D1D5DB"
     m.accountNav.color = "#D1D5DB"
     m.signOutNav.color = "#9CA3AF"
     m.signOutFocusBg.color = "#181818"
@@ -1727,6 +2216,7 @@ sub updateMenuVisuals()
     m.collapsedWatchAgain.color = "#9CA3AF"
     m.collapsedHome.color = "#9CA3AF"
     m.collapsedSearch.color = "#9CA3AF"
+    m.collapsedBookmarks.color = "#9CA3AF"
     m.collapsedAccount.color = "#9CA3AF"
 
     if m.menuIndex = 0
@@ -1743,6 +2233,10 @@ sub updateMenuVisuals()
         m.collapsedSearch.color = "#F5F5F5"
     else if m.menuIndex = 3
         m.navFocusBg.translation = [12, 292]
+        m.bookmarksNav.color = "#111827"
+        m.collapsedBookmarks.color = "#F5F5F5"
+    else if m.menuIndex = 4
+        m.navFocusBg.translation = [12, 352]
         m.accountNav.color = "#111827"
         m.collapsedAccount.color = "#F5F5F5"
     else
@@ -1755,7 +2249,7 @@ end sub
 sub moveMenu(delta as Integer)
     m.menuIndex = m.menuIndex + delta
     if m.menuIndex < 0 then m.menuIndex = 0
-    if m.menuIndex > 4 then m.menuIndex = 4
+    if m.menuIndex > 5 then m.menuIndex = 5
     updateMenuVisuals()
 end sub
 
@@ -1768,6 +2262,8 @@ sub activateMenuItem()
         showSection("search")
         resetSearchState()
     else if m.menuIndex = 3
+        showSection("bookmarks")
+    else if m.menuIndex = 4
         showSection("account")
     else
         m.top.signOutRequested = true
@@ -2004,6 +2500,60 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                     return true
                 else if key = "back"
                     setMenuExpanded(true)
+                    return true
+                end if
+            end if
+        else if m.selectedSection = "bookmarks"
+            if m.bookmarksErrorGroup.visible
+                if key = "OK"
+                    retryBookmarks()
+                    return true
+                else if key = "left" or key = "back"
+                    setMenuExpanded(true)
+                    return true
+                end if
+            else if m.bookmarksFocusArea = "folders"
+                if key = "left" or key = "back"
+                    setMenuExpanded(true)
+                    return true
+                else if key = "up"
+                    moveBookmarkFolderFocus(-1)
+                    return true
+                else if key = "down"
+                    moveBookmarkFolderFocus(1)
+                    return true
+                else if key = "right"
+                    if m.bookmarkItems.Count() > 0 then m.bookmarksFocusArea = "items"
+                    updateBookmarksFocusVisuals()
+                    return true
+                else if key = "OK"
+                    loadSelectedBookmarkFolderItems()
+                    return true
+                end if
+            else if m.bookmarksFocusArea = "items"
+                if key = "left"
+                    if m.selectedBookmarkItemIndex MOD m.bookmarkColumns = 0
+                        m.bookmarksFocusArea = "folders"
+                        updateBookmarksFocusVisuals()
+                    else
+                        moveBookmarkItemFocus(-1)
+                    end if
+                    return true
+                else if key = "right"
+                    moveBookmarkItemFocus(1)
+                    return true
+                else if key = "up"
+                    moveBookmarkItemFocus(-m.bookmarkColumns)
+                    return true
+                else if key = "down"
+                    moveBookmarkItemFocus(m.bookmarkColumns)
+                    return true
+                else if key = "OK"
+                    selectBookmarkItem()
+                    return true
+                else if key = "back"
+                    m.bookmarksFocusArea = "folders"
+                    updateBookmarksFocusVisuals()
                     return true
                 end if
             end if

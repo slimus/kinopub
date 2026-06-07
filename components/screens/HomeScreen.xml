@@ -13,7 +13,8 @@
       <Label id="collapsedWatchAgain" text="W" translation="[0,118]" width="84" horizAlign="center" color="#F5F5F5" />
       <Label id="collapsedHome" text="H" translation="[0,178]" width="84" horizAlign="center" color="#9CA3AF" />
       <Label id="collapsedSearch" text="S" translation="[0,238]" width="84" horizAlign="center" color="#9CA3AF" />
-      <Label id="collapsedAccount" text="A" translation="[0,298]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedBookmarks" text="B" translation="[0,298]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedAccount" text="A" translation="[0,358]" width="84" horizAlign="center" color="#9CA3AF" />
     </Group>
 
     <Group id="expandedMenu" translation="[0,0]" visible="false">
@@ -23,7 +24,8 @@
       <Label id="watchAgainNav" text="W  Watch Again" translation="[32,124]" color="#111827" />
       <Label id="homeNav" text="H  Home" translation="[32,184]" color="#D1D5DB" />
       <Label id="searchNav" text="S  Search" translation="[32,244]" color="#D1D5DB" />
-      <Label id="accountNav" text="A  Account" translation="[32,304]" color="#D1D5DB" />
+      <Label id="bookmarksNav" text="B  Bookmarks" translation="[32,304]" color="#D1D5DB" />
+      <Label id="accountNav" text="A  Account" translation="[32,364]" color="#D1D5DB" />
       <Rectangle id="signOutFocusBg" translation="[12,616]" width="260" height="44" color="#181818" />
       <Label id="signOutNav" text="Sign out" translation="[32,628]" color="#9CA3AF" />
     </Group>
@@ -157,6 +159,46 @@
           <Label id="searchScrollUpChevron" text="^" translation="[938,236]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="searchScrollDownChevron" text="v" translation="[938,614]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="searchNextPageStatus" text="" translation="[0,640]" color="#9CA3AF" />
+        </Group>
+      </Group>
+
+      <Group id="bookmarksContent" visible="false">
+        <Label text="Bookmarks" translation="[0,0]" color="#F5F5F5" />
+
+        <Group id="bookmarksLoadingGroup" translation="[0,96]" visible="false">
+          <Label text="Loading bookmarks..." translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="bookmarksEmptyGroup" translation="[0,96]" visible="false">
+          <Label text="No bookmark folders yet" translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="bookmarksErrorGroup" translation="[0,96]" visible="false">
+          <Label id="bookmarksErrorLabel" text="Unable to load bookmarks" translation="[0,0]" width="900" color="#FCA5A5" />
+          <Group id="bookmarksRetryGroup" translation="[0,54]">
+            <Rectangle id="bookmarksRetryFocus" width="196" height="44" color="#374151" />
+            <Label text="Retry" translation="[52,12]" color="#F5F5F5" />
+          </Group>
+        </Group>
+
+        <Group id="bookmarksBodyGroup" visible="false">
+          <Label text="Folders" translation="[0,58]" color="#D1D5DB" />
+          <Group id="bookmarkFoldersHost" translation="[0,96]" />
+          <Label id="bookmarkFolderScrollUpChevron" text="^" translation="[264,96]" width="28" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="bookmarkFolderScrollDownChevron" text="v" translation="[264,506]" width="28" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="bookmarkFolderStatusLabel" text="" translation="[0,560]" width="260" color="#9CA3AF" />
+
+          <Label id="bookmarkItemsTitleLabel" text="Items" translation="[300,58]" width="620" color="#D1D5DB" />
+          <Group id="bookmarkItemsHost" translation="[300,96]" />
+          <Group id="bookmarksCursor" translation="[300,96]" visible="false">
+            <Rectangle width="180" height="6" color="#F5F5F5" />
+            <Rectangle translation="[0,162]" width="180" height="6" color="#F5F5F5" />
+            <Rectangle width="6" height="168" color="#F5F5F5" />
+            <Rectangle translation="[174,0]" width="6" height="168" color="#F5F5F5" />
+          </Group>
+          <Label id="bookmarkItemsScrollUpChevron" text="^" translation="[1066,96]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="bookmarkItemsScrollDownChevron" text="v" translation="[1066,474]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="bookmarksNextPageStatus" text="" translation="[300,620]" width="680" color="#9CA3AF" />
         </Group>
       </Group>
 
