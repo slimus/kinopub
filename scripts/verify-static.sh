@@ -158,7 +158,27 @@ grep -q "typeTitle" source/services/KinoSearchService.brs
 grep -q "typeBadge" source/services/KinoSearchService.brs
 grep -q "appendTypeBadge" components/screens/HomeScreen.brs
 grep -q "appendTypeBadge(card, item)" components/screens/HomeScreen.brs
-grep -q "badgeWidth = 82" components/screens/HomeScreen.brs
+grep -q "function homeUiPalette" components/screens/HomeScreen.brs
+grep -q "function createMediaCard" components/screens/HomeScreen.brs
+grep -q "function posterBrowseCardLayout" components/screens/HomeScreen.brs
+grep -q "chipWidth = 64" components/screens/HomeScreen.brs
+grep -q "subtitle.visible = false" components/screens/HomeScreen.brs
+grep -q "function cardYearText" components/screens/HomeScreen.brs
+grep -q "layout.showYear" components/screens/HomeScreen.brs
+grep -q "layout.showYear = true" components/screens/HomeScreen.brs
+grep -q "year.translation = \\[layout.textX, 190\\]" components/screens/HomeScreen.brs
+grep -q "year.width = layout.textWidth" components/screens/HomeScreen.brs
+grep -q "year.font.size = 24" components/screens/HomeScreen.brs
+grep -q "cardVisualStateColor" components/screens/HomeScreen.brs
+grep -q "m.searchYearSortCheckLabel.text = \"On\"" components/screens/HomeScreen.brs
+grep -q "m.homeMaxVisibleRails = 2" components/screens/HomeScreen.brs
+grep -q "m.homeVisibleCards = 5" components/screens/HomeScreen.brs
+grep -q "m.historyColumns = 5" components/screens/HomeScreen.brs
+grep -q "m.searchColumns = 5" components/screens/HomeScreen.brs
+grep -q "cardHeight: 220" components/screens/HomeScreen.brs
+grep -q "posterHeight: 150" components/screens/HomeScreen.brs
+grep -q "collapsedActiveIndicator" components/screens/HomeScreen.xml
+grep -q "m.collapsedActiveIndicator.translation" components/screens/HomeScreen.brs
 grep -q "function SearchHistoryStore" source/services/SearchHistoryStore.brs
 grep -q 'sectionName: "searchhistory"' source/services/SearchHistoryStore.brs
 grep -q 'historyKey: "queriesJson"' source/services/SearchHistoryStore.brs
@@ -194,6 +214,13 @@ grep -q 'bookmarkFolderScrollUpChevron' components/screens/HomeScreen.xml
 grep -q 'bookmarkFolderScrollDownChevron' components/screens/HomeScreen.xml
 grep -q 'bookmarkItemsScrollUpChevron' components/screens/HomeScreen.xml
 grep -q 'bookmarkItemsScrollDownChevron' components/screens/HomeScreen.xml
+grep -q "function detailUiPalette" components/screens/VideoDetailScreen.brs
+grep -q "function detailButtonColor" components/screens/VideoDetailScreen.brs
+grep -q "createEpisodeRow" components/screens/VideoDetailScreen.brs
+grep -q "m.playButtonLabel.color = palette.primaryText" components/screens/VideoDetailScreen.brs
+grep -q "m.descriptionFocusBg.color = palette.surfaceFocus" components/screens/VideoDetailScreen.brs
+grep -q 'id="heroGradientOverlay"' components/screens/VideoDetailScreen.xml
+grep -q 'id="detailAccentBar"' components/screens/VideoDetailScreen.xml
 grep -q 'accountContent' components/screens/HomeScreen.xml
 grep -q 'accountLoadingGroup' components/screens/HomeScreen.xml
 grep -q 'accountErrorGroup' components/screens/HomeScreen.xml

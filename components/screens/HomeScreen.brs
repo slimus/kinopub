@@ -90,6 +90,7 @@ sub init()
     m.historyScrollUpChevron = m.top.findNode("historyScrollUpChevron")
     m.historyScrollDownChevron = m.top.findNode("historyScrollDownChevron")
     m.historyNextPageStatus = m.top.findNode("historyNextPageStatus")
+    m.collapsedActiveIndicator = m.top.findNode("collapsedActiveIndicator")
     m.collapsedWatchAgain = m.top.findNode("collapsedWatchAgain")
     m.collapsedHome = m.top.findNode("collapsedHome")
     m.collapsedSearch = m.top.findNode("collapsedSearch")
@@ -120,7 +121,7 @@ sub init()
     m.historyFailedNextPage = false
     m.selectedHistoryIndex = 0
     m.visualSelectedHistoryIndex = -1
-    m.historyColumns = 4
+    m.historyColumns = 5
     m.historyVisiblePagePair = 0
     m.homeLoaded = false
     m.isLoadingHome = false
@@ -134,11 +135,11 @@ sub init()
     m.visualSelectedHomeRailIndex = -1
     m.visualSelectedHomeCardIndex = -1
     m.homeVisibleRailStart = 0
-    m.homeMaxVisibleRails = 3
-    m.homeCardWidth = 220
-    m.homeCardSpacing = 244
-    m.homeRailHeight = 206
-    m.homeVisibleCards = 4
+    m.homeMaxVisibleRails = 2
+    m.homeCardWidth = 160
+    m.homeCardSpacing = 180
+    m.homeRailHeight = 266
+    m.homeVisibleCards = 5
     m.homePerPage = 12
     m.searchQuery = ""
     m.searchSubmittedQuery = ""
@@ -158,7 +159,7 @@ sub init()
     m.searchFailedNextPage = false
     m.selectedSearchIndex = 0
     m.visualSelectedSearchIndex = -1
-    m.searchColumns = 4
+    m.searchColumns = 5
     m.searchVisiblePagePair = 0
     m.searchFocusArea = "box"
     m.searchKeyboardLayout = "ru"
@@ -255,9 +256,9 @@ end sub
 sub renderSearchYearSort()
     if m.searchYearSortCheckLabel = invalid then return
     if m.searchSortByYear
-        m.searchYearSortCheckLabel.text = "[x]"
+        m.searchYearSortCheckLabel.text = "On"
     else
-        m.searchYearSortCheckLabel.text = "[ ]"
+        m.searchYearSortCheckLabel.text = "Off"
     end if
 end sub
 
@@ -537,6 +538,7 @@ sub renderBookmarkFolders()
     normalizeBookmarkFolderWindow()
     lastIndex = m.bookmarkFolderVisibleStart + m.bookmarkMaxVisibleFolders - 1
     if lastIndex >= m.bookmarkFolders.Count() then lastIndex = m.bookmarkFolders.Count() - 1
+    palette = homeUiPalette()
 
     for index = m.bookmarkFolderVisibleStart to lastIndex
         folder = m.bookmarkFolders[index]
@@ -546,21 +548,21 @@ sub renderBookmarkFolders()
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = 260
         bg.height = 48
-        bg.color = "#2A2A2A"
+        bg.color = palette.surface
         row.appendChild(bg)
 
         title = CreateObject("roSGNode", "Label")
         title.text = folder.title
         title.translation = [16, 8]
         title.width = 228
-        title.color = "#F5F5F5"
+        title.color = palette.text
         row.appendChild(title)
 
         count = CreateObject("roSGNode", "Label")
         count.text = bookmarkFolderCountText(folder)
         count.translation = [16, 30]
         count.width = 228
-        count.color = "#9CA3AF"
+        count.color = palette.muted
         row.appendChild(count)
 
         m.bookmarkFoldersHost.appendChild(row)
@@ -759,33 +761,52 @@ sub updateBookmarkScrollChevrons()
     m.bookmarkItemsScrollDownChevron.visible = hasLoadedItemsBelow or hasMoreBookmarkPages()
 end sub
 
-function createBookmarkCard(item as Object, index as Integer) as Object
-    visibleSlot = index MOD (m.bookmarkColumns * 2)
-    column = visibleSlot MOD m.bookmarkColumns
-    row = Int(visibleSlot / m.bookmarkColumns)
-    x = column * 190
-    y = row * 210
+function homeUiPalette() as Object
+    return {
+        surface: "#171D26"
+        surfaceFocus: "#1D4ED8"
+        surfaceSelected: "#273142"
+        posterFallback: "#253142"
+        text: "#F8FAFC"
+        muted: "#9BA7BA"
+        chipBg: "#111827"
+        chipBorder: "#526172"
+        progressTrack: "#2D3748"
+        progressFill: "#F43F5E"
+    }
+end function
+
+function cardVisualStateColor(isFocused as Boolean, isSelected as Boolean) as String
+    palette = homeUiPalette()
+    if isFocused then return palette.surfaceFocus
+    if isSelected then return palette.surfaceSelected
+    return palette.surface
+end function
+
+function createMediaCard(item as Object, layout as Object) as Object
+    palette = homeUiPalette()
 
     card = CreateObject("roSGNode", "Group")
-    card.translation = [x, y]
+    card.translation = [layout.x, layout.y]
 
     focusBg = CreateObject("roSGNode", "Rectangle")
-    focusBg.width = 180
-    focusBg.height = 168
-    focusBg.color = "#2A2A2A"
+    focusBg.width = layout.cardWidth
+    focusBg.height = layout.cardHeight
+    focusBg.color = palette.surface
     card.appendChild(focusBg)
 
     fallback = CreateObject("roSGNode", "Rectangle")
-    fallback.translation = [8, 8]
-    fallback.width = 82
-    fallback.height = 124
-    fallback.color = "#1F2937"
+    fallback.translation = [layout.posterX, 8]
+    fallback.width = layout.posterWidth
+    fallback.height = layout.posterHeight
+    fallback.color = palette.posterFallback
+    fallback.visible = true
     card.appendChild(fallback)
 
     poster = CreateObject("roSGNode", "Poster")
-    poster.translation = [8, 8]
-    poster.width = 82
-    poster.height = 124
+    poster.translation = [layout.posterX, 8]
+    poster.width = layout.posterWidth
+    poster.height = layout.posterHeight
     poster.uri = item.posterUrl
     poster.loadDisplayMode = "scaleToFit"
     card.appendChild(poster)
@@ -793,19 +814,97 @@ function createBookmarkCard(item as Object, index as Integer) as Object
 
     title = CreateObject("roSGNode", "Label")
     title.text = item.title
-    title.translation = [102, 16]
-    title.width = 70
-    title.color = "#F5F5F5"
+    title.translation = [layout.textX, 164]
+    title.width = layout.textWidth
+    title.height = 28
+    title.color = palette.text
     card.appendChild(title)
+
+    if layout.DoesExist("showYear") and layout.showYear
+        yearText = cardYearText(item)
+        if yearText <> ""
+            year = CreateObject("roSGNode", "Label")
+            year.text = yearText
+            year.translation = [layout.textX, 190]
+            year.width = layout.textWidth
+            year.height = 24
+            year.font.size = 24
+            year.horizAlign = "right"
+            year.color = palette.muted
+            card.appendChild(year)
+        end if
+    end if
 
     subtitle = CreateObject("roSGNode", "Label")
     subtitle.text = item.subtitle
-    subtitle.translation = [102, 58]
-    subtitle.width = 70
-    subtitle.color = "#9CA3AF"
+    if subtitle.text = "" and item.metadata <> invalid then subtitle.text = item.metadata
+    subtitle.translation = [layout.textX, 188]
+    subtitle.width = layout.textWidth
+    subtitle.height = 0
+    subtitle.color = palette.muted
+    subtitle.visible = false
     card.appendChild(subtitle)
 
+    if layout.DoesExist("showProgress") and layout.showProgress
+        progressBg = CreateObject("roSGNode", "Rectangle")
+        progressBg.translation = [layout.posterX, 154]
+        progressBg.width = layout.posterWidth
+        progressBg.height = 5
+        progressBg.color = palette.progressTrack
+        progressBg.visible = item.durationSeconds > 0 and item.progressSeconds > 0
+        card.appendChild(progressBg)
+
+        progressFill = CreateObject("roSGNode", "Rectangle")
+        progressFill.translation = [layout.posterX, 154]
+        progressFill.width = mediaProgressWidth(item, layout.posterWidth)
+        progressFill.height = 5
+        progressFill.color = palette.progressFill
+        progressFill.visible = progressBg.visible
+        card.appendChild(progressFill)
+    end if
+
     return { node: card, focusBg: focusBg }
+end function
+
+function cardYearText(item as Object) as String
+    if item = invalid or type(item) <> "roAssociativeArray" then return ""
+    if item.DoesExist("year") <> true or item.year = invalid then return ""
+
+    valueType = type(item.year)
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger"
+        if item.year > 0 then return StrI(item.year).Trim()
+    else if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble"
+        year = Int(item.year)
+        if year > 0 then return StrI(year).Trim()
+    else if valueType = "String" or valueType = "roString"
+        return item.year.Trim()
+    end if
+
+    return ""
+end function
+
+function posterBrowseCardLayout(x as Integer, y as Integer) as Object
+    return {
+        x: x
+        y: y
+        cardWidth: 160
+        cardHeight: 220
+        posterX: 24
+        posterWidth: 112
+        posterHeight: 150
+        textX: 8
+        textWidth: 144
+    }
+end function
+
+function createBookmarkCard(item as Object, index as Integer) as Object
+    visibleSlot = index MOD (m.bookmarkColumns * 2)
+    column = visibleSlot MOD m.bookmarkColumns
+    row = Int(visibleSlot / m.bookmarkColumns)
+    x = column * 178
+    y = row * 226
+
+    return createMediaCard(item, posterBrowseCardLayout(x, y))
 end function
 
 sub moveBookmarkFolderFocus(delta as Integer)
@@ -844,11 +943,11 @@ sub updateBookmarksFocusVisuals()
         bg = m.bookmarkFolderBgNodes[index]
         folderIndex = m.bookmarkFolderIndexes[index]
         if folderIndex = m.selectedBookmarkFolderIndex and m.selectedSection = "bookmarks" and m.focusArea = "content" and m.bookmarksFocusArea = "folders"
-            bg.color = "#3B82F6"
+            bg.color = cardVisualStateColor(true, false)
         else if folderIndex = m.selectedBookmarkFolderIndex
-            bg.color = "#4B5563"
+            bg.color = cardVisualStateColor(false, true)
         else
-            bg.color = "#2A2A2A"
+            bg.color = cardVisualStateColor(false, false)
         end if
     end for
 
@@ -856,9 +955,9 @@ sub updateBookmarksFocusVisuals()
         bg = m.bookmarkItemBgNodes[nodeIndex]
         index = m.bookmarkItemIndexes[nodeIndex]
         if index = m.selectedBookmarkItemIndex and m.selectedSection = "bookmarks" and m.focusArea = "content" and m.bookmarksFocusArea = "items"
-            bg.color = "#3B82F6"
+            bg.color = cardVisualStateColor(true, false)
         else
-            bg.color = "#2A2A2A"
+            bg.color = cardVisualStateColor(false, false)
         end if
     end for
 
@@ -877,7 +976,7 @@ sub updateBookmarksCursor()
     visibleSlot = m.selectedBookmarkItemIndex MOD (m.bookmarkColumns * 2)
     column = visibleSlot MOD m.bookmarkColumns
     row = Int(visibleSlot / m.bookmarkColumns)
-    m.bookmarksCursor.translation = [300 + (column * 190), 96 + (row * 210)]
+    m.bookmarksCursor.translation = [300 + (column * 178), 96 + (row * 226)]
     m.bookmarksCursor.visible = true
 end sub
 
@@ -1079,73 +1178,23 @@ function createHistoryCard(item as Object, index as Integer) as Object
     visibleSlot = index MOD (m.historyColumns * 2)
     column = visibleSlot MOD m.historyColumns
     row = Int(visibleSlot / m.historyColumns)
-    x = column * 232
-    y = row * 210
+    x = column * 180
+    y = row * 226
 
-    card = CreateObject("roSGNode", "Group")
-    card.translation = [x, y]
-
-    focusBg = CreateObject("roSGNode", "Rectangle")
-    focusBg.width = 220
-    focusBg.height = 168
-    focusBg.color = "#2A2A2A"
-    card.appendChild(focusBg)
-
-    fallback = CreateObject("roSGNode", "Rectangle")
-    fallback.translation = [8, 8]
-    fallback.width = 82
-    fallback.height = 124
-    fallback.color = "#1F2937"
-    fallback.visible = true
-    card.appendChild(fallback)
-
-    poster = CreateObject("roSGNode", "Poster")
-    poster.translation = [8, 8]
-    poster.width = 82
-    poster.height = 124
-    poster.uri = item.posterUrl
-    poster.loadDisplayMode = "scaleToFit"
-    card.appendChild(poster)
-    appendTypeBadge(card, item)
-
-    title = CreateObject("roSGNode", "Label")
-    title.text = item.title
-    title.translation = [102, 16]
-    title.width = 110
-    title.color = "#F5F5F5"
-    card.appendChild(title)
-
-    subtitle = CreateObject("roSGNode", "Label")
-    subtitle.text = item.subtitle
-    subtitle.translation = [102, 58]
-    subtitle.width = 110
-    subtitle.color = "#9CA3AF"
-    card.appendChild(subtitle)
-
-    progressBg = CreateObject("roSGNode", "Rectangle")
-    progressBg.translation = [102, 132]
-    progressBg.width = 110
-    progressBg.height = 5
-    progressBg.color = "#374151"
-    progressBg.visible = item.durationSeconds > 0 and item.progressSeconds > 0
-    card.appendChild(progressBg)
-
-    progressFill = CreateObject("roSGNode", "Rectangle")
-    progressFill.translation = [102, 132]
-    progressFill.width = historyProgressWidth(item)
-    progressFill.height = 5
-    progressFill.color = "#EF4444"
-    progressFill.visible = progressBg.visible
-    card.appendChild(progressFill)
-
-    return { node: card, focusBg: focusBg }
+    layout = posterBrowseCardLayout(x, y)
+    layout.showProgress = true
+    return createMediaCard(item, layout)
 end function
 
 function historyProgressWidth(item as Object) as Integer
+    return mediaProgressWidth(item, 112)
+end function
+
+function mediaProgressWidth(item as Object, maxWidth as Integer) as Integer
     if item.durationSeconds <= 0 or item.progressSeconds <= 0 then return 0
-    width = Int((item.progressSeconds * 110) / item.durationSeconds)
+    width = Int((item.progressSeconds * maxWidth) / item.durationSeconds)
     if width < 1 then width = 1
-    if width > 110 then width = 110
+    if width > maxWidth then width = maxWidth
     return width
 end function
 
@@ -1153,51 +1202,52 @@ sub appendTypeBadge(card as Object, item as Object)
     badgeText = itemTypeBadgeText(item)
     if badgeText = "" then return
 
-    badgeWidth = 82
+    palette = homeUiPalette()
+    chipWidth = 64
 
     badgeBg = CreateObject("roSGNode", "Rectangle")
-    badgeBg.translation = [8, 8]
-    badgeBg.width = badgeWidth
-    badgeBg.height = 22
-    badgeBg.color = "#111827"
-    badgeBg.opacity = 0.88
+    badgeBg.translation = [24, 14]
+    badgeBg.width = chipWidth
+    badgeBg.height = 24
+    badgeBg.color = palette.chipBg
+    badgeBg.opacity = 0.82
     card.appendChild(badgeBg)
 
     badgeBorderTop = CreateObject("roSGNode", "Rectangle")
-    badgeBorderTop.translation = [8, 8]
-    badgeBorderTop.width = badgeWidth
+    badgeBorderTop.translation = [24, 14]
+    badgeBorderTop.width = chipWidth
     badgeBorderTop.height = 1
-    badgeBorderTop.color = "#D1D5DB"
+    badgeBorderTop.color = palette.chipBorder
     card.appendChild(badgeBorderTop)
 
     badgeBorderBottom = CreateObject("roSGNode", "Rectangle")
-    badgeBorderBottom.translation = [8, 29]
-    badgeBorderBottom.width = badgeWidth
+    badgeBorderBottom.translation = [24, 37]
+    badgeBorderBottom.width = chipWidth
     badgeBorderBottom.height = 1
-    badgeBorderBottom.color = "#D1D5DB"
+    badgeBorderBottom.color = palette.chipBorder
     card.appendChild(badgeBorderBottom)
 
     badgeBorderLeft = CreateObject("roSGNode", "Rectangle")
-    badgeBorderLeft.translation = [8, 8]
+    badgeBorderLeft.translation = [24, 14]
     badgeBorderLeft.width = 1
-    badgeBorderLeft.height = 22
-    badgeBorderLeft.color = "#D1D5DB"
+    badgeBorderLeft.height = 24
+    badgeBorderLeft.color = palette.chipBorder
     card.appendChild(badgeBorderLeft)
 
     badgeBorderRight = CreateObject("roSGNode", "Rectangle")
-    badgeBorderRight.translation = [7 + badgeWidth, 8]
+    badgeBorderRight.translation = [23 + chipWidth, 14]
     badgeBorderRight.width = 1
-    badgeBorderRight.height = 22
-    badgeBorderRight.color = "#D1D5DB"
+    badgeBorderRight.height = 24
+    badgeBorderRight.color = palette.chipBorder
     card.appendChild(badgeBorderRight)
 
     label = CreateObject("roSGNode", "Label")
     label.text = badgeText
-    label.translation = [8, 11]
-    label.width = badgeWidth
-    label.height = 16
+    label.translation = [24, 15]
+    label.width = chipWidth
+    label.height = 22
     label.horizAlign = "center"
-    label.color = "#F5F5F5"
+    label.color = palette.text
     card.appendChild(label)
 end sub
 
@@ -1218,11 +1268,11 @@ sub updateHistoryCardFocus()
         focusBg = m.historyCardBgNodes[nodeIndex]
         index = m.historyCardIndexes[nodeIndex]
         if index = m.selectedHistoryIndex
-            focusBg.color = "#3B82F6"
+            focusBg.color = cardVisualStateColor(true, false)
         else if index = m.visualSelectedHistoryIndex
-            focusBg.color = "#4B5563"
+            focusBg.color = cardVisualStateColor(false, true)
         else
-            focusBg.color = "#2A2A2A"
+            focusBg.color = cardVisualStateColor(false, false)
         end if
     end for
     updateHistoryCursor()
@@ -1241,7 +1291,7 @@ sub updateHistoryCursor()
     visibleSlot = m.selectedHistoryIndex MOD (m.historyColumns * 2)
     column = visibleSlot MOD m.historyColumns
     row = Int(visibleSlot / m.historyColumns)
-    m.historyCursor.translation = [column * 232, 82 + (row * 210)]
+    m.historyCursor.translation = [column * 180, 82 + (row * 226)]
     m.historyCursor.visible = true
 end sub
 
@@ -1477,48 +1527,7 @@ function homeRailWindowStart(railIndex as Integer) as Integer
 end function
 
 function createHomeCard(item as Object, visibleCardSlot as Integer) as Object
-    card = CreateObject("roSGNode", "Group")
-    card.translation = [visibleCardSlot * m.homeCardSpacing, 38]
-
-    focusBg = CreateObject("roSGNode", "Rectangle")
-    focusBg.width = 220
-    focusBg.height = 168
-    focusBg.color = "#2A2A2A"
-    card.appendChild(focusBg)
-
-    fallback = CreateObject("roSGNode", "Rectangle")
-    fallback.translation = [8, 8]
-    fallback.width = 82
-    fallback.height = 124
-    fallback.color = "#1F2937"
-    fallback.visible = true
-    card.appendChild(fallback)
-
-    poster = CreateObject("roSGNode", "Poster")
-    poster.translation = [8, 8]
-    poster.width = 82
-    poster.height = 124
-    poster.uri = item.posterUrl
-    poster.loadDisplayMode = "scaleToFit"
-    card.appendChild(poster)
-    appendTypeBadge(card, item)
-
-    title = CreateObject("roSGNode", "Label")
-    title.text = item.title
-    title.translation = [102, 16]
-    title.width = 110
-    title.color = "#F5F5F5"
-    card.appendChild(title)
-
-    subtitle = CreateObject("roSGNode", "Label")
-    subtitle.text = item.subtitle
-    if subtitle.text = "" and item.metadata <> invalid then subtitle.text = item.metadata
-    subtitle.translation = [102, 58]
-    subtitle.width = 110
-    subtitle.color = "#9CA3AF"
-    card.appendChild(subtitle)
-
-    return { node: card, focusBg: focusBg }
+    return createMediaCard(item, posterBrowseCardLayout(visibleCardSlot * m.homeCardSpacing, 38))
 end function
 
 sub updateHomeCardFocus()
@@ -1527,11 +1536,11 @@ sub updateHomeCardFocus()
         focusBg = m.homeCardBgNodes[nodeIndex]
         position = m.homeCardPositions[nodeIndex]
         if position.railIndex = m.selectedHomeRailIndex and position.cardIndex = m.selectedHomeCardIndex
-            focusBg.color = "#3B82F6"
+            focusBg.color = cardVisualStateColor(true, false)
         else if position.railIndex = m.visualSelectedHomeRailIndex and position.cardIndex = m.visualSelectedHomeCardIndex
-            focusBg.color = "#4B5563"
+            focusBg.color = cardVisualStateColor(false, true)
         else
-            focusBg.color = "#2A2A2A"
+            focusBg.color = cardVisualStateColor(false, false)
         end if
     end for
     updateHomeCursor()
@@ -1568,7 +1577,7 @@ sub updateHomeChevrons()
 
     focusedRail = m.homeRails[m.selectedHomeRailIndex]
     railSlot = m.selectedHomeRailIndex - m.homeVisibleRailStart
-    chevronY = 96 + (railSlot * m.homeRailHeight) + 62
+    chevronY = 96 + (railSlot * m.homeRailHeight) + 82
     m.homeRailLeftChevron.translation = [0, chevronY]
     m.homeRailRightChevron.translation = [1092, chevronY]
     m.homeRailLeftChevron.visible = m.selectedHomeCardIndex > 0
@@ -2001,51 +2010,12 @@ function createSearchCard(item as Object, index as Integer) as Object
     visibleSlot = index MOD (m.searchColumns * 2)
     column = visibleSlot MOD m.searchColumns
     row = Int(visibleSlot / m.searchColumns)
-    x = column * 232
-    y = row * 210
+    x = column * 180
+    y = row * 226
 
-    card = CreateObject("roSGNode", "Group")
-    card.translation = [x, y]
-
-    focusBg = CreateObject("roSGNode", "Rectangle")
-    focusBg.width = 220
-    focusBg.height = 168
-    focusBg.color = "#2A2A2A"
-    card.appendChild(focusBg)
-
-    fallback = CreateObject("roSGNode", "Rectangle")
-    fallback.translation = [8, 8]
-    fallback.width = 82
-    fallback.height = 124
-    fallback.color = "#1F2937"
-    fallback.visible = true
-    card.appendChild(fallback)
-
-    poster = CreateObject("roSGNode", "Poster")
-    poster.translation = [8, 8]
-    poster.width = 82
-    poster.height = 124
-    poster.uri = item.posterUrl
-    poster.loadDisplayMode = "scaleToFit"
-    card.appendChild(poster)
-    appendTypeBadge(card, item)
-
-    title = CreateObject("roSGNode", "Label")
-    title.text = item.title
-    title.translation = [102, 16]
-    title.width = 110
-    title.color = "#F5F5F5"
-    card.appendChild(title)
-
-    subtitle = CreateObject("roSGNode", "Label")
-    subtitle.text = item.subtitle
-    if subtitle.text = "" and item.metadata <> invalid then subtitle.text = item.metadata
-    subtitle.translation = [102, 58]
-    subtitle.width = 110
-    subtitle.color = "#9CA3AF"
-    card.appendChild(subtitle)
-
-    return { node: card, focusBg: focusBg }
+    layout = posterBrowseCardLayout(x, y)
+    layout.showYear = true
+    return createMediaCard(item, layout)
 end function
 
 sub updateSearchCardFocus()
@@ -2054,11 +2024,11 @@ sub updateSearchCardFocus()
         focusBg = m.searchCardBgNodes[nodeIndex]
         index = m.searchCardIndexes[nodeIndex]
         if index = m.selectedSearchIndex and m.searchFocusArea = "results"
-            focusBg.color = "#3B82F6"
+            focusBg.color = cardVisualStateColor(true, false)
         else if index = m.visualSelectedSearchIndex
-            focusBg.color = "#4B5563"
+            focusBg.color = cardVisualStateColor(false, true)
         else
-            focusBg.color = "#2A2A2A"
+            focusBg.color = cardVisualStateColor(false, false)
         end if
     end for
     updateSearchCursor()
@@ -2075,7 +2045,7 @@ sub updateSearchCursor()
     visibleSlot = m.selectedSearchIndex MOD (m.searchColumns * 2)
     column = visibleSlot MOD m.searchColumns
     row = Int(visibleSlot / m.searchColumns)
-    m.searchResultCursor.translation = [column * 232, 236 + (row * 210)]
+    m.searchResultCursor.translation = [column * 180, 236 + (row * 226)]
     m.searchResultCursor.visible = true
 end sub
 
@@ -2205,13 +2175,14 @@ sub setMenuExpanded(expanded as Boolean)
 end sub
 
 sub updateMenuVisuals()
+    palette = homeUiPalette()
     m.watchAgainNav.color = "#D1D5DB"
     m.homeNav.color = "#D1D5DB"
     m.searchNav.color = "#D1D5DB"
     m.bookmarksNav.color = "#D1D5DB"
     m.accountNav.color = "#D1D5DB"
     m.signOutNav.color = "#9CA3AF"
-    m.signOutFocusBg.color = "#181818"
+    m.signOutFocusBg.color = "#0F131A"
 
     m.collapsedWatchAgain.color = "#9CA3AF"
     m.collapsedHome.color = "#9CA3AF"
@@ -2221,28 +2192,34 @@ sub updateMenuVisuals()
 
     if m.menuIndex = 0
         m.navFocusBg.translation = [12, 112]
-        m.watchAgainNav.color = "#111827"
-        m.collapsedWatchAgain.color = "#F5F5F5"
+        m.collapsedActiveIndicator.translation = [0, 112]
+        m.watchAgainNav.color = palette.text
+        m.collapsedWatchAgain.color = palette.text
     else if m.menuIndex = 1
         m.navFocusBg.translation = [12, 172]
-        m.homeNav.color = "#111827"
-        m.collapsedHome.color = "#F5F5F5"
+        m.collapsedActiveIndicator.translation = [0, 172]
+        m.homeNav.color = palette.text
+        m.collapsedHome.color = palette.text
     else if m.menuIndex = 2
         m.navFocusBg.translation = [12, 232]
-        m.searchNav.color = "#111827"
-        m.collapsedSearch.color = "#F5F5F5"
+        m.collapsedActiveIndicator.translation = [0, 232]
+        m.searchNav.color = palette.text
+        m.collapsedSearch.color = palette.text
     else if m.menuIndex = 3
         m.navFocusBg.translation = [12, 292]
-        m.bookmarksNav.color = "#111827"
-        m.collapsedBookmarks.color = "#F5F5F5"
+        m.collapsedActiveIndicator.translation = [0, 292]
+        m.bookmarksNav.color = palette.text
+        m.collapsedBookmarks.color = palette.text
     else if m.menuIndex = 4
         m.navFocusBg.translation = [12, 352]
-        m.accountNav.color = "#111827"
-        m.collapsedAccount.color = "#F5F5F5"
+        m.collapsedActiveIndicator.translation = [0, 352]
+        m.accountNav.color = palette.text
+        m.collapsedAccount.color = palette.text
     else
         m.navFocusBg.translation = [12, 616]
-        m.signOutNav.color = "#111827"
-        m.signOutFocusBg.color = "#E5E7EB"
+        m.collapsedActiveIndicator.translation = [0, 616]
+        m.signOutNav.color = palette.text
+        m.signOutFocusBg.color = "#2563EB"
     end if
 end sub
 
