@@ -6,6 +6,7 @@ sub runContentTask()
     tokenStore = TokenStore()
     client = KinoApiClient(KinoConfig())
     authService = KinoAuthService(client, tokenStore)
+    bookmarkService = KinoBookmarkService(client)
     typeService = KinoContentTypeService(client)
     historyService = KinoHistoryService(client)
     homeService = KinoHomeService(client)
@@ -27,6 +28,14 @@ sub runContentTask()
         m.top.response = contentTaskSearchItems(tokenStore, authService, searchService, typeService, request)
     else if command = "loadUserInfo"
         m.top.response = contentTaskLoadUserInfo(tokenStore, authService, userService)
+    else if command = "loadBookmarkFolders"
+        m.top.response = contentTaskLoadBookmarkFolders(tokenStore, authService, bookmarkService)
+    else if command = "loadBookmarkFolderItems"
+        m.top.response = contentTaskLoadBookmarkFolderItems(tokenStore, authService, bookmarkService, typeService, request)
+    else if command = "loadItemBookmarkFolders"
+        m.top.response = contentTaskLoadItemBookmarkFolders(tokenStore, authService, bookmarkService, request)
+    else if command = "toggleItemBookmark"
+        m.top.response = contentTaskToggleItemBookmark(tokenStore, authService, bookmarkService, request)
     else if command = "savePlaybackProgress"
         m.top.response = contentTaskSavePlaybackProgress(tokenStore, authService, watchingService, request)
     else if command = "markPlaybackWatched"
@@ -176,6 +185,74 @@ function contentTaskLoadUserInfo(tokenStore as Object, authService as Object, us
 
     result = userService.info(tokenResult.accessToken)
     result.command = "loadUserInfo"
+    return result
+end function
+
+function contentTaskLoadBookmarkFolders(tokenStore as Object, authService as Object, bookmarkService as Object) as Object
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to load bookmarks.")
+    if tokenResult.ok <> true
+        tokenResult.command = "loadBookmarkFolders"
+        return tokenResult
+    end if
+
+    result = bookmarkService.listFolders(tokenResult.accessToken)
+    result.command = "loadBookmarkFolders"
+    return result
+end function
+
+function contentTaskLoadBookmarkFolderItems(tokenStore as Object, authService as Object, bookmarkService as Object, typeService as Object, request as Dynamic) as Object
+    folderId = contentTaskIntegerField(request, "folderId", 0)
+    page = contentTaskIntegerField(request, "page", 1)
+    perpage = contentTaskIntegerField(request, "perpage", 20)
+
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to load bookmark folder.")
+    if tokenResult.ok <> true
+        tokenResult.command = "loadBookmarkFolderItems"
+        tokenResult.folderId = folderId
+        return tokenResult
+    end if
+
+    typeMap = contentTaskTypeMap(typeService, tokenResult.accessToken)
+    result = bookmarkService.listFolderItems(tokenResult.accessToken, folderId, page, perpage, typeMap)
+    result.command = "loadBookmarkFolderItems"
+    result.folderId = folderId
+    result.page = page
+    result.perpage = perpage
+    return result
+end function
+
+function contentTaskLoadItemBookmarkFolders(tokenStore as Object, authService as Object, bookmarkService as Object, request as Dynamic) as Object
+    itemId = contentTaskIntegerField(request, "itemId", 0)
+
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to load bookmark status.")
+    if tokenResult.ok <> true
+        tokenResult.command = "loadItemBookmarkFolders"
+        tokenResult.itemId = itemId
+        return tokenResult
+    end if
+
+    result = bookmarkService.itemFolders(tokenResult.accessToken, itemId)
+    result.command = "loadItemBookmarkFolders"
+    result.itemId = itemId
+    return result
+end function
+
+function contentTaskToggleItemBookmark(tokenStore as Object, authService as Object, bookmarkService as Object, request as Dynamic) as Object
+    itemId = contentTaskIntegerField(request, "itemId", 0)
+    folderId = contentTaskIntegerField(request, "folderId", 0)
+
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to update bookmark.")
+    if tokenResult.ok <> true
+        tokenResult.command = "toggleItemBookmark"
+        tokenResult.itemId = itemId
+        tokenResult.folderId = folderId
+        return tokenResult
+    end if
+
+    result = bookmarkService.toggleItem(tokenResult.accessToken, itemId, folderId)
+    result.command = "toggleItemBookmark"
+    result.itemId = itemId
+    result.folderId = folderId
     return result
 end function
 

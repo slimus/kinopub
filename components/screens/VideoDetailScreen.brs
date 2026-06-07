@@ -17,6 +17,9 @@ sub init()
     m.descriptionLabel = m.top.findNode("descriptionLabel")
     m.playFocusBg = m.top.findNode("playFocusBg")
     m.playButtonLabel = m.top.findNode("playButtonLabel")
+    m.bookmarkActionGroup = m.top.findNode("bookmarkActionGroup")
+    m.bookmarkFocusBg = m.top.findNode("bookmarkFocusBg")
+    m.bookmarkLabel = m.top.findNode("bookmarkLabel")
     m.playbackErrorLabel = m.top.findNode("playbackErrorLabel")
     m.panelTitleLabel = m.top.findNode("panelTitleLabel")
     m.seasonTabsHost = m.top.findNode("seasonTabsHost")
@@ -35,6 +38,9 @@ sub init()
     m.descriptionOverlayTextLabel = m.top.findNode("descriptionOverlayTextLabel")
     m.descriptionOverlayScrollUpChevron = m.top.findNode("descriptionOverlayScrollUpChevron")
     m.descriptionOverlayScrollDownChevron = m.top.findNode("descriptionOverlayScrollDownChevron")
+    m.bookmarkOverlayGroup = m.top.findNode("bookmarkOverlayGroup")
+    m.bookmarkOverlayStatusLabel = m.top.findNode("bookmarkOverlayStatusLabel")
+    m.bookmarkOverlayFoldersHost = m.top.findNode("bookmarkOverlayFoldersHost")
 
     m.selection = invalid
     m.item = invalid
@@ -65,6 +71,13 @@ sub init()
     m.similarCardWidth = 118
     m.similarCardSpacing = 130
     m.maxVisibleSimilarItems = 3
+    m.bookmarkFolders = []
+    m.itemBookmarkFolders = []
+    m.bookmarkOverlayRows = []
+    m.bookmarkOverlayRowBgs = []
+    m.selectedBookmarkFolderIndex = 0
+    m.bookmarkOverlayOpen = false
+    m.bookmarkStatusMessage = ""
 
     m.top.observeField("selection", "onSelectionChanged")
     m.top.observeField("playbackError", "onPlaybackError")
@@ -129,6 +142,7 @@ sub onDetailResponse(event as Object)
     buildPlayableModel()
     m.focusArea = "episodes"
     renderDetail()
+    loadItemBookmarkFolders()
     showState("detail")
 end sub
 
@@ -539,6 +553,210 @@ sub selectSimilarItem()
     }
 end sub
 
+sub loadItemBookmarkFolders()
+    if m.item = invalid or m.item.itemId <= 0 then return
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadItemBookmarkFolders"
+    task.request = { itemId: m.item.itemId }
+    task.observeField("response", "onItemBookmarkFoldersResponse")
+    task.control = "RUN"
+    m.itemBookmarkFoldersTask = task
+end sub
+
+sub onItemBookmarkFoldersResponse(event as Object)
+    response = event.getData()
+    if response = invalid or response.ok <> true then return
+    m.itemBookmarkFolders = []
+    if response.folders <> invalid then m.itemBookmarkFolders = response.folders
+    renderBookmarkAction()
+    if m.bookmarkOverlayOpen then renderBookmarkOverlayFolders()
+end sub
+
+sub renderBookmarkAction()
+    if m.bookmarkLabel = invalid then return
+    count = 0
+    if m.itemBookmarkFolders <> invalid then count = m.itemBookmarkFolders.Count()
+    if count > 0
+        m.bookmarkLabel.text = "Bookmarked (" + StrI(count).Trim() + ")"
+    else
+        m.bookmarkLabel.text = "Bookmarks"
+    end if
+    updateBookmarkActionFocus()
+end sub
+
+sub updateBookmarkActionFocus()
+    if m.bookmarkFocusBg = invalid then return
+    if m.focusArea = "bookmark"
+        m.bookmarkFocusBg.color = "#E5E7EB"
+        m.bookmarkLabel.color = "#111827"
+    else
+        m.bookmarkFocusBg.color = "#374151"
+        m.bookmarkLabel.color = "#D1D5DB"
+    end if
+end sub
+
+sub openBookmarkOverlay()
+    if m.item = invalid or m.item.itemId <= 0 then return
+    m.bookmarkOverlayOpen = true
+    m.bookmarkOverlayGroup.visible = true
+    m.bookmarkOverlayStatusLabel.text = "Loading folders..."
+    m.bookmarkFolders = []
+    renderBookmarkOverlayFolders()
+    loadBookmarkFoldersForOverlay()
+end sub
+
+sub closeBookmarkOverlay()
+    m.bookmarkOverlayOpen = false
+    m.bookmarkOverlayGroup.visible = false
+end sub
+
+sub loadBookmarkFoldersForOverlay()
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadBookmarkFolders"
+    task.request = {}
+    task.observeField("response", "onBookmarkOverlayFoldersResponse")
+    task.control = "RUN"
+    m.bookmarkOverlayTask = task
+end sub
+
+sub onBookmarkOverlayFoldersResponse(event as Object)
+    response = event.getData()
+    if response = invalid or response.ok <> true
+        message = "Unable to load bookmark folders."
+        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+        m.bookmarkOverlayStatusLabel.text = message
+        return
+    end if
+
+    m.bookmarkFolders = []
+    if response.folders <> invalid then m.bookmarkFolders = response.folders
+    if m.selectedBookmarkFolderIndex >= m.bookmarkFolders.Count() then m.selectedBookmarkFolderIndex = m.bookmarkFolders.Count() - 1
+    if m.selectedBookmarkFolderIndex < 0 then m.selectedBookmarkFolderIndex = 0
+
+    if m.bookmarkFolders.Count() = 0
+        m.bookmarkOverlayStatusLabel.text = "No bookmark folders yet."
+    else
+        m.bookmarkOverlayStatusLabel.text = "Choose a folder"
+    end if
+    renderBookmarkOverlayFolders()
+end sub
+
+sub renderBookmarkOverlayFolders()
+    if m.bookmarkOverlayFoldersHost = invalid then return
+    childCount = m.bookmarkOverlayFoldersHost.getChildCount()
+    if childCount > 0 then m.bookmarkOverlayFoldersHost.removeChildrenIndex(childCount, 0)
+    m.bookmarkOverlayRows = []
+    m.bookmarkOverlayRowBgs = []
+
+    maxRows = m.bookmarkFolders.Count()
+    if maxRows > 6 then maxRows = 6
+    for index = 0 to maxRows - 1
+        folder = m.bookmarkFolders[index]
+        row = CreateObject("roSGNode", "Group")
+        row.translation = [0, index * 50]
+
+        bg = CreateObject("roSGNode", "Rectangle")
+        bg.width = 504
+        bg.height = 42
+        bg.color = "#2A2A2A"
+        row.appendChild(bg)
+
+        marker = CreateObject("roSGNode", "Label")
+        if bookmarkFolderContainsItem(folder.folderId)
+            marker.text = "[x]"
+        else
+            marker.text = "[ ]"
+        end if
+        marker.translation = [14, 11]
+        marker.width = 44
+        marker.color = "#D1D5DB"
+        row.appendChild(marker)
+
+        label = CreateObject("roSGNode", "Label")
+        label.text = folder.title
+        label.translation = [64, 11]
+        label.width = 360
+        label.color = "#F5F5F5"
+        row.appendChild(label)
+
+        count = CreateObject("roSGNode", "Label")
+        count.text = bookmarkFolderCountText(folder)
+        count.translation = [424, 11]
+        count.width = 64
+        count.color = "#9CA3AF"
+        count.horizAlign = "right"
+        row.appendChild(count)
+
+        m.bookmarkOverlayFoldersHost.appendChild(row)
+        m.bookmarkOverlayRows.Push(row)
+        m.bookmarkOverlayRowBgs.Push(bg)
+    end for
+
+    updateBookmarkOverlayFocus()
+end sub
+
+function bookmarkFolderContainsItem(folderId as Integer) as Boolean
+    if m.itemBookmarkFolders = invalid then return false
+    for each folder in m.itemBookmarkFolders
+        if folder <> invalid and folder.folderId = folderId then return true
+    end for
+    return false
+end function
+
+function bookmarkFolderCountText(folder as Dynamic) as String
+    if folder = invalid or folder.count = invalid then return ""
+    return StrI(folder.count).Trim()
+end function
+
+sub updateBookmarkOverlayFocus()
+    for index = 0 to m.bookmarkOverlayRowBgs.Count() - 1
+        if index = m.selectedBookmarkFolderIndex
+            m.bookmarkOverlayRowBgs[index].color = "#3B82F6"
+        else
+            m.bookmarkOverlayRowBgs[index].color = "#2A2A2A"
+        end if
+    end for
+end sub
+
+sub moveBookmarkOverlayFolder(delta as Integer)
+    if m.bookmarkFolders.Count() = 0 then return
+    nextIndex = m.selectedBookmarkFolderIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    maxIndex = m.bookmarkFolders.Count() - 1
+    if maxIndex > 5 then maxIndex = 5
+    if nextIndex > maxIndex then nextIndex = maxIndex
+    m.selectedBookmarkFolderIndex = nextIndex
+    updateBookmarkOverlayFocus()
+end sub
+
+sub toggleSelectedBookmarkFolder()
+    if m.item = invalid or m.bookmarkFolders.Count() = 0 then return
+    folder = m.bookmarkFolders[m.selectedBookmarkFolderIndex]
+    m.bookmarkOverlayStatusLabel.text = "Updating bookmark..."
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "toggleItemBookmark"
+    task.request = { itemId: m.item.itemId, folderId: folder.folderId }
+    task.observeField("response", "onToggleItemBookmarkResponse")
+    task.control = "RUN"
+    m.toggleBookmarkTask = task
+end sub
+
+sub onToggleItemBookmarkResponse(event as Object)
+    response = event.getData()
+    if response = invalid or response.ok <> true
+        message = "Unable to update bookmark."
+        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+        m.bookmarkOverlayStatusLabel.text = message
+        return
+    end if
+
+    m.bookmarkOverlayStatusLabel.text = "Bookmark updated."
+    loadItemBookmarkFolders()
+    loadBookmarkFoldersForOverlay()
+end sub
+
 function joinMetadata(values as Dynamic) as String
     if values = invalid or values.Count() = 0 then return ""
 
@@ -946,6 +1164,7 @@ sub updateSelectedMediaVisuals()
     if media = invalid
         m.playButtonLabel.text = "Unavailable"
         m.playFocusBg.color = "#374151"
+        updateBookmarkActionFocus()
         m.episodeCursor.visible = false
         return
     end if
@@ -964,6 +1183,7 @@ sub updateSelectedMediaVisuals()
         m.playFocusBg.color = "#374151"
     end if
     updateDescriptionFocusVisual()
+    updateBookmarkActionFocus()
     updateDetailExtrasFocusVisuals()
 
     visibleIndex = m.currentEpisodeIndex - m.visibleEpisodeStart
@@ -1061,6 +1281,23 @@ end function
 function onKeyEvent(key as String, press as Boolean) as Boolean
     if press <> true then return false
 
+    if m.bookmarkOverlayOpen
+        if key = "back"
+            closeBookmarkOverlay()
+            return true
+        else if key = "up"
+            moveBookmarkOverlayFolder(-1)
+            return true
+        else if key = "down"
+            moveBookmarkOverlayFolder(1)
+            return true
+        else if key = "OK"
+            toggleSelectedBookmarkFolder()
+            return true
+        end if
+        return true
+    end if
+
     if m.descriptionOverlayGroup.visible
         if key = "back" or key = "OK"
             closeDescriptionOverlay()
@@ -1130,11 +1367,37 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                 return true
             end if
         else if key = "right"
-            m.focusArea = "episodes"
+            m.focusArea = "bookmark"
             updateSelectedMediaVisuals()
             return true
         else if key = "OK"
             startSelectedPlayback()
+            return true
+        end if
+    else if m.focusArea = "bookmark"
+        if key = "up"
+            m.focusArea = "description"
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "down"
+            extrasFocus = firstDetailExtrasFocusArea()
+            if extrasFocus <> ""
+                m.focusArea = extrasFocus
+            else
+                m.focusArea = "play"
+            end if
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "left"
+            m.focusArea = "play"
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "right"
+            m.focusArea = "episodes"
+            updateSelectedMediaVisuals()
+            return true
+        else if key = "OK"
+            openBookmarkOverlay()
             return true
         end if
     else if m.focusArea = "description"

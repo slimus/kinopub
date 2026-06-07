@@ -6,6 +6,7 @@ required_files=(
   source/main.brs
   source/services/KinoApiClient.brs
   source/services/KinoAuthService.brs
+  source/services/KinoBookmarkService.brs
   source/services/KinoContentTypeService.brs
   source/services/KinoHistoryService.brs
   source/services/KinoHomeService.brs
@@ -120,6 +121,17 @@ grep -q 'notifyResult.status = 401' components/tasks/AuthTask.brs
 grep -q 'notifyResult.error = "unauthorized"' components/tasks/AuthTask.brs
 grep -q 'message: "Device authorization was removed. Sign in again."' components/tasks/AuthTask.brs
 grep -q "KinoContentTypeService.brs" components/tasks/ContentTask.xml
+grep -q "KinoBookmarkService.brs" components/tasks/ContentTask.xml
+grep -q "function KinoBookmarkService" source/services/KinoBookmarkService.brs
+grep -q '"/v1/bookmarks"' source/services/KinoBookmarkService.brs
+grep -q '"/v1/bookmarks/get-item-folders"' source/services/KinoBookmarkService.brs
+grep -q '"/v1/bookmarks/toggle-item"' source/services/KinoBookmarkService.brs
+grep -q 'postFormBody("/v1/bookmarks/toggle-item"' source/services/KinoBookmarkService.brs
+grep -q "KinoBookmarkService(client)" components/tasks/ContentTask.brs
+grep -q "loadBookmarkFolders" components/tasks/ContentTask.brs
+grep -q "loadBookmarkFolderItems" components/tasks/ContentTask.brs
+grep -q "loadItemBookmarkFolders" components/tasks/ContentTask.brs
+grep -q "toggleItemBookmark" components/tasks/ContentTask.brs
 grep -q "KinoContentTypeService(client)" components/tasks/ContentTask.brs
 grep -q "contentTaskTypeMap(typeService, tokenResult.accessToken)" components/tasks/ContentTask.brs
 grep -q "typeMap = contentTaskTypeMap(typeService, tokenResult.accessToken)" components/tasks/ContentTask.brs
@@ -169,10 +181,19 @@ grep -q 'setMenuExpanded(false)' components/screens/HomeScreen.brs
 grep -q 'Watch Again' components/screens/HomeScreen.xml
 grep -q 'Home' components/screens/HomeScreen.xml
 grep -q 'Search' components/screens/HomeScreen.xml
+grep -q 'Bookmarks' components/screens/HomeScreen.xml
 grep -q 'Account' components/screens/HomeScreen.xml
 grep -q 'watchAgainContent' components/screens/HomeScreen.xml
 grep -q 'homeContent' components/screens/HomeScreen.xml
 grep -q 'searchContent' components/screens/HomeScreen.xml
+grep -q 'bookmarksContent' components/screens/HomeScreen.xml
+grep -q 'bookmarkFoldersHost' components/screens/HomeScreen.xml
+grep -q 'bookmarkItemsHost' components/screens/HomeScreen.xml
+grep -q 'bookmarksCursor' components/screens/HomeScreen.xml
+grep -q 'bookmarkFolderScrollUpChevron' components/screens/HomeScreen.xml
+grep -q 'bookmarkFolderScrollDownChevron' components/screens/HomeScreen.xml
+grep -q 'bookmarkItemsScrollUpChevron' components/screens/HomeScreen.xml
+grep -q 'bookmarkItemsScrollDownChevron' components/screens/HomeScreen.xml
 grep -q 'accountContent' components/screens/HomeScreen.xml
 grep -q 'accountLoadingGroup' components/screens/HomeScreen.xml
 grep -q 'accountErrorGroup' components/screens/HomeScreen.xml
@@ -394,7 +415,12 @@ grep -q 'm.accountContent.visible = section = "account"' components/screens/Home
 grep -q 'loadAccountInfo' components/screens/HomeScreen.brs
 grep -q 'onAccountInfoResponse' components/screens/HomeScreen.brs
 grep -q 'renderAccountInfo' components/screens/HomeScreen.brs
-grep -q 'm.menuIndex > 4' components/screens/HomeScreen.brs
+grep -q 'm.menuIndex > 5' components/screens/HomeScreen.brs
+grep -q 'showSection("bookmarks")' components/screens/HomeScreen.brs
+grep -q "updateBookmarkScrollChevrons" components/screens/HomeScreen.brs
+grep -q "hasMoreBookmarkPages" components/screens/HomeScreen.brs
+grep -q "loadNextBookmarkPageIfNeeded" components/screens/HomeScreen.brs
+grep -q "requestBookmarkFolderItems(m.bookmarkCurrentFolderId, m.bookmarkCurrentPage + 1, true)" components/screens/HomeScreen.brs
 grep -q 'showSection("account")' components/screens/HomeScreen.brs
 grep -q "No playable video is available" components/screens/VideoDetailScreen.xml
 grep -q 'field id="playbackRequested"' components/screens/VideoDetailScreen.xml
@@ -404,6 +430,10 @@ grep -q "episodeWatchStatus" components/screens/VideoDetailScreen.brs
 grep -q "episodeProgressText" components/screens/VideoDetailScreen.brs
 grep -q 'id="descriptionFocusBg"' components/screens/VideoDetailScreen.xml
 grep -q 'id="descriptionOverlayGroup"' components/screens/VideoDetailScreen.xml
+grep -q 'id="bookmarkActionGroup"' components/screens/VideoDetailScreen.xml
+grep -q 'id="bookmarkOverlayGroup"' components/screens/VideoDetailScreen.xml
+grep -q "loadItemBookmarkFolders" components/screens/VideoDetailScreen.brs
+grep -q "toggleSelectedBookmarkFolder" components/screens/VideoDetailScreen.brs
 grep -q 'id="descriptionOverlayTextLabel"' components/screens/VideoDetailScreen.xml
 grep -q 'id="descriptionOverlayScrollUpChevron"' components/screens/VideoDetailScreen.xml
 grep -q 'id="descriptionOverlayScrollDownChevron"' components/screens/VideoDetailScreen.xml
@@ -709,6 +739,7 @@ unzip -p dist/kinopub.zip images/channel-icon_fhd.png >/dev/null
 unzip -p dist/kinopub.zip components/screens/PlayerScreen.xml | grep -q "bottomRailGroup"
 unzip -p dist/kinopub.zip components/screens/PlayerScreen.brs | grep -q "sendProgressUpdate"
 unzip -p dist/kinopub.zip source/services/KinoWatchingService.brs | grep -q '"/v1/watching/marktime"'
+unzip -p dist/kinopub.zip source/services/KinoBookmarkService.brs | grep -q '"/v1/bookmarks/toggle-item"'
 unzip -p dist/kinopub.zip source/services/PlayerPreferenceStore.brs | grep -q "playerprefs"
 unzip -p dist/kinopub.zip source/services/KinoSearchService.brs | grep -q '"/v1/items"'
 unzip -p dist/kinopub.zip source/services/KinoContentTypeService.brs | grep -q '"/v1/types"'
@@ -718,7 +749,9 @@ if unzip -p dist/kinopub.zip source/services/KinoSearchService.brs | grep -q '"/
 fi
 unzip -p dist/kinopub.zip components/tasks/ContentTask.brs | grep -q "searchItems"
 unzip -p dist/kinopub.zip components/tasks/ContentTask.xml | grep -q "KinoContentTypeService.brs"
+unzip -p dist/kinopub.zip components/tasks/ContentTask.xml | grep -q "KinoBookmarkService.brs"
 unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep -q 'source: "search"'
+unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep -q 'showSection("bookmarks")'
 unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep -q "appendTypeBadge"
 unzip -p dist/kinopub.zip components/screens/HomeScreen.xml | grep -q "searchKeyboardGroup"
 
