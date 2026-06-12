@@ -23,6 +23,11 @@ sub init()
     m.progressTimer = m.top.findNode("progressTimer")
     m.statusClearTimer = m.top.findNode("statusClearTimer")
     m.resumePromptTimer = m.top.findNode("resumePromptTimer")
+    m.nextEpisodePromptGroup = m.top.findNode("nextEpisodePromptGroup")
+    m.nextEpisodePromptMessageLabel = m.top.findNode("nextEpisodePromptMessageLabel")
+    m.nextEpisodePromptOptionsHost = m.top.findNode("nextEpisodePromptOptionsHost")
+    m.nextEpisodePromptCountdownLabel = m.top.findNode("nextEpisodePromptCountdownLabel")
+    m.nextEpisodeCountdownTimer = m.top.findNode("nextEpisodeCountdownTimer")
     m.seekDebounceTimer = m.top.findNode("seekDebounceTimer")
     m.seekSettleTimer = m.top.findNode("seekSettleTimer")
 
@@ -47,6 +52,14 @@ sub init()
     m.resumeStartPosition = 0
     m.resumeCountdownSeconds = 15
     m.resumePromptOptionNodes = []
+    m.nextEpisodePromptOpen = false
+    m.nextEpisodePromptIndex = 0
+    m.nextEpisodePromptRemainingSeconds = 10
+    m.nextEpisodePromptPlayback = invalid
+    m.nextEpisodeRequestPending = false
+    m.nextEpisodeRequested = false
+    m.nextEpisodeRequestReason = ""
+    m.nextEpisodePromptOptionNodes = []
     m.isPlaying = false
     m.playbackStarted = false
     m.savedAudioPreferenceApplied = false
@@ -59,6 +72,7 @@ sub init()
     m.playbackOptionIndex = 0
 
     m.top.observeField("playback", "onPlaybackChanged")
+    m.top.observeField("nextPlayback", "onNextPlaybackChanged")
     m.videoNode.observeField("state", "onVideoStateChanged")
     m.videoNode.observeField("position", "onVideoPositionChanged")
     m.videoNode.observeField("availableAudioTracks", "onAvailableAudioTracksChanged")
@@ -67,6 +81,7 @@ sub init()
     m.progressTimer.observeField("fire", "onProgressTimer")
     m.statusClearTimer.observeField("fire", "onStatusClearTimer")
     m.resumePromptTimer.observeField("fire", "onResumePromptTimer")
+    m.nextEpisodeCountdownTimer.observeField("fire", "onNextEpisodeCountdownTimer")
     m.seekDebounceTimer.observeField("fire", "onSeekDebounceTimer")
     m.seekSettleTimer.observeField("fire", "onSeekSettleTimer")
     m.top.setFocus(true)
@@ -86,12 +101,40 @@ sub onPlaybackChanged(event as Object)
     m.playback = event.getData()
     if m.playback = invalid then return
 
+    resetNextEpisodeState()
     m.preferences = m.preferenceStore.load(m.playback)
     m.titleLabel.text = playbackTitle()
     buildControls()
     showRail()
     updateProgressVisuals()
     startPlayback()
+end sub
+
+sub resetNextEpisodeState()
+    m.nextEpisodePromptOpen = false
+    m.nextEpisodePromptIndex = 0
+    m.nextEpisodePromptRemainingSeconds = 10
+    m.nextEpisodePromptPlayback = invalid
+    m.nextEpisodeRequestPending = false
+    m.nextEpisodeRequested = false
+    m.nextEpisodeRequestReason = ""
+    if m.nextEpisodePromptGroup <> invalid then m.nextEpisodePromptGroup.visible = false
+    if m.nextEpisodeCountdownTimer <> invalid then m.nextEpisodeCountdownTimer.control = "stop"
+end sub
+
+sub onNextPlaybackChanged(event as Object)
+    response = event.getData()
+    m.nextEpisodeRequestPending = false
+
+    if response = invalid or response.ok <> true or response.playback = invalid
+        if m.nextEpisodeRequestReason = "finished"
+            markCompletedIfSafe()
+            exitPlayer()
+        end if
+        return
+    end if
+
+    showNextEpisodePrompt(response.playback)
 end sub
 
 function playbackTitle() as String
@@ -317,6 +360,130 @@ sub updateResumePromptCountdown()
     m.resumePromptCountdownLabel.text = "Auto-resume in " + StrI(m.resumeCountdownSeconds).Trim() + " sec"
 end sub
 
+sub showNextEpisodePrompt(playback as Object)
+    if playback = invalid then return
+
+    m.nextEpisodePromptPlayback = playback
+    m.nextEpisodePromptOpen = true
+    m.nextEpisodePromptIndex = 0
+    m.nextEpisodePromptRemainingSeconds = 10
+
+    title = "Next episode"
+    if playback.title <> invalid and playback.title <> "" then title = playback.title
+    m.nextEpisodePromptMessageLabel.text = title
+    renderNextEpisodePromptOptions()
+    updateNextEpisodePromptCountdown()
+    m.bottomRailGroup.visible = false
+    m.nextEpisodePromptGroup.visible = true
+    m.nextEpisodeCountdownTimer.control = "start"
+end sub
+
+sub renderNextEpisodePromptOptions()
+    childCount = m.nextEpisodePromptOptionsHost.getChildCount()
+    if childCount > 0 then m.nextEpisodePromptOptionsHost.removeChildrenIndex(childCount, 0)
+    m.nextEpisodePromptOptionNodes = []
+
+    labels = ["Play next now", "Keep watching"]
+    for index = 0 to labels.Count() - 1
+        group = CreateObject("roSGNode", "Group")
+        group.translation = [0, index * 58]
+
+        bg = CreateObject("roSGNode", "Rectangle")
+        bg.width = 440
+        bg.height = 46
+        bg.color = "#374151"
+        if index = m.nextEpisodePromptIndex then bg.color = "#E5E7EB"
+        group.appendChild(bg)
+
+        label = CreateObject("roSGNode", "Label")
+        label.translation = [18, 12]
+        label.width = 404
+        label.text = labels[index]
+        label.color = "#D1D5DB"
+        if index = m.nextEpisodePromptIndex then label.color = "#111827"
+        group.appendChild(label)
+
+        m.nextEpisodePromptOptionsHost.appendChild(group)
+        m.nextEpisodePromptOptionNodes.Push(group)
+    end for
+end sub
+
+sub updateNextEpisodePromptCountdown()
+    m.nextEpisodePromptCountdownLabel.text = "Auto-play in " + StrI(m.nextEpisodePromptRemainingSeconds).Trim() + " sec"
+end sub
+
+sub closeNextEpisodePrompt()
+    m.nextEpisodePromptOpen = false
+    m.nextEpisodePromptPlayback = invalid
+    m.nextEpisodeCountdownTimer.control = "stop"
+    m.nextEpisodePromptGroup.visible = false
+    if m.isPlaying then showRail()
+end sub
+
+sub onNextEpisodeCountdownTimer()
+    if m.nextEpisodePromptOpen <> true then return
+
+    m.nextEpisodePromptRemainingSeconds = m.nextEpisodePromptRemainingSeconds - 1
+    if m.nextEpisodePromptRemainingSeconds <= 0
+        chooseNextEpisodePromptOption(0)
+    else
+        updateNextEpisodePromptCountdown()
+    end if
+end sub
+
+function handleNextEpisodePromptKey(key as String) as Boolean
+    if key = "back"
+        chooseNextEpisodePromptOption(1)
+        return true
+    else if key = "up" or key = "down"
+        if m.nextEpisodePromptIndex = 0 then m.nextEpisodePromptIndex = 1 else m.nextEpisodePromptIndex = 0
+        renderNextEpisodePromptOptions()
+        return true
+    else if key = "OK" or key = "play"
+        chooseNextEpisodePromptOption(m.nextEpisodePromptIndex)
+        return true
+    end if
+
+    return true
+end function
+
+sub chooseNextEpisodePromptOption(index as Integer)
+    if index <> 0
+        closeNextEpisodePrompt()
+        return
+    end if
+
+    nextPlayback = m.nextEpisodePromptPlayback
+    if nextPlayback = invalid
+        closeNextEpisodePrompt()
+        return
+    end if
+
+    markCompletedIfSafe()
+    startNextPlayback(nextPlayback)
+end sub
+
+sub startNextPlayback(playback as Object)
+    m.nextEpisodeCountdownTimer.control = "stop"
+    m.nextEpisodePromptGroup.visible = false
+    m.videoNode.control = "stop"
+    m.progressTimer.control = "stop"
+    clearPendingSeek()
+
+    m.playback = playback
+    m.preferences = m.preferenceStore.load(m.playback)
+    m.titleLabel.text = playbackTitle()
+    m.lastSavedSeconds = -1
+    m.completed = false
+    m.playbackStarted = false
+    m.isPlaying = false
+    resetNextEpisodeState()
+    buildControls()
+    showRail()
+    updateProgressVisuals()
+    startPlayback()
+end sub
+
 function resumeStartSeconds() as Integer
     if m.playback = invalid or m.playback.progressSeconds = invalid then return 0
     progress = m.playback.progressSeconds
@@ -329,6 +496,63 @@ function resumeStartSeconds() as Integer
     end if
 
     return progress
+end function
+
+function nextEpisodePromptThresholdSeconds(duration as Integer) as Integer
+    if duration <= 0 then return 0
+
+    percentThreshold = Int((duration * 8) / 100)
+    if percentThreshold < 1 then percentThreshold = 1
+    if percentThreshold > 180 then return 180
+    return percentThreshold
+end function
+
+sub maybeRequestNextEpisodePrompt(reason as String)
+    if m.playback = invalid then return
+    if m.nextEpisodeRequested = true or m.nextEpisodeRequestPending = true or m.nextEpisodePromptOpen = true then return
+    if canAskForNextEpisode() <> true then return
+
+    if reason = "threshold"
+        duration = playbackDurationSeconds()
+        if duration <= 0 then return
+        position = currentPositionSeconds()
+        if position <= 0 then return
+        remaining = duration - position
+        if remaining < 0 then remaining = 0
+        threshold = nextEpisodePromptThresholdSeconds(duration)
+        if threshold <= 0 or remaining > threshold then return
+    end if
+
+    m.nextEpisodeRequested = true
+    m.nextEpisodeRequestPending = true
+    m.nextEpisodeRequestReason = reason
+    m.top.nextPlaybackRequested = {
+        itemId: playbackIntegerField("itemId", 0)
+        mediaId: playbackIntegerField("mediaId", 0)
+        seasonNumber: playbackIntegerField("seasonNumber", 0)
+        episodeNumber: playbackIntegerField("episodeNumber", 0)
+        videoNumber: playbackIntegerField("videoNumber", 0)
+        reason: reason
+    }
+end sub
+
+function canAskForNextEpisode() as Boolean
+    if m.playback = invalid then return false
+    itemId = playbackIntegerField("itemId", 0)
+    mediaId = playbackIntegerField("mediaId", 0)
+    seasonNumber = playbackIntegerField("seasonNumber", 0)
+    if itemId <= 0 or mediaId <= 0 then return false
+    return seasonNumber > 0
+end function
+
+function playbackIntegerField(key as String, fallback as Integer) as Integer
+    if m.playback = invalid or type(m.playback) <> "roAssociativeArray" then return fallback
+    if m.playback.DoesExist(key) <> true or m.playback[key] = invalid then return fallback
+    value = m.playback[key]
+    valueType = type(value)
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value
+    if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble" then return Int(value)
+    return fallback
 end function
 
 sub buildControls()
@@ -456,6 +680,14 @@ sub onVideoStateChanged(event as Object)
             exitPlayer()
             return
         end if
+        if m.nextEpisodePromptOpen
+            chooseNextEpisodePromptOption(0)
+            return
+        end if
+        if canAskForNextEpisode()
+            maybeRequestNextEpisodePrompt("finished")
+            if m.nextEpisodeRequestPending then return
+        end if
         m.completed = true
         markCompletedIfSafe()
         exitPlayer()
@@ -515,6 +747,7 @@ end sub
 sub onVideoPositionChanged()
     updateSeekSettle()
     updateProgressVisuals()
+    maybeRequestNextEpisodePrompt("threshold")
 end sub
 
 sub onAvailableAudioTracksChanged()
@@ -528,7 +761,10 @@ sub onAvailableSubtitleTracksChanged()
 end sub
 
 sub onProgressTimer()
-    if m.isPlaying then sendProgressUpdate("interval")
+    if m.isPlaying
+        sendProgressUpdate("interval")
+        maybeRequestNextEpisodePrompt("threshold")
+    end if
 end sub
 
 sub onResumePromptTimer()
@@ -613,6 +849,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if press <> true then return false
 
     if m.resumePromptOpen then return handleResumePromptKey(key)
+    if m.nextEpisodePromptOpen then return handleNextEpisodePromptKey(key)
 
     if key = "back"
         sendProgressUpdate("exit")
@@ -1374,6 +1611,7 @@ sub exitPlayer()
     m.railHideTimer.control = "stop"
     m.statusClearTimer.control = "stop"
     m.resumePromptTimer.control = "stop"
+    m.nextEpisodeCountdownTimer.control = "stop"
     m.seekDebounceTimer.control = "stop"
     clearPendingSeek()
     m.videoNode.control = "stop"

@@ -4,6 +4,8 @@
     <field id="playback" type="assocarray" />
     <field id="exitRequested" type="boolean" alwaysNotify="true" />
     <field id="playbackError" type="string" alwaysNotify="true" />
+    <field id="nextPlaybackRequested" type="assocarray" alwaysNotify="true" />
+    <field id="nextPlayback" type="assocarray" alwaysNotify="true" />
   </interface>
   <children>
     <Video id="videoNode" width="1280" height="720" enableUI="false" />
@@ -39,10 +41,19 @@
       <Label id="statusLabel" translation="[72,166]" width="700" color="#9CA3AF" />
     </Group>
 
+    <Group id="nextEpisodePromptGroup" translation="[390,214]" visible="false">
+      <Rectangle width="500" height="292" color="#111827" opacity="0.96" />
+      <Label id="nextEpisodePromptTitleLabel" translation="[30,28]" width="440" text="Play next episode?" color="#F5F5F5" />
+      <Label id="nextEpisodePromptMessageLabel" translation="[30,74]" width="440" color="#D1D5DB" />
+      <Group id="nextEpisodePromptOptionsHost" translation="[30,126]" />
+      <Label id="nextEpisodePromptCountdownLabel" translation="[30,246]" width="440" horizAlign="center" color="#9CA3AF" />
+    </Group>
+
     <Timer id="railHideTimer" repeat="false" duration="4" />
     <Timer id="progressTimer" repeat="true" duration="60" />
     <Timer id="statusClearTimer" repeat="false" duration="2.5" />
     <Timer id="resumePromptTimer" repeat="true" duration="1" />
+    <Timer id="nextEpisodeCountdownTimer" repeat="true" duration="1" />
     <Timer id="seekDebounceTimer" repeat="false" duration="0.45" />
     <Timer id="seekSettleTimer" repeat="false" duration="2.5" />
   </children>

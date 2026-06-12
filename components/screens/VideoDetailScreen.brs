@@ -80,10 +80,13 @@ sub init()
     m.bookmarkStatusMessage = ""
     m.pendingPlaybackMediaId = 0
     m.pendingPlaybackPayload = invalid
+    m.pendingNextPlaybackMediaId = 0
+    m.pendingNextPlaybackPayload = invalid
 
     m.top.observeField("selection", "onSelectionChanged")
     m.top.observeField("playbackError", "onPlaybackError")
     m.top.observeField("reloadRequested", "onReloadRequested")
+    m.top.observeField("nextPlaybackRequested", "onNextPlaybackRequested")
     m.top.setFocus(true)
 end sub
 
@@ -1390,11 +1393,141 @@ sub onMediaLinksRefreshResponse(event as Object)
     m.playbackErrorLabel.text = message
 end sub
 
+sub onNextPlaybackRequested(event as Object)
+    request = event.getData()
+    media = nextPlayableMediaAfter(request)
+    if media = invalid
+        m.top.nextPlayback = {
+            ok: false
+            reason: nextPlaybackRequestReason(request)
+            message: "No next episode is available."
+        }
+        return
+    end if
+
+    prepareNextPlaybackPreflight(media, request)
+end sub
+
+function nextPlayableMediaAfter(request as Dynamic) as Dynamic
+    if request = invalid or m.seasons = invalid or m.seasons.Count() = 0 then return invalid
+
+    requestMediaId = nextPlaybackIntegerField(request, "mediaId", 0)
+    requestSeasonNumber = nextPlaybackIntegerField(request, "seasonNumber", 0)
+    requestVideoNumber = nextPlaybackIntegerField(request, "videoNumber", 0)
+    requestEpisodeNumber = nextPlaybackIntegerField(request, "episodeNumber", requestVideoNumber)
+
+    foundCurrent = false
+    for seasonIndex = 0 to m.seasons.Count() - 1
+        season = m.seasons[seasonIndex]
+        episodes = []
+        if season <> invalid and season.episodes <> invalid then episodes = season.episodes
+
+        for episodeIndex = 0 to episodes.Count() - 1
+            episode = episodes[episodeIndex]
+            if foundCurrent and episode <> invalid and episode.isPlayable = true then return episode
+
+            if nextPlaybackMatchesMedia(episode, requestMediaId, requestSeasonNumber, requestVideoNumber, requestEpisodeNumber)
+                foundCurrent = true
+            end if
+        end for
+    end for
+
+    return invalid
+end function
+
+function nextPlaybackMatchesMedia(media as Dynamic, requestMediaId as Integer, requestSeasonNumber as Integer, requestVideoNumber as Integer, requestEpisodeNumber as Integer) as Boolean
+    if media = invalid then return false
+    if requestMediaId > 0 and media.mediaId <> invalid and media.mediaId = requestMediaId then return true
+
+    mediaSeasonNumber = 0
+    if media.seasonNumber <> invalid then mediaSeasonNumber = media.seasonNumber
+    if requestSeasonNumber > 0 and mediaSeasonNumber <> requestSeasonNumber then return false
+
+    mediaVideoNumber = 0
+    if media.videoNumber <> invalid then mediaVideoNumber = media.videoNumber
+    if requestVideoNumber > 0 and mediaVideoNumber = requestVideoNumber then return true
+
+    mediaEpisodeNumber = 0
+    if media.episodeNumber <> invalid then mediaEpisodeNumber = media.episodeNumber
+    return requestEpisodeNumber > 0 and mediaEpisodeNumber = requestEpisodeNumber
+end function
+
+sub prepareNextPlaybackPreflight(media as Object, request as Dynamic)
+    payload = playbackPayloadForMedia(media)
+    reason = nextPlaybackRequestReason(request)
+    mediaId = 0
+    if media.mediaId <> invalid then mediaId = media.mediaId
+
+    if mediaId <= 0
+        m.top.nextPlayback = { ok: true, playback: payload, reason: reason }
+        return
+    end if
+
+    m.pendingNextPlaybackMediaId = mediaId
+    m.pendingNextPlaybackPayload = payload
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "refreshMediaLinks"
+    task.request = { media: media }
+    task.observeField("response", "onNextMediaLinksRefreshResponse")
+    task.control = "RUN"
+    m.nextMediaLinksTask = task
+end sub
+
+sub onNextMediaLinksRefreshResponse(event as Object)
+    response = event.getData()
+    fallbackPayload = m.pendingNextPlaybackPayload
+    pendingMediaId = m.pendingNextPlaybackMediaId
+    m.pendingNextPlaybackMediaId = 0
+    m.pendingNextPlaybackPayload = invalid
+    m.nextMediaLinksTask = invalid
+
+    if pendingMediaId <= 0 then return
+
+    if response <> invalid and response.ok = true and response.media <> invalid
+        responseMediaId = 0
+        if response.media.mediaId <> invalid then responseMediaId = response.media.mediaId
+        if responseMediaId <> pendingMediaId then return
+        m.top.nextPlayback = { ok: true, playback: playbackPayloadForMedia(response.media) }
+        return
+    end if
+
+    if fallbackPayload <> invalid and fallbackPayload.streamUrl <> invalid and fallbackPayload.streamUrl <> ""
+        m.top.nextPlayback = { ok: true, playback: fallbackPayload }
+        return
+    end if
+
+    message = "No playable next episode is available."
+    if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+    m.top.nextPlayback = { ok: false, message: message }
+end sub
+
+function nextPlaybackRequestReason(request as Dynamic) as String
+    if request = invalid or type(request) <> "roAssociativeArray" then return ""
+    if request.DoesExist("reason") <> true or request.reason = invalid then return ""
+    if type(request.reason) = "String" or type(request.reason) = "roString" then return request.reason
+    return ""
+end function
+
+function nextPlaybackIntegerField(source as Dynamic, key as String, fallback as Integer) as Integer
+    if source = invalid or type(source) <> "roAssociativeArray" then return fallback
+    if source.DoesExist(key) <> true or source[key] = invalid then return fallback
+    value = source[key]
+    valueType = type(value)
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value
+    if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble" then return Int(value)
+    return fallback
+end function
+
 sub cancelPlaybackPreflight()
     if m.mediaLinksTask <> invalid then m.mediaLinksTask.control = "STOP"
     m.mediaLinksTask = invalid
     m.pendingPlaybackMediaId = 0
     m.pendingPlaybackPayload = invalid
+    if m.nextMediaLinksTask <> invalid then m.nextMediaLinksTask.control = "STOP"
+    m.nextMediaLinksTask = invalid
+    m.pendingNextPlaybackMediaId = 0
+    m.pendingNextPlaybackPayload = invalid
 end sub
 
 function onKeyEvent(key as String, press as Boolean) as Boolean

@@ -518,6 +518,8 @@ grep -q '"/v1/watching/marktime"' source/services/KinoWatchingService.brs
 grep -q '"/v1/watching/toggle"' source/services/KinoWatchingService.brs
 grep -q "function PlayerPreferenceStore" source/services/PlayerPreferenceStore.brs
 grep -q "playerprefs" source/services/PlayerPreferenceStore.brs
+
+./scripts/tests/next-episode-flow.sh
 grep -q "playerPreferenceLoad" source/services/PlayerPreferenceStore.brs
 grep -q "playerPreferenceSave" source/services/PlayerPreferenceStore.brs
 grep -q "playerPreferenceIntegerField" source/services/PlayerPreferenceStore.brs
