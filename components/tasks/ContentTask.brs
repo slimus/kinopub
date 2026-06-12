@@ -24,6 +24,8 @@ sub runContentTask()
         m.top.response = contentTaskLoadHome(tokenStore, authService, homeService, typeService, request)
     else if command = "loadItemDetail"
         m.top.response = contentTaskLoadItemDetail(tokenStore, authService, itemService, request)
+    else if command = "refreshMediaLinks"
+        m.top.response = contentTaskRefreshMediaLinks(tokenStore, authService, itemService, request)
     else if command = "searchItems"
         m.top.response = contentTaskSearchItems(tokenStore, authService, searchService, typeService, request)
     else if command = "loadUserInfo"
@@ -140,6 +142,27 @@ function contentTaskLoadItemDetail(tokenStore as Object, authService as Object, 
     end if
     result.command = "loadItemDetail"
     result.itemId = itemId
+    result.mediaId = mediaId
+    return result
+end function
+
+function contentTaskRefreshMediaLinks(tokenStore as Object, authService as Object, itemService as Object, request as Dynamic) as Object
+    media = invalid
+    if request <> invalid and type(request) = "roAssociativeArray" and request.DoesExist("media") then media = request.media
+    mediaId = contentTaskIntegerField(media, "mediaId", 0)
+    if mediaId <= 0
+        return { command: "refreshMediaLinks", ok: false, mediaId: mediaId, error: "invalid_media", message: "Unable to refresh this video.", status: 0 }
+    end if
+
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to play this video.")
+    if tokenResult.ok <> true
+        tokenResult.command = "refreshMediaLinks"
+        tokenResult.mediaId = mediaId
+        return tokenResult
+    end if
+
+    result = itemService.mediaLinks(tokenResult.accessToken, media)
+    result.command = "refreshMediaLinks"
     result.mediaId = mediaId
     return result
 end function

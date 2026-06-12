@@ -4,13 +4,16 @@ function KinoItemService(client as Object) as Object
         detail: kinoItemDetail
         similar: kinoItemSimilar
         trailer: kinoItemTrailer
+        mediaLinks: kinoItemMediaLinks
         normalizeResponse: kinoItemNormalizeResponse
         normalizeSimilarResponse: kinoItemNormalizeSimilarResponse
         normalizeSimilarItem: kinoItemNormalizeSimilarItem
         normalizeTrailerResponse: kinoItemNormalizeTrailerResponse
+        normalizeMediaLinksResponse: kinoItemNormalizeMediaLinksResponse
         normalizeVideos: kinoItemNormalizeVideos
         normalizeSeasons: kinoItemNormalizeSeasons
         normalizeMedia: kinoItemNormalizeMedia
+        mergeMediaLinkFields: kinoItemMergeMediaLinkFields
         mediaStream: kinoItemMediaStream
         streamFromUrlContainer: kinoItemStreamFromUrlContainer
         qualityOptions: kinoItemQualityOptions
@@ -59,6 +62,17 @@ function kinoItemTrailer(accessToken as String, itemId as Integer) as Object
     response = m.client.get("/v1/items/trailer", { access_token: accessToken, id: itemId }, m.client.defaultTimeoutMs)
     if response.ok <> true then return m.failure(response)
     return m.normalizeTrailerResponse(response.body)
+end function
+
+function kinoItemMediaLinks(accessToken as String, media as Object) as Object
+    mediaId = m.integerField(media, "mediaId", 0)
+    if mediaId <= 0
+        return { ok: false, error: "invalid_media", message: "Unable to refresh this video.", status: 0 }
+    end if
+
+    response = m.client.get("/v1/items/media-links", { access_token: accessToken, mid: mediaId }, m.client.defaultTimeoutMs)
+    if response.ok <> true then return m.failure(response)
+    return m.normalizeMediaLinksResponse(response.body, media)
 end function
 
 function kinoItemNormalizeResponse(body as Dynamic, requestedItemId as Integer) as Object
@@ -295,6 +309,58 @@ function kinoItemNormalizeMedia(media as Dynamic, seasonNumber as Integer, fallb
     }
 end function
 
+function kinoItemNormalizeMediaLinksResponse(body as Dynamic, media as Object) as Object
+    if media = invalid or type(media) <> "roAssociativeArray"
+        return { ok: false, error: "invalid_media", message: "Unable to refresh this video.", status: 0 }
+    end if
+
+    merged = m.mergeMediaLinkFields(media, body)
+    refreshed = m.normalizeMedia(merged, m.integerField(media, "seasonNumber", 0), m.integerField(media, "episodeNumber", 1))
+    refreshed.title = m.stringField(media, "title", refreshed.title)
+    refreshed.subtitle = m.stringField(media, "subtitle", refreshed.subtitle)
+    refreshed.mediaId = m.integerField(media, "mediaId", refreshed.mediaId)
+    refreshed.videoNumber = m.integerField(media, "videoNumber", refreshed.videoNumber)
+    refreshed.durationSeconds = m.integerField(media, "durationSeconds", refreshed.durationSeconds)
+    refreshed.watchStatus = m.integerField(media, "watchStatus", refreshed.watchStatus)
+    refreshed.watched = m.booleanField(media, "watched", refreshed.watched)
+    refreshed.progressSeconds = m.integerField(media, "progressSeconds", refreshed.progressSeconds)
+
+    if refreshed.streamUrl = ""
+        return { ok: false, error: "no_playable_stream", message: "No playable video is available.", status: 0, media: refreshed }
+    end if
+
+    return { ok: true, media: refreshed }
+end function
+
+function kinoItemMergeMediaLinkFields(media as Object, body as Dynamic) as Object
+    merged = {}
+    for each key in media
+        merged[key] = media[key]
+    end for
+
+    source = body
+    if body <> invalid and type(body) = "roAssociativeArray"
+        if body.DoesExist("media") and body.media <> invalid
+            source = body.media
+        else if body.DoesExist("links") and body.links <> invalid
+            source = body.links
+        else if body.DoesExist("item") and body.item <> invalid
+            source = body.item
+        end if
+    end if
+
+    if source <> invalid and type(source) = "roAssociativeArray"
+        if source.DoesExist("files") then merged.files = source.files
+        if source.DoesExist("subtitles") then merged.subtitles = source.subtitles
+        if source.DoesExist("audios") then merged.audios = source.audios
+        if source.DoesExist("audio") then merged.audio = source.audio
+        if source.DoesExist("hls") then merged.hls = source.hls
+        if source.DoesExist("url") then merged.url = source.url
+    end if
+
+    return merged
+end function
+
 function kinoItemMediaStream(media as Dynamic) as Object
     if media = invalid or type(media) <> "roAssociativeArray" then return { url: "", format: "" }
 
@@ -508,6 +574,7 @@ function kinoItemTrackOptions(media as Dynamic) as Object
 
     if media <> invalid and type(media) = "roAssociativeArray"
         sourceAudio = m.arrayField(media, "audio")
+        if sourceAudio.Count() = 0 then sourceAudio = m.arrayField(media, "audios")
         for index = 0 to sourceAudio.Count() - 1
             track = sourceAudio[index]
             if track <> invalid and type(track) = "roAssociativeArray"
