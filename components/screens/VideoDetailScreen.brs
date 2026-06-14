@@ -78,6 +78,8 @@ sub init()
     m.selectedBookmarkFolderIndex = 0
     m.bookmarkOverlayOpen = false
     m.bookmarkStatusMessage = ""
+    m.pendingPlaybackMediaId = 0
+    m.pendingPlaybackPayload = invalid
 
     m.top.observeField("selection", "onSelectionChanged")
     m.top.observeField("playbackError", "onPlaybackError")
@@ -165,6 +167,7 @@ sub onDetailResponse(event as Object)
     m.similarItems = []
     if m.item.similarItems <> invalid then m.similarItems = m.item.similarItems
     m.selectedSimilarIndex = 0
+    cancelPlaybackPreflight()
     buildPlayableModel()
     m.focusArea = "episodes"
     renderDetail()
@@ -1303,7 +1306,7 @@ sub startSelectedPlayback()
         return
     end if
 
-    m.top.playbackRequested = playbackPayloadForMedia(media)
+    startPlaybackPreflight(media)
 end sub
 
 function playbackPayloadForMedia(media as Object) as Object
@@ -1330,6 +1333,69 @@ function playbackPayloadForMedia(media as Object) as Object
         subtitleTracks: media.subtitleTracks
     }
 end function
+
+sub startPlaybackPreflight(media as Object)
+    payload = playbackPayloadForMedia(media)
+    mediaId = 0
+    if media.mediaId <> invalid then mediaId = media.mediaId
+
+    if mediaId <= 0
+        m.top.playbackRequested = payload
+        return
+    end if
+
+    if m.pendingPlaybackMediaId = mediaId
+        return
+    end if
+
+    m.pendingPlaybackMediaId = mediaId
+    m.pendingPlaybackPayload = payload
+    m.playbackErrorLabel.text = "Preparing video..."
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "refreshMediaLinks"
+    task.request = { media: media }
+    task.observeField("response", "onMediaLinksRefreshResponse")
+    task.control = "RUN"
+    m.mediaLinksTask = task
+end sub
+
+sub onMediaLinksRefreshResponse(event as Object)
+    response = event.getData()
+    fallbackPayload = m.pendingPlaybackPayload
+    pendingMediaId = m.pendingPlaybackMediaId
+    m.pendingPlaybackMediaId = 0
+    m.pendingPlaybackPayload = invalid
+    m.mediaLinksTask = invalid
+
+    if pendingMediaId <= 0 then return
+
+    if response <> invalid and response.ok = true and response.media <> invalid
+        responseMediaId = 0
+        if response.media.mediaId <> invalid then responseMediaId = response.media.mediaId
+        if responseMediaId <> pendingMediaId then return
+        m.playbackErrorLabel.text = ""
+        m.top.playbackRequested = playbackPayloadForMedia(response.media)
+        return
+    end if
+
+    if fallbackPayload <> invalid and fallbackPayload.streamUrl <> invalid and fallbackPayload.streamUrl <> ""
+        m.playbackErrorLabel.text = ""
+        m.top.playbackRequested = fallbackPayload
+        return
+    end if
+
+    message = "No playable video is available."
+    if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+    m.playbackErrorLabel.text = message
+end sub
+
+sub cancelPlaybackPreflight()
+    if m.mediaLinksTask <> invalid then m.mediaLinksTask.control = "STOP"
+    m.mediaLinksTask = invalid
+    m.pendingPlaybackMediaId = 0
+    m.pendingPlaybackPayload = invalid
+end sub
 
 function onKeyEvent(key as String, press as Boolean) as Boolean
     if press <> true then return false
@@ -1366,6 +1432,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
 
     if key = "back"
+        cancelPlaybackPreflight()
         m.top.backRequested = true
         return true
     end if

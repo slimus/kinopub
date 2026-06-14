@@ -480,6 +480,19 @@ grep -q "appendWatchedCheck" components/screens/VideoDetailScreen.brs
 grep -q "progressText = episodeProgressText(episode)" components/screens/VideoDetailScreen.brs
 grep -q "watchStatus: media.watchStatus" components/screens/VideoDetailScreen.brs
 grep -q "m.top.playbackRequested" components/screens/VideoDetailScreen.brs
+grep -q 'mediaLinks: kinoItemMediaLinks' source/services/KinoItemService.brs
+grep -q 'normalizeMediaLinksResponse: kinoItemNormalizeMediaLinksResponse' source/services/KinoItemService.brs
+grep -q 'mergeMediaLinkFields: kinoItemMergeMediaLinkFields' source/services/KinoItemService.brs
+grep -q '"/v1/items/media-links"' source/services/KinoItemService.brs
+grep -q 'if sourceAudio.Count() = 0 then sourceAudio = m.arrayField(media, "audios")' source/services/KinoItemService.brs
+grep -q 'command = "refreshMediaLinks"' components/tasks/ContentTask.brs
+grep -q 'contentTaskRefreshMediaLinks' components/tasks/ContentTask.brs
+grep -q 'itemService.mediaLinks(tokenResult.accessToken, media)' components/tasks/ContentTask.brs
+grep -q 'm.pendingPlaybackMediaId = 0' components/screens/VideoDetailScreen.brs
+grep -q 'm.playbackErrorLabel.text = "Preparing video..."' components/screens/VideoDetailScreen.brs
+grep -q 'task.command = "refreshMediaLinks"' components/screens/VideoDetailScreen.brs
+grep -q 'sub onMediaLinksRefreshResponse' components/screens/VideoDetailScreen.brs
+grep -q 'm.top.playbackRequested = fallbackPayload' components/screens/VideoDetailScreen.brs
 grep -q "m.posterFallback.visible = true" components/screens/VideoDetailScreen.brs
 grep -q "showPlayerScreen" components/AppScene.brs
 grep -q "onPlaybackRequested" components/AppScene.brs
@@ -767,6 +780,7 @@ unzip -p dist/kinopub.zip components/screens/PlayerScreen.xml | grep -q "bottomR
 unzip -p dist/kinopub.zip components/screens/PlayerScreen.brs | grep -q "sendProgressUpdate"
 unzip -p dist/kinopub.zip source/services/KinoWatchingService.brs | grep -q '"/v1/watching/marktime"'
 unzip -p dist/kinopub.zip source/services/KinoBookmarkService.brs | grep -q '"/v1/bookmarks/toggle-item"'
+unzip -p dist/kinopub.zip source/services/KinoItemService.brs | grep -q '"/v1/items/media-links"'
 unzip -p dist/kinopub.zip source/services/PlayerPreferenceStore.brs | grep -q "playerprefs"
 unzip -p dist/kinopub.zip source/services/KinoSearchService.brs | grep -q '"/v1/items"'
 unzip -p dist/kinopub.zip source/services/KinoContentTypeService.brs | grep -q '"/v1/types"'
@@ -775,12 +789,14 @@ if unzip -p dist/kinopub.zip source/services/KinoSearchService.brs | grep -q '"/
   exit 1
 fi
 unzip -p dist/kinopub.zip components/tasks/ContentTask.brs | grep -q "searchItems"
+unzip -p dist/kinopub.zip components/tasks/ContentTask.brs | grep -q "refreshMediaLinks"
 unzip -p dist/kinopub.zip components/tasks/ContentTask.xml | grep -q "KinoContentTypeService.brs"
 unzip -p dist/kinopub.zip components/tasks/ContentTask.xml | grep -q "KinoBookmarkService.brs"
 unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep -q 'source: "search"'
 unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep -q 'showSection("bookmarks")'
 unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep -q "appendTypeBadge"
 unzip -p dist/kinopub.zip components/screens/HomeScreen.xml | grep -q "searchKeyboardGroup"
+unzip -p dist/kinopub.zip components/screens/VideoDetailScreen.brs | grep -q "Preparing video..."
 
 bash scripts/tests/player-track-dedupe.sh
 bash scripts/tests/player-subtitle-selection.sh
