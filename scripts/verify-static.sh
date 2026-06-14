@@ -518,6 +518,8 @@ grep -q '"/v1/watching/marktime"' source/services/KinoWatchingService.brs
 grep -q '"/v1/watching/toggle"' source/services/KinoWatchingService.brs
 grep -q "function PlayerPreferenceStore" source/services/PlayerPreferenceStore.brs
 grep -q "playerprefs" source/services/PlayerPreferenceStore.brs
+
+./scripts/tests/next-episode-flow.sh
 grep -q "playerPreferenceLoad" source/services/PlayerPreferenceStore.brs
 grep -q "playerPreferenceSave" source/services/PlayerPreferenceStore.brs
 grep -q "playerPreferenceIntegerField" source/services/PlayerPreferenceStore.brs
@@ -666,7 +668,7 @@ if grep -A 20 "sub startPlayback" components/screens/PlayerScreen.brs | grep -q 
   echo "Debug playback isolation must not apply saved audio/subtitle preferences on startup." >&2
   exit 1
 fi
-grep -q "m.controlFocusY = 106" components/screens/PlayerScreen.brs
+grep -q "m.controlFocusY = 234" components/screens/PlayerScreen.brs
 grep -q "m.focusCursor.translation = \\[m.controlPositions\\[m.focusIndex\\], m.controlFocusY\\]" components/screens/PlayerScreen.brs
 grep -q "updatePlayPauseControlLabel()" components/screens/PlayerScreen.brs
 grep -q "updateControlLabels()" components/screens/PlayerScreen.brs
@@ -800,5 +802,7 @@ unzip -p dist/kinopub.zip components/screens/VideoDetailScreen.brs | grep -q "Pr
 
 bash scripts/tests/player-track-dedupe.sh
 bash scripts/tests/player-subtitle-selection.sh
+bash scripts/tests/next-episode-flow.sh
+bash scripts/tests/player-season-carousel.sh
 
 echo "Static verification passed."

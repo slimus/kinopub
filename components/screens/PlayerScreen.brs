@@ -9,6 +9,12 @@ sub init()
     m.bottomRailGroup = m.top.findNode("bottomRailGroup")
     m.titleLabel = m.top.findNode("titleLabel")
     m.timeLabel = m.top.findNode("timeLabel")
+    m.seasonCarouselGroup = m.top.findNode("seasonCarouselGroup")
+    m.seasonCarouselTitleLabel = m.top.findNode("seasonCarouselTitleLabel")
+    m.seasonCarouselHost = m.top.findNode("seasonCarouselHost")
+    m.seasonCarouselLeftChevron = m.top.findNode("seasonCarouselLeftChevron")
+    m.seasonCarouselRightChevron = m.top.findNode("seasonCarouselRightChevron")
+    m.seasonCarouselStatusLabel = m.top.findNode("seasonCarouselStatusLabel")
     m.progressFocus = m.top.findNode("progressFocus")
     m.progressTrack = m.top.findNode("progressTrack")
     m.progressFill = m.top.findNode("progressFill")
@@ -23,6 +29,11 @@ sub init()
     m.progressTimer = m.top.findNode("progressTimer")
     m.statusClearTimer = m.top.findNode("statusClearTimer")
     m.resumePromptTimer = m.top.findNode("resumePromptTimer")
+    m.nextEpisodePromptGroup = m.top.findNode("nextEpisodePromptGroup")
+    m.nextEpisodePromptMessageLabel = m.top.findNode("nextEpisodePromptMessageLabel")
+    m.nextEpisodePromptOptionsHost = m.top.findNode("nextEpisodePromptOptionsHost")
+    m.nextEpisodePromptCountdownLabel = m.top.findNode("nextEpisodePromptCountdownLabel")
+    m.nextEpisodeCountdownTimer = m.top.findNode("nextEpisodeCountdownTimer")
     m.seekDebounceTimer = m.top.findNode("seekDebounceTimer")
     m.seekSettleTimer = m.top.findNode("seekSettleTimer")
 
@@ -33,7 +44,7 @@ sub init()
     m.controlNodes = []
     m.controlPositions = [72, 322, 572, 822]
     m.controlSpacing = 250
-    m.controlFocusY = 106
+    m.controlFocusY = 234
     m.focusArea = "controls"
     m.focusIndex = 0
     m.menuOpen = false
@@ -47,6 +58,14 @@ sub init()
     m.resumeStartPosition = 0
     m.resumeCountdownSeconds = 15
     m.resumePromptOptionNodes = []
+    m.nextEpisodePromptOpen = false
+    m.nextEpisodePromptIndex = 0
+    m.nextEpisodePromptRemainingSeconds = 10
+    m.nextEpisodePromptPlayback = invalid
+    m.nextEpisodeRequestPending = false
+    m.nextEpisodeRequested = false
+    m.nextEpisodeRequestReason = ""
+    m.nextEpisodePromptOptionNodes = []
     m.isPlaying = false
     m.playbackStarted = false
     m.savedAudioPreferenceApplied = false
@@ -57,8 +76,15 @@ sub init()
     m.pendingSeekPosition = invalid
     m.playbackOptions = []
     m.playbackOptionIndex = 0
+    m.seasonEpisodes = []
+    m.seasonCarouselCards = []
+    m.seasonCarouselFocusIndex = 0
+    m.seasonCarouselVisibleStart = 0
+    m.maxVisibleSeasonCarouselItems = 6
+    m.seasonCarouselRequestPending = false
 
     m.top.observeField("playback", "onPlaybackChanged")
+    m.top.observeField("nextPlayback", "onNextPlaybackChanged")
     m.videoNode.observeField("state", "onVideoStateChanged")
     m.videoNode.observeField("position", "onVideoPositionChanged")
     m.videoNode.observeField("availableAudioTracks", "onAvailableAudioTracksChanged")
@@ -67,6 +93,7 @@ sub init()
     m.progressTimer.observeField("fire", "onProgressTimer")
     m.statusClearTimer.observeField("fire", "onStatusClearTimer")
     m.resumePromptTimer.observeField("fire", "onResumePromptTimer")
+    m.nextEpisodeCountdownTimer.observeField("fire", "onNextEpisodeCountdownTimer")
     m.seekDebounceTimer.observeField("fire", "onSeekDebounceTimer")
     m.seekSettleTimer.observeField("fire", "onSeekSettleTimer")
     m.top.setFocus(true)
@@ -84,14 +111,64 @@ end sub
 
 sub onPlaybackChanged(event as Object)
     m.playback = event.getData()
-    if m.playback = invalid then return
+    if m.playback = invalid
+        resetNextEpisodeState()
+        resetSeasonCarouselState()
+        if m.focusArea = "seasonCarousel" then m.focusArea = "controls"
+        renderSeasonCarousel()
+        updateFocusCursor()
+        return
+    end if
 
+    resetNextEpisodeState()
     m.preferences = m.preferenceStore.load(m.playback)
     m.titleLabel.text = playbackTitle()
+    buildSeasonCarouselFromPlayback()
     buildControls()
     showRail()
     updateProgressVisuals()
     startPlayback()
+end sub
+
+sub resetNextEpisodeState()
+    m.nextEpisodePromptOpen = false
+    m.nextEpisodePromptIndex = 0
+    m.nextEpisodePromptRemainingSeconds = 10
+    m.nextEpisodePromptPlayback = invalid
+    m.nextEpisodeRequestPending = false
+    m.nextEpisodeRequested = false
+    m.nextEpisodeRequestReason = ""
+    if m.nextEpisodePromptGroup <> invalid then m.nextEpisodePromptGroup.visible = false
+    if m.nextEpisodeCountdownTimer <> invalid then m.nextEpisodeCountdownTimer.control = "stop"
+end sub
+
+sub onNextPlaybackChanged(event as Object)
+    response = event.getData()
+    if m.seasonCarouselRequestPending = true
+        if response = invalid or response.reason <> "seasonCarousel"
+            m.nextEpisodeRequestPending = false
+            m.nextEpisodeRequested = false
+            m.nextEpisodeRequestReason = ""
+            return
+        end if
+    end if
+
+    m.nextEpisodeRequestPending = false
+    m.seasonCarouselRequestPending = false
+
+    if response = invalid or response.ok <> true or response.playback = invalid
+        if m.nextEpisodeRequestReason = "finished"
+            markCompletedIfSafe()
+            exitPlayer()
+        end if
+        return
+    end if
+
+    if response.reason = "seasonCarousel"
+        startNextPlayback(response.playback)
+    else
+        showNextEpisodePrompt(response.playback)
+    end if
 end sub
 
 function playbackTitle() as String
@@ -317,6 +394,131 @@ sub updateResumePromptCountdown()
     m.resumePromptCountdownLabel.text = "Auto-resume in " + StrI(m.resumeCountdownSeconds).Trim() + " sec"
 end sub
 
+sub showNextEpisodePrompt(playback as Object)
+    if playback = invalid then return
+
+    m.nextEpisodePromptPlayback = playback
+    m.nextEpisodePromptOpen = true
+    m.nextEpisodePromptIndex = 0
+    m.nextEpisodePromptRemainingSeconds = 10
+
+    title = "Next episode"
+    if playback.title <> invalid and playback.title <> "" then title = playback.title
+    m.nextEpisodePromptMessageLabel.text = title
+    renderNextEpisodePromptOptions()
+    updateNextEpisodePromptCountdown()
+    m.bottomRailGroup.visible = false
+    m.nextEpisodePromptGroup.visible = true
+    m.nextEpisodeCountdownTimer.control = "start"
+end sub
+
+sub renderNextEpisodePromptOptions()
+    childCount = m.nextEpisodePromptOptionsHost.getChildCount()
+    if childCount > 0 then m.nextEpisodePromptOptionsHost.removeChildrenIndex(childCount, 0)
+    m.nextEpisodePromptOptionNodes = []
+
+    labels = ["Play next now", "Keep watching"]
+    for index = 0 to labels.Count() - 1
+        group = CreateObject("roSGNode", "Group")
+        group.translation = [0, index * 58]
+
+        bg = CreateObject("roSGNode", "Rectangle")
+        bg.width = 440
+        bg.height = 46
+        bg.color = "#374151"
+        if index = m.nextEpisodePromptIndex then bg.color = "#E5E7EB"
+        group.appendChild(bg)
+
+        label = CreateObject("roSGNode", "Label")
+        label.translation = [18, 12]
+        label.width = 404
+        label.text = labels[index]
+        label.color = "#D1D5DB"
+        if index = m.nextEpisodePromptIndex then label.color = "#111827"
+        group.appendChild(label)
+
+        m.nextEpisodePromptOptionsHost.appendChild(group)
+        m.nextEpisodePromptOptionNodes.Push(group)
+    end for
+end sub
+
+sub updateNextEpisodePromptCountdown()
+    m.nextEpisodePromptCountdownLabel.text = "Auto-play in " + StrI(m.nextEpisodePromptRemainingSeconds).Trim() + " sec"
+end sub
+
+sub closeNextEpisodePrompt()
+    m.nextEpisodePromptOpen = false
+    m.nextEpisodePromptPlayback = invalid
+    m.nextEpisodeCountdownTimer.control = "stop"
+    m.nextEpisodePromptGroup.visible = false
+    if m.isPlaying then showRail()
+end sub
+
+sub onNextEpisodeCountdownTimer()
+    if m.nextEpisodePromptOpen <> true then return
+
+    m.nextEpisodePromptRemainingSeconds = m.nextEpisodePromptRemainingSeconds - 1
+    if m.nextEpisodePromptRemainingSeconds <= 0
+        chooseNextEpisodePromptOption(0)
+    else
+        updateNextEpisodePromptCountdown()
+    end if
+end sub
+
+function handleNextEpisodePromptKey(key as String) as Boolean
+    if key = "back"
+        chooseNextEpisodePromptOption(1)
+        return true
+    else if key = "up" or key = "down"
+        if m.nextEpisodePromptIndex = 0 then m.nextEpisodePromptIndex = 1 else m.nextEpisodePromptIndex = 0
+        renderNextEpisodePromptOptions()
+        return true
+    else if key = "OK" or key = "play"
+        chooseNextEpisodePromptOption(m.nextEpisodePromptIndex)
+        return true
+    end if
+
+    return true
+end function
+
+sub chooseNextEpisodePromptOption(index as Integer)
+    if index <> 0
+        closeNextEpisodePrompt()
+        return
+    end if
+
+    nextPlayback = m.nextEpisodePromptPlayback
+    if nextPlayback = invalid
+        closeNextEpisodePrompt()
+        return
+    end if
+
+    markCompletedIfSafe()
+    startNextPlayback(nextPlayback)
+end sub
+
+sub startNextPlayback(playback as Object)
+    m.nextEpisodeCountdownTimer.control = "stop"
+    m.nextEpisodePromptGroup.visible = false
+    m.videoNode.control = "stop"
+    m.progressTimer.control = "stop"
+    clearPendingSeek()
+
+    m.playback = playback
+    m.preferences = m.preferenceStore.load(m.playback)
+    m.titleLabel.text = playbackTitle()
+    buildSeasonCarouselFromPlayback()
+    m.lastSavedSeconds = -1
+    m.completed = false
+    m.playbackStarted = false
+    m.isPlaying = false
+    resetNextEpisodeState()
+    buildControls()
+    showRail()
+    updateProgressVisuals()
+    startPlayback()
+end sub
+
 function resumeStartSeconds() as Integer
     if m.playback = invalid or m.playback.progressSeconds = invalid then return 0
     progress = m.playback.progressSeconds
@@ -329,6 +531,306 @@ function resumeStartSeconds() as Integer
     end if
 
     return progress
+end function
+
+function nextEpisodePromptThresholdSeconds(duration as Integer) as Integer
+    if duration <= 0 then return 0
+
+    percentThreshold = Int((duration * 8) / 100)
+    if percentThreshold < 1 then percentThreshold = 1
+    if percentThreshold > 180 then return 180
+    return percentThreshold
+end function
+
+sub maybeRequestNextEpisodePrompt(reason as String)
+    if m.playback = invalid then return
+    if m.nextEpisodeRequested = true or m.nextEpisodeRequestPending = true or m.nextEpisodePromptOpen = true then return
+    if canAskForNextEpisode() <> true then return
+
+    if reason = "threshold"
+        duration = playbackDurationSeconds()
+        if duration <= 0 then return
+        position = currentPositionSeconds()
+        if position <= 0 then return
+        remaining = duration - position
+        if remaining < 0 then remaining = 0
+        threshold = nextEpisodePromptThresholdSeconds(duration)
+        if threshold <= 0 or remaining > threshold then return
+    end if
+
+    m.nextEpisodeRequested = true
+    m.nextEpisodeRequestPending = true
+    m.nextEpisodeRequestReason = reason
+    m.top.nextPlaybackRequested = {
+        itemId: playbackIntegerField("itemId", 0)
+        mediaId: playbackIntegerField("mediaId", 0)
+        seasonNumber: playbackIntegerField("seasonNumber", 0)
+        episodeNumber: playbackIntegerField("episodeNumber", 0)
+        videoNumber: playbackIntegerField("videoNumber", 0)
+        reason: reason
+    }
+end sub
+
+function canAskForNextEpisode() as Boolean
+    if m.playback = invalid then return false
+    itemId = playbackIntegerField("itemId", 0)
+    mediaId = playbackIntegerField("mediaId", 0)
+    seasonNumber = playbackIntegerField("seasonNumber", 0)
+    if itemId <= 0 or mediaId <= 0 then return false
+    return seasonNumber > 0
+end function
+
+function playbackIntegerField(key as String, fallback as Integer) as Integer
+    if m.playback = invalid or type(m.playback) <> "roAssociativeArray" then return fallback
+    if m.playback.DoesExist(key) <> true or m.playback[key] = invalid then return fallback
+    value = m.playback[key]
+    valueType = type(value)
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value
+    if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble" then return Int(value)
+    return fallback
+end function
+
+sub resetSeasonCarouselState()
+    m.seasonEpisodes = []
+    m.seasonCarouselCards = []
+    m.seasonCarouselFocusIndex = 0
+    m.seasonCarouselVisibleStart = 0
+    m.seasonCarouselRequestPending = false
+end sub
+
+sub buildSeasonCarouselFromPlayback()
+    resetSeasonCarouselState()
+
+    if m.playback = invalid or type(m.playback) <> "roAssociativeArray" then return
+    if m.playback.DoesExist("seasonEpisodes") <> true or m.playback.seasonEpisodes = invalid then return
+    if type(m.playback.seasonEpisodes) <> "roArray" then return
+
+    for each episode in m.playback.seasonEpisodes
+        if type(episode) = "roAssociativeArray" then m.seasonEpisodes.Push(episode)
+    end for
+
+    currentMediaId = seasonCarouselCurrentMediaId()
+    for index = 0 to m.seasonEpisodes.Count() - 1
+        episode = m.seasonEpisodes[index]
+        episodeMediaId = seasonCarouselEpisodeIntegerField(episode, "mediaId", 0)
+        if currentMediaId > 0 and episodeMediaId = currentMediaId
+            m.seasonCarouselFocusIndex = index
+            m.seasonCarouselVisibleStart = index
+            exit for
+        end if
+    end for
+
+    updateSeasonCarouselVisibleWindow()
+end sub
+
+function seasonCarouselCurrentMediaId() as Integer
+    return playbackIntegerField("mediaId", 0)
+end function
+
+function hasSeasonCarousel() as Boolean
+    return m.seasonEpisodes <> invalid and m.seasonEpisodes.Count() > 1
+end function
+
+sub updateSeasonCarouselVisibleWindow()
+    if hasSeasonCarousel() <> true
+        m.seasonCarouselVisibleStart = 0
+        return
+    end if
+
+    if m.seasonCarouselFocusIndex < 0 then m.seasonCarouselFocusIndex = 0
+    if m.seasonCarouselFocusIndex >= m.seasonEpisodes.Count() then m.seasonCarouselFocusIndex = m.seasonEpisodes.Count() - 1
+
+    if m.seasonCarouselFocusIndex < m.seasonCarouselVisibleStart
+        m.seasonCarouselVisibleStart = m.seasonCarouselFocusIndex
+    else if m.seasonCarouselFocusIndex >= m.seasonCarouselVisibleStart + m.maxVisibleSeasonCarouselItems
+        m.seasonCarouselVisibleStart = m.seasonCarouselFocusIndex - m.maxVisibleSeasonCarouselItems + 1
+    end if
+
+    maxStart = m.seasonEpisodes.Count() - m.maxVisibleSeasonCarouselItems
+    if maxStart < 0 then maxStart = 0
+    if m.seasonCarouselVisibleStart > maxStart then m.seasonCarouselVisibleStart = maxStart
+    if m.seasonCarouselVisibleStart < 0 then m.seasonCarouselVisibleStart = 0
+end sub
+
+sub renderSeasonCarousel()
+    if m.seasonCarouselGroup = invalid or m.seasonCarouselHost = invalid then return
+
+    childCount = m.seasonCarouselHost.getChildCount()
+    if childCount > 0 then m.seasonCarouselHost.removeChildrenIndex(childCount, 0)
+    m.seasonCarouselCards = []
+
+    if hasSeasonCarousel() <> true
+        if m.focusArea = "seasonCarousel" then m.focusArea = "controls"
+        m.seasonCarouselGroup.visible = false
+        updateSeasonCarouselChevrons()
+        return
+    end if
+
+    seasonNumber = playbackIntegerField("seasonNumber", 0)
+    if seasonNumber > 0
+        m.seasonCarouselTitleLabel.text = "Season " + StrI(seasonNumber).Trim()
+    else
+        m.seasonCarouselTitleLabel.text = "Season"
+    end if
+
+    updateSeasonCarouselVisibleWindow()
+    startIndex = m.seasonCarouselVisibleStart
+    lastIndex = startIndex + m.maxVisibleSeasonCarouselItems - 1
+    if lastIndex >= m.seasonEpisodes.Count() then lastIndex = m.seasonEpisodes.Count() - 1
+
+    for index = startIndex to lastIndex
+        card = createSeasonCarouselCard(m.seasonEpisodes[index], index, index - startIndex)
+        m.seasonCarouselHost.appendChild(card)
+        m.seasonCarouselCards.Push(card)
+    end for
+
+    m.seasonCarouselGroup.visible = true
+    updateSeasonCarouselChevrons()
+end sub
+
+function createSeasonCarouselCard(episode as Object, index as Integer, visibleIndex as Integer) as Object
+    card = CreateObject("roSGNode", "Group")
+    card.translation = [visibleIndex * 184, 0]
+
+    isFocused = m.focusArea = "seasonCarousel" and index = m.seasonCarouselFocusIndex
+    isCurrent = seasonCarouselEpisodeIsCurrent(episode)
+
+    bg = CreateObject("roSGNode", "Rectangle")
+    bg.width = 168
+    bg.height = 86
+    bg.color = "#1F2937"
+    if isCurrent then bg.color = "#1D4ED8"
+    card.appendChild(bg)
+
+    poster = CreateObject("roSGNode", "Poster")
+    poster.translation = [6, 6]
+    poster.width = 72
+    poster.height = 46
+    poster.uri = seasonCarouselEpisodeStringField(episode, "thumbnailUrl", "")
+    poster.loadDisplayMode = "scaleToFill"
+    card.appendChild(poster)
+
+    title = CreateObject("roSGNode", "Label")
+    title.text = seasonCarouselEpisodeTitle(episode)
+    title.translation = [86, 8]
+    title.width = 74
+    title.height = 32
+    title.wrap = true
+    title.color = "#F5F5F5"
+    card.appendChild(title)
+
+    meta = CreateObject("roSGNode", "Label")
+    meta.text = seasonCarouselEpisodeMeta(episode)
+    meta.translation = [86, 50]
+    meta.width = 74
+    meta.color = "#D1D5DB"
+    card.appendChild(meta)
+
+    if seasonCarouselEpisodeWatched(episode)
+        watched = CreateObject("roSGNode", "Label")
+        watched.text = "✓"
+        watched.translation = [140, 6]
+        watched.width = 20
+        watched.horizAlign = "center"
+        watched.color = "#34D399"
+        card.appendChild(watched)
+    end if
+
+    if isCurrent
+        nowLabel = CreateObject("roSGNode", "Label")
+        nowLabel.text = "Now"
+        nowLabel.translation = [8, 58]
+        nowLabel.width = 54
+        nowLabel.color = "#BFDBFE"
+        card.appendChild(nowLabel)
+    end if
+
+    if isFocused
+        focus = CreateObject("roSGNode", "Rectangle")
+        focus.width = 168
+        focus.height = 4
+        focus.color = "#F5F5F5"
+        card.appendChild(focus)
+        focusBottom = CreateObject("roSGNode", "Rectangle")
+        focusBottom.translation = [0, 82]
+        focusBottom.width = 168
+        focusBottom.height = 4
+        focusBottom.color = "#F5F5F5"
+        card.appendChild(focusBottom)
+    end if
+
+    return card
+end function
+
+sub updateSeasonCarouselChevrons()
+    if m.seasonCarouselLeftChevron = invalid or m.seasonCarouselRightChevron = invalid then return
+    showChevrons = hasSeasonCarousel() and m.bottomRailGroup.visible = true
+    m.seasonCarouselLeftChevron.visible = showChevrons and m.seasonCarouselVisibleStart > 0
+    m.seasonCarouselRightChevron.visible = showChevrons and (m.seasonCarouselVisibleStart + m.maxVisibleSeasonCarouselItems) < m.seasonEpisodes.Count()
+end sub
+
+function seasonCarouselEpisodeIsCurrent(episode as Dynamic) as Boolean
+    if episode = invalid then return false
+    currentMediaId = seasonCarouselCurrentMediaId()
+    return currentMediaId > 0 and seasonCarouselEpisodeIntegerField(episode, "mediaId", 0) = currentMediaId
+end function
+
+function seasonCarouselEpisodeWatched(episode as Dynamic) as Boolean
+    if episode = invalid then return false
+    if seasonCarouselEpisodeBooleanField(episode, "watched", false) then return true
+    if seasonCarouselEpisodeIntegerField(episode, "watchStatus", 0) = 1 then return true
+    return false
+end function
+
+function seasonCarouselEpisodeTitle(episode as Dynamic) as String
+    if episode = invalid then return ""
+    title = seasonCarouselEpisodeStringField(episode, "title", "")
+    if title <> "" then return title
+
+    episodeNumber = seasonCarouselEpisodeIntegerField(episode, "episodeNumber", 0)
+    if episodeNumber > 0 then return "Episode " + StrI(episodeNumber).Trim()
+    return "Episode"
+end function
+
+function seasonCarouselEpisodeMeta(episode as Dynamic) as String
+    if episode = invalid then return ""
+    episodeNumber = seasonCarouselEpisodeIntegerField(episode, "episodeNumber", 0)
+    if episodeNumber > 0 then return "E" + StrI(episodeNumber).Trim()
+    return ""
+end function
+
+function seasonCarouselEpisodeStringField(episode as Dynamic, key as String, fallback as String) as String
+    if episode = invalid or type(episode) <> "roAssociativeArray" then return fallback
+    if episode.DoesExist(key) <> true then return fallback
+    value = episode[key]
+    if value = invalid then return fallback
+
+    valueType = type(value)
+    if valueType = "String" or valueType = "roString" then return value
+    return fallback
+end function
+
+function seasonCarouselEpisodeIntegerField(episode as Dynamic, key as String, fallback as Integer) as Integer
+    if episode = invalid or type(episode) <> "roAssociativeArray" then return fallback
+    if episode.DoesExist(key) <> true then return fallback
+    value = episode[key]
+    if value = invalid then return fallback
+
+    valueType = type(value)
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value
+    if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble" then return Int(value)
+    return fallback
+end function
+
+function seasonCarouselEpisodeBooleanField(episode as Dynamic, key as String, fallback as Boolean) as Boolean
+    if episode = invalid or type(episode) <> "roAssociativeArray" then return fallback
+    if episode.DoesExist(key) <> true then return fallback
+    value = episode[key]
+    if value = invalid then return fallback
+
+    valueType = type(value)
+    if valueType = "Boolean" or valueType = "roBoolean" then return value
+    return fallback
 end function
 
 sub buildControls()
@@ -349,6 +851,7 @@ sub buildControls()
     end for
 
     updateFocusCursor()
+    renderSeasonCarousel()
 end sub
 
 function controlLabels() as Object
@@ -374,6 +877,7 @@ end sub
 sub showRail()
     m.bottomRailGroup.visible = true
     updateFocusCursor()
+    updateSeasonCarouselChevrons()
     if m.isPlaying and m.menuOpen <> true then m.railHideTimer.control = "start"
 end sub
 
@@ -381,10 +885,18 @@ sub onRailHideTimer()
     if m.isPlaying and m.menuOpen <> true
         m.bottomRailGroup.visible = false
         updateFocusCursor()
+        updateSeasonCarouselChevrons()
     end if
 end sub
 
 sub updateFocusCursor()
+    if m.focusArea = "seasonCarousel"
+        m.focusCursor.visible = false
+        m.progressFocus.visible = false
+        renderSeasonCarousel()
+        return
+    end if
+
     if m.focusArea = "progress"
         m.focusCursor.visible = false
         m.progressFocus.visible = m.bottomRailGroup.visible and m.menuOpen <> true
@@ -456,6 +968,14 @@ sub onVideoStateChanged(event as Object)
             exitPlayer()
             return
         end if
+        if m.nextEpisodePromptOpen
+            chooseNextEpisodePromptOption(0)
+            return
+        end if
+        if canAskForNextEpisode()
+            maybeRequestNextEpisodePrompt("finished")
+            if m.nextEpisodeRequestPending then return
+        end if
         m.completed = true
         markCompletedIfSafe()
         exitPlayer()
@@ -515,6 +1035,7 @@ end sub
 sub onVideoPositionChanged()
     updateSeekSettle()
     updateProgressVisuals()
+    maybeRequestNextEpisodePrompt("threshold")
 end sub
 
 sub onAvailableAudioTracksChanged()
@@ -528,7 +1049,10 @@ sub onAvailableSubtitleTracksChanged()
 end sub
 
 sub onProgressTimer()
-    if m.isPlaying then sendProgressUpdate("interval")
+    if m.isPlaying
+        sendProgressUpdate("interval")
+        maybeRequestNextEpisodePrompt("threshold")
+    end if
 end sub
 
 sub onResumePromptTimer()
@@ -613,6 +1137,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if press <> true then return false
 
     if m.resumePromptOpen then return handleResumePromptKey(key)
+    if m.nextEpisodePromptOpen then return handleNextEpisodePromptKey(key)
 
     if key = "back"
         sendProgressUpdate("exit")
@@ -629,6 +1154,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if m.menuOpen then return handleMenuKey(key)
 
     if m.focusArea = "progress" then return handleProgressKey(key)
+    if m.focusArea = "seasonCarousel" then return handleSeasonCarouselKey(key)
 
     if key = "up"
         m.focusArea = "progress"
@@ -717,7 +1243,11 @@ function handleTransportKey(key as String) as Boolean
 end function
 
 function handleProgressKey(key as String) as Boolean
-    if key = "down"
+    if key = "up" and hasSeasonCarousel()
+        m.focusArea = "seasonCarousel"
+        renderSeasonCarousel()
+        updateFocusCursor()
+    else if key = "down"
         m.focusArea = "controls"
         updateFocusCursor()
     else if key = "left"
@@ -734,6 +1264,80 @@ function handleProgressKey(key as String) as Boolean
     showRail()
     return true
 end function
+
+function handleSeasonCarouselKey(key as String) as Boolean
+    if key = "down"
+        m.focusArea = "progress"
+        renderSeasonCarousel()
+        updateFocusCursor()
+    else if key = "left"
+        moveSeasonCarousel(-1)
+    else if key = "right"
+        moveSeasonCarousel(1)
+    else if key = "OK"
+        selectFocusedSeasonCarouselEpisode()
+    else if isTransportKey(key)
+        return handleTransportKey(key)
+    else if key = "back"
+        sendProgressUpdate("exit")
+        exitPlayer()
+    end if
+
+    showRail()
+    return true
+end function
+
+sub moveSeasonCarousel(delta as Integer)
+    if hasSeasonCarousel() <> true then return
+
+    nextIndex = m.seasonCarouselFocusIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex >= m.seasonEpisodes.Count() then nextIndex = m.seasonEpisodes.Count() - 1
+    if nextIndex = m.seasonCarouselFocusIndex then return
+
+    m.seasonCarouselFocusIndex = nextIndex
+    renderSeasonCarousel()
+end sub
+
+sub selectFocusedSeasonCarouselEpisode()
+    if hasSeasonCarousel() <> true then return
+    if m.seasonCarouselRequestPending then return
+    if m.seasonCarouselFocusIndex < 0 or m.seasonCarouselFocusIndex >= m.seasonEpisodes.Count() then return
+
+    episode = m.seasonEpisodes[m.seasonCarouselFocusIndex]
+    if episode = invalid then return
+    if seasonCarouselEpisodeIsCurrent(episode)
+        setStatusMessage("Current episode", true)
+        return
+    end if
+    if seasonCarouselEpisodeBooleanField(episode, "isPlayable", false) <> true
+        setStatusMessage("Episode is not playable", true)
+        return
+    end if
+
+    episodeMediaId = seasonCarouselEpisodeIntegerField(episode, "mediaId", 0)
+    if episodeMediaId <= 0
+        setStatusMessage("Episode is not playable", true)
+        return
+    end if
+
+    m.seasonCarouselRequestPending = true
+    m.nextEpisodeRequestPending = false
+    m.nextEpisodeRequested = false
+    m.nextEpisodeRequestReason = ""
+    m.nextEpisodePromptOpen = false
+    if m.nextEpisodePromptGroup <> invalid then m.nextEpisodePromptGroup.visible = false
+    if m.nextEpisodeCountdownTimer <> invalid then m.nextEpisodeCountdownTimer.control = "stop"
+    setStatusMessage("Preparing episode...", true)
+    m.top.nextPlaybackRequested = {
+        itemId: playbackIntegerField("itemId", 0)
+        mediaId: episodeMediaId
+        seasonNumber: seasonCarouselEpisodeIntegerField(episode, "seasonNumber", 0)
+        episodeNumber: seasonCarouselEpisodeIntegerField(episode, "episodeNumber", 0)
+        videoNumber: seasonCarouselEpisodeIntegerField(episode, "videoNumber", 0)
+        reason: "seasonCarousel"
+    }
+end sub
 
 sub togglePlayPause()
     if m.isPlaying
@@ -1374,6 +1978,7 @@ sub exitPlayer()
     m.railHideTimer.control = "stop"
     m.statusClearTimer.control = "stop"
     m.resumePromptTimer.control = "stop"
+    m.nextEpisodeCountdownTimer.control = "stop"
     m.seekDebounceTimer.control = "stop"
     clearPendingSeek()
     m.videoNode.control = "stop"
