@@ -4,6 +4,8 @@
     <field id="playback" type="assocarray" />
     <field id="exitRequested" type="boolean" alwaysNotify="true" />
     <field id="playbackError" type="string" alwaysNotify="true" />
+    <field id="nextPlaybackRequested" type="assocarray" alwaysNotify="true" />
+    <field id="nextPlayback" type="assocarray" alwaysNotify="true" />
   </interface>
   <children>
     <Video id="videoNode" width="1280" height="720" enableUI="false" />
@@ -16,15 +18,21 @@
       <Label id="resumePromptCountdownLabel" translation="[30,246]" width="440" horizAlign="center" color="#9CA3AF" />
     </Group>
 
-    <Group id="bottomRailGroup" translation="[0,520]" visible="false">
-      <Rectangle width="1280" height="200" color="#101010" opacity="0.84" />
+    <Group id="bottomRailGroup" translation="[0,400]" visible="false">
+      <Rectangle width="1280" height="320" color="#101010" opacity="0.84" />
       <Label id="titleLabel" translation="[72,24]" width="860" color="#F5F5F5" />
       <Label id="timeLabel" translation="[1030,28]" width="180" horizAlign="right" color="#D1D5DB" />
-      <Rectangle id="progressFocus" translation="[68,68]" width="1144" height="22" color="#F5F5F5" opacity="0.18" visible="false" />
-      <Rectangle id="progressTrack" translation="[72,76]" width="1136" height="6" color="#4B5563" />
-      <Rectangle id="progressFill" translation="[72,76]" width="0" height="6" color="#EF4444" />
-      <Group id="controlsHost" translation="[72,106]" />
-      <Group id="focusCursor" translation="[72,106]" visible="false">
+      <Group id="seasonCarouselGroup" translation="[72,54]" visible="false">
+        <Label id="seasonCarouselTitleLabel" text="Season" width="180" color="#D1D5DB" />
+        <Label id="seasonCarouselLeftChevron" text="&lt;" translation="[-42,52]" width="30" horizAlign="center" color="#D1D5DB" visible="false" />
+        <Group id="seasonCarouselHost" translation="[0,28]" />
+        <Label id="seasonCarouselRightChevron" text="&gt;" translation="[1138,52]" width="30" horizAlign="center" color="#D1D5DB" visible="false" />
+      </Group>
+      <Rectangle id="progressFocus" translation="[68,196]" width="1144" height="22" color="#F5F5F5" opacity="0.18" visible="false" />
+      <Rectangle id="progressTrack" translation="[72,204]" width="1136" height="6" color="#4B5563" />
+      <Rectangle id="progressFill" translation="[72,204]" width="0" height="6" color="#EF4444" />
+      <Group id="controlsHost" translation="[72,234]" />
+      <Group id="focusCursor" translation="[72,234]" visible="false">
         <Rectangle width="232" height="48" color="#E5E7EB" opacity="0.22" />
         <Rectangle width="232" height="4" color="#F5F5F5" />
         <Rectangle translation="[0,44]" width="232" height="4" color="#F5F5F5" />
@@ -36,13 +44,23 @@
         <Label id="menuTitleLabel" translation="[18,14]" width="384" color="#D1D5DB" />
         <Group id="menuItemsHost" translation="[18,48]" />
       </Group>
-      <Label id="statusLabel" translation="[72,166]" width="700" color="#9CA3AF" />
+      <Label id="seasonCarouselStatusLabel" translation="[72,286]" width="700" color="#9CA3AF" visible="false" />
+      <Label id="statusLabel" translation="[72,286]" width="700" color="#9CA3AF" />
+    </Group>
+
+    <Group id="nextEpisodePromptGroup" translation="[390,214]" visible="false">
+      <Rectangle width="500" height="292" color="#111827" opacity="0.96" />
+      <Label id="nextEpisodePromptTitleLabel" translation="[30,28]" width="440" text="Play next episode?" color="#F5F5F5" />
+      <Label id="nextEpisodePromptMessageLabel" translation="[30,74]" width="440" color="#D1D5DB" />
+      <Group id="nextEpisodePromptOptionsHost" translation="[30,126]" />
+      <Label id="nextEpisodePromptCountdownLabel" translation="[30,246]" width="440" horizAlign="center" color="#9CA3AF" />
     </Group>
 
     <Timer id="railHideTimer" repeat="false" duration="4" />
     <Timer id="progressTimer" repeat="true" duration="60" />
     <Timer id="statusClearTimer" repeat="false" duration="2.5" />
     <Timer id="resumePromptTimer" repeat="true" duration="1" />
+    <Timer id="nextEpisodeCountdownTimer" repeat="true" duration="1" />
     <Timer id="seekDebounceTimer" repeat="false" duration="0.45" />
     <Timer id="seekSettleTimer" repeat="false" duration="2.5" />
   </children>

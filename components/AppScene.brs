@@ -75,6 +75,7 @@ sub showVideoDetailScreen(selection as Object)
     detailScreen.selection = selection
     detailScreen.observeField("backRequested", "onVideoDetailBackRequested")
     detailScreen.observeField("playbackRequested", "onPlaybackRequested")
+    detailScreen.observeField("nextPlayback", "onVideoDetailNextPlayback")
     m.detailScreen = detailScreen
     m.screenHost.appendChild(detailScreen)
     detailScreen.setFocus(true)
@@ -102,6 +103,7 @@ sub showPlayerScreen(playback as Object)
     playerScreen.id = "playerScreen"
     playerScreen.observeField("exitRequested", "onPlayerExitRequested")
     playerScreen.observeField("playbackError", "onPlayerPlaybackError")
+    playerScreen.observeField("nextPlaybackRequested", "onPlayerNextPlaybackRequested")
     m.playerScreen = playerScreen
     m.screenHost.appendChild(playerScreen)
     playerScreen.playback = playback
@@ -116,6 +118,21 @@ end sub
 sub onPlayerPlaybackError(event as Object)
     message = event.getData()
     if m.detailScreen <> invalid and message <> invalid and message <> "" then m.detailScreen.playbackError = message
+end sub
+
+sub onPlayerNextPlaybackRequested(event as Object)
+    request = event.getData()
+    if m.detailScreen = invalid
+        if m.playerScreen <> invalid then m.playerScreen.nextPlayback = { ok: false, message: "No video details are available." }
+        return
+    end if
+
+    m.detailScreen.nextPlaybackRequested = request
+end sub
+
+sub onVideoDetailNextPlayback(event as Object)
+    nextPlayback = event.getData()
+    if m.playerScreen <> invalid then m.playerScreen.nextPlayback = nextPlayback
 end sub
 
 sub closePlayerScreen()

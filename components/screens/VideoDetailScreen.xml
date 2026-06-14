@@ -6,6 +6,8 @@
     <field id="playbackRequested" type="assocarray" alwaysNotify="true" />
     <field id="playbackError" type="string" alwaysNotify="true" />
     <field id="reloadRequested" type="boolean" alwaysNotify="true" />
+    <field id="nextPlaybackRequested" type="assocarray" alwaysNotify="true" />
+    <field id="nextPlayback" type="assocarray" alwaysNotify="true" />
   </interface>
   <children>
     <Rectangle width="1280" height="720" color="#090B0F" />
