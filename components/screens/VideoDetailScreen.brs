@@ -1334,6 +1334,56 @@ function playbackPayloadForMedia(media as Object) as Object
         qualityOptions: media.qualityOptions
         audioTracks: media.audioTracks
         subtitleTracks: media.subtitleTracks
+        seasonEpisodes: seasonEpisodesForMedia(media)
+    }
+end function
+
+function seasonEpisodesForMedia(media as Dynamic) as Object
+    episodes = []
+    if media = invalid or m.seasons = invalid then return episodes
+    if media.seasonNumber = invalid or media.seasonNumber <= 0 then return episodes
+
+    for seasonIndex = 0 to m.seasons.Count() - 1
+        season = m.seasons[seasonIndex]
+        if season <> invalid and season.number <> invalid and season.number = media.seasonNumber
+            if season.episodes = invalid then return episodes
+            for each episode in season.episodes
+                payload = seasonCarouselEpisodePayload(episode)
+                if payload <> invalid then episodes.Push(payload)
+            end for
+            return episodes
+        end if
+    end for
+
+    return episodes
+end function
+
+function seasonCarouselEpisodePayload(episode as Dynamic) as Dynamic
+    if episode = invalid then return invalid
+
+    videoNumber = 1
+    if episode.videoNumber <> invalid then videoNumber = episode.videoNumber else videoNumber = episode.episodeNumber
+
+    return {
+        itemId: m.item.itemId
+        mediaId: episode.mediaId
+        itemTitle: m.item.title
+        title: episode.title
+        subtitle: episode.subtitle
+        seasonNumber: episode.seasonNumber
+        episodeNumber: episode.episodeNumber
+        videoNumber: videoNumber
+        durationSeconds: episode.durationSeconds
+        progressSeconds: episode.progressSeconds
+        watchStatus: episode.watchStatus
+        watched: episode.watched
+        thumbnailUrl: episode.thumbnailUrl
+        isPlayable: episode.isPlayable
+        streamUrl: episode.streamUrl
+        streamFormat: episode.streamFormat
+        qualityOptions: episode.qualityOptions
+        audioTracks: episode.audioTracks
+        subtitleTracks: episode.subtitleTracks
     }
 end function
 
@@ -1395,11 +1445,16 @@ end sub
 
 sub onNextPlaybackRequested(event as Object)
     request = event.getData()
-    media = nextPlayableMediaAfter(request)
+    reason = nextPlaybackRequestReason(request)
+    if reason = "seasonCarousel"
+        media = requestedPlayableMedia(request)
+    else
+        media = nextPlayableMediaAfter(request)
+    end if
     if media = invalid
         m.top.nextPlayback = {
             ok: false
-            reason: nextPlaybackRequestReason(request)
+            reason: reason
             message: "No next episode is available."
         }
         return
@@ -1435,6 +1490,30 @@ function nextPlayableMediaAfter(request as Dynamic) as Dynamic
     return invalid
 end function
 
+function requestedPlayableMedia(request as Dynamic) as Dynamic
+    if request = invalid or m.seasons = invalid or m.seasons.Count() = 0 then return invalid
+
+    requestMediaId = nextPlaybackIntegerField(request, "mediaId", 0)
+    requestSeasonNumber = nextPlaybackIntegerField(request, "seasonNumber", 0)
+    requestVideoNumber = nextPlaybackIntegerField(request, "videoNumber", 0)
+    requestEpisodeNumber = nextPlaybackIntegerField(request, "episodeNumber", requestVideoNumber)
+
+    for seasonIndex = 0 to m.seasons.Count() - 1
+        season = m.seasons[seasonIndex]
+        episodes = []
+        if season <> invalid and season.episodes <> invalid then episodes = season.episodes
+
+        for episodeIndex = 0 to episodes.Count() - 1
+            episode = episodes[episodeIndex]
+            if episode <> invalid and episode.isPlayable = true and nextPlaybackMatchesMedia(episode, requestMediaId, requestSeasonNumber, requestVideoNumber, requestEpisodeNumber)
+                return episode
+            end if
+        end for
+    end for
+
+    return invalid
+end function
+
 function nextPlaybackMatchesMedia(media as Dynamic, requestMediaId as Integer, requestSeasonNumber as Integer, requestVideoNumber as Integer, requestEpisodeNumber as Integer) as Boolean
     if media = invalid then return false
     if requestMediaId > 0 and media.mediaId <> invalid and media.mediaId = requestMediaId then return true
@@ -1455,6 +1534,7 @@ end function
 sub prepareNextPlaybackPreflight(media as Object, request as Dynamic)
     payload = playbackPayloadForMedia(media)
     reason = nextPlaybackRequestReason(request)
+    payload.requestReason = reason
     mediaId = 0
     if media.mediaId <> invalid then mediaId = media.mediaId
 
@@ -1477,6 +1557,7 @@ end sub
 sub onNextMediaLinksRefreshResponse(event as Object)
     response = event.getData()
     fallbackPayload = m.pendingNextPlaybackPayload
+    reason = nextPlaybackRequestReasonFromPayload(fallbackPayload)
     pendingMediaId = m.pendingNextPlaybackMediaId
     m.pendingNextPlaybackMediaId = 0
     m.pendingNextPlaybackPayload = invalid
@@ -1487,25 +1568,41 @@ sub onNextMediaLinksRefreshResponse(event as Object)
     if response <> invalid and response.ok = true and response.media <> invalid
         responseMediaId = 0
         if response.media.mediaId <> invalid then responseMediaId = response.media.mediaId
-        if responseMediaId <> pendingMediaId then return
-        m.top.nextPlayback = { ok: true, playback: playbackPayloadForMedia(response.media) }
+        if responseMediaId = pendingMediaId
+            m.top.nextPlayback = { ok: true, playback: playbackPayloadForMedia(response.media), reason: reason }
+            return
+        end if
+        if fallbackPayload <> invalid and fallbackPayload.streamUrl <> invalid and fallbackPayload.streamUrl <> ""
+            m.top.nextPlayback = { ok: true, playback: fallbackPayload, reason: reason }
+            return
+        end if
+        message = "No playable next episode is available."
+        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+        m.top.nextPlayback = { ok: false, message: message, reason: reason }
         return
     end if
 
     if fallbackPayload <> invalid and fallbackPayload.streamUrl <> invalid and fallbackPayload.streamUrl <> ""
-        m.top.nextPlayback = { ok: true, playback: fallbackPayload }
+        m.top.nextPlayback = { ok: true, playback: fallbackPayload, reason: reason }
         return
     end if
 
     message = "No playable next episode is available."
     if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
-    m.top.nextPlayback = { ok: false, message: message }
+    m.top.nextPlayback = { ok: false, message: message, reason: reason }
 end sub
 
 function nextPlaybackRequestReason(request as Dynamic) as String
     if request = invalid or type(request) <> "roAssociativeArray" then return ""
     if request.DoesExist("reason") <> true or request.reason = invalid then return ""
     if type(request.reason) = "String" or type(request.reason) = "roString" then return request.reason
+    return ""
+end function
+
+function nextPlaybackRequestReasonFromPayload(payload as Dynamic) as String
+    if payload = invalid or type(payload) <> "roAssociativeArray" then return ""
+    if payload.DoesExist("requestReason") <> true or payload.requestReason = invalid then return ""
+    if type(payload.requestReason) = "String" or type(payload.requestReason) = "roString" then return payload.requestReason
     return ""
 end function
 
