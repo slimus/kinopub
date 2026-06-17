@@ -7,6 +7,7 @@ required_files=(
   source/services/KinoApiClient.brs
   source/services/KinoAuthService.brs
   source/services/KinoBookmarkService.brs
+  source/services/KinoBrowseService.brs
   source/services/KinoContentTypeService.brs
   source/services/KinoHistoryService.brs
   source/services/KinoHomeService.brs
@@ -122,12 +123,31 @@ grep -q 'notifyResult.error = "unauthorized"' components/tasks/AuthTask.brs
 grep -q 'message: "Device authorization was removed. Sign in again."' components/tasks/AuthTask.brs
 grep -q "KinoContentTypeService.brs" components/tasks/ContentTask.xml
 grep -q "KinoBookmarkService.brs" components/tasks/ContentTask.xml
+grep -q "KinoBrowseService.brs" components/tasks/ContentTask.xml
 grep -q "function KinoBookmarkService" source/services/KinoBookmarkService.brs
 grep -q '"/v1/bookmarks"' source/services/KinoBookmarkService.brs
 grep -q '"/v1/bookmarks/get-item-folders"' source/services/KinoBookmarkService.brs
 grep -q '"/v1/bookmarks/toggle-item"' source/services/KinoBookmarkService.brs
 grep -q 'postFormBody("/v1/bookmarks/toggle-item"' source/services/KinoBookmarkService.brs
 grep -q "KinoBookmarkService(client)" components/tasks/ContentTask.brs
+grep -q "function KinoBrowseService" source/services/KinoBrowseService.brs
+grep -q '"/v1/items"' source/services/KinoBrowseService.brs
+grep -q '"/v1/genres"' source/services/KinoBrowseService.brs
+grep -q '"/v1/countries"' source/services/KinoBrowseService.brs
+grep -q 'genreSectionName: "kinogenres"' source/services/KinoBrowseService.brs
+grep -q 'countrySectionName: "kinocountries"' source/services/KinoBrowseService.brs
+grep -q "cacheTtlSeconds: 86400" source/services/KinoBrowseService.brs
+grep -q "KinoBrowseService(client)" components/tasks/ContentTask.brs
+grep -q "loadBrowseOptions" components/tasks/ContentTask.brs
+grep -q "loadBrowseItems" components/tasks/ContentTask.brs
+grep -q "contentTaskLoadBrowseOptions" components/tasks/ContentTask.brs
+grep -q "contentTaskLoadBrowseItems" components/tasks/ContentTask.brs
+grep -q "typeMap = contentTaskTypeMap(typeService, tokenResult.accessToken)" components/tasks/ContentTask.brs
+grep -q "typeTitle" source/services/KinoBrowseService.brs
+grep -q "typeBadge" source/services/KinoBrowseService.brs
+grep -q "year_from" source/services/KinoBrowseService.brs
+grep -q "year_to" source/services/KinoBrowseService.brs
+grep -q "finished" source/services/KinoBrowseService.brs
 grep -q "loadBookmarkFolders" components/tasks/ContentTask.brs
 grep -q "loadBookmarkFolderItems" components/tasks/ContentTask.brs
 grep -q "loadItemBookmarkFolders" components/tasks/ContentTask.brs
@@ -193,6 +213,14 @@ grep -q "m.recentSearches = m.searchHistoryStore.load()" components/screens/Home
 grep -q "renderRecentSearches" components/screens/HomeScreen.brs
 grep -q "selectRecentSearch" components/screens/HomeScreen.brs
 grep -q "saveSubmittedSearchQuery" components/screens/HomeScreen.brs
+grep -q '\["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"\]' components/screens/HomeScreen.brs
+grep -Fq "[\"?\", \"!\", \",\", \".\", \":\", \"-\", \"'\", \"\"\"\", \"/\"]" components/screens/HomeScreen.brs
+grep -q '\["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ъ"\]' components/screens/HomeScreen.brs
+grep -q '\["ф", "ы", "в", "а", "п", "р", "о", "л", "д", "ж", "э"\]' components/screens/HomeScreen.brs
+if grep -q '"123"' components/screens/HomeScreen.brs; then
+  echo "Search keyboard must keep digits visible instead of using a 123 layout toggle." >&2
+  exit 1
+fi
 grep -q 'm.selectedSection = "watchAgain"' components/screens/HomeScreen.brs
 grep -q 'm.menuExpanded = false' components/screens/HomeScreen.brs
 grep -q 'showSection("watchAgain")' components/screens/HomeScreen.brs
@@ -200,11 +228,28 @@ grep -q 'setMenuExpanded(true)' components/screens/HomeScreen.brs
 grep -q 'setMenuExpanded(false)' components/screens/HomeScreen.brs
 grep -q 'Watch Again' components/screens/HomeScreen.xml
 grep -q 'Home' components/screens/HomeScreen.xml
+grep -q 'Browse' components/screens/HomeScreen.xml
 grep -q 'Search' components/screens/HomeScreen.xml
 grep -q 'Bookmarks' components/screens/HomeScreen.xml
 grep -q 'Account' components/screens/HomeScreen.xml
+grep -q 'id="collapsedBrowse" text="BR" translation="\[0,238\]"' components/screens/HomeScreen.xml
+grep -q 'id="browseNav" text="B  Browse" translation="\[32,244\]"' components/screens/HomeScreen.xml
+grep -q 'id="searchNav" text="S  Search" translation="\[32,304\]"' components/screens/HomeScreen.xml
+grep -q 'id="bookmarksNav" text="K  Bookmarks" translation="\[32,364\]"' components/screens/HomeScreen.xml
+grep -q 'id="accountNav" text="A  Account" translation="\[32,424\]"' components/screens/HomeScreen.xml
 grep -q 'watchAgainContent' components/screens/HomeScreen.xml
 grep -q 'homeContent' components/screens/HomeScreen.xml
+grep -q 'browseContent' components/screens/HomeScreen.xml
+grep -q 'browseFilterBar' components/screens/HomeScreen.xml
+grep -q 'browseTypeFilterLabel' components/screens/HomeScreen.xml
+grep -q 'browseGenreFilterLabel' components/screens/HomeScreen.xml
+grep -q 'browseCountryFilterLabel' components/screens/HomeScreen.xml
+grep -q 'browseYearFilterLabel' components/screens/HomeScreen.xml
+grep -q 'browseFinishedFilterLabel' components/screens/HomeScreen.xml
+grep -q 'browsePickerGroup' components/screens/HomeScreen.xml
+grep -q 'browseResultGridHost' components/screens/HomeScreen.xml
+grep -q 'browseResultCursor' components/screens/HomeScreen.xml
+grep -q 'browseNextPageStatus' components/screens/HomeScreen.xml
 grep -q 'searchContent' components/screens/HomeScreen.xml
 grep -q 'bookmarksContent' components/screens/HomeScreen.xml
 grep -q 'bookmarkFoldersHost' components/screens/HomeScreen.xml
@@ -438,11 +483,22 @@ grep -q "renderSearchKeyboard" components/screens/HomeScreen.brs
 grep -q "requestSearchPage" components/screens/HomeScreen.brs
 grep -q "loadNextSearchPageIfNeeded" components/screens/HomeScreen.brs
 grep -q 'source: "search"' components/screens/HomeScreen.brs
+grep -q 'm.browseContent.visible = section = "browse"' components/screens/HomeScreen.brs
+grep -q 'loadBrowseIfNeeded(false)' components/screens/HomeScreen.brs
+grep -q 'm.menuIndex = 2' components/screens/HomeScreen.brs
+grep -q 'showSection("browse")' components/screens/HomeScreen.brs
+grep -q 'function browseYearOptions' components/screens/HomeScreen.brs
+grep -q 'function browseFinishedOptions' components/screens/HomeScreen.brs
+grep -q 'sub openBrowsePicker' components/screens/HomeScreen.brs
+grep -q 'sub selectBrowsePickerItem' components/screens/HomeScreen.brs
+grep -q 'sub requestBrowsePage' components/screens/HomeScreen.brs
+grep -q 'function createBrowseCard' components/screens/HomeScreen.brs
+grep -q 'm.top.videoSelected = item' components/screens/HomeScreen.brs
 grep -q 'm.accountContent.visible = section = "account"' components/screens/HomeScreen.brs
 grep -q 'loadAccountInfo' components/screens/HomeScreen.brs
 grep -q 'onAccountInfoResponse' components/screens/HomeScreen.brs
 grep -q 'renderAccountInfo' components/screens/HomeScreen.brs
-grep -q 'm.menuIndex > 5' components/screens/HomeScreen.brs
+grep -q 'm.menuIndex > 6' components/screens/HomeScreen.brs
 grep -q 'showSection("bookmarks")' components/screens/HomeScreen.brs
 grep -q "updateBookmarkScrollChevrons" components/screens/HomeScreen.brs
 grep -q "hasMoreBookmarkPages" components/screens/HomeScreen.brs

@@ -13,9 +13,10 @@
       <Rectangle id="collapsedActiveIndicator" translation="[0,112]" width="4" height="44" color="#60A5FA" />
       <Label id="collapsedWatchAgain" text="WA" translation="[0,118]" width="84" horizAlign="center" color="#F5F5F5" />
       <Label id="collapsedHome" text="HO" translation="[0,178]" width="84" horizAlign="center" color="#9CA3AF" />
-      <Label id="collapsedSearch" text="SE" translation="[0,238]" width="84" horizAlign="center" color="#9CA3AF" />
-      <Label id="collapsedBookmarks" text="BK" translation="[0,298]" width="84" horizAlign="center" color="#9CA3AF" />
-      <Label id="collapsedAccount" text="AC" translation="[0,358]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedBrowse" text="BR" translation="[0,238]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedSearch" text="SE" translation="[0,298]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedBookmarks" text="BK" translation="[0,358]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedAccount" text="AC" translation="[0,418]" width="84" horizAlign="center" color="#9CA3AF" />
     </Group>
 
     <Group id="expandedMenu" translation="[0,0]" visible="false">
@@ -24,9 +25,10 @@
       <Rectangle id="navFocusBg" translation="[12,112]" width="260" height="44" color="#2563EB" />
       <Label id="watchAgainNav" text="W  Watch Again" translation="[32,124]" color="#F8FAFC" />
       <Label id="homeNav" text="H  Home" translation="[32,184]" color="#D1D5DB" />
-      <Label id="searchNav" text="S  Search" translation="[32,244]" color="#D1D5DB" />
-      <Label id="bookmarksNav" text="B  Bookmarks" translation="[32,304]" color="#D1D5DB" />
-      <Label id="accountNav" text="A  Account" translation="[32,364]" color="#D1D5DB" />
+      <Label id="browseNav" text="B  Browse" translation="[32,244]" color="#D1D5DB" />
+      <Label id="searchNav" text="S  Search" translation="[32,304]" color="#D1D5DB" />
+      <Label id="bookmarksNav" text="K  Bookmarks" translation="[32,364]" color="#D1D5DB" />
+      <Label id="accountNav" text="A  Account" translation="[32,424]" color="#D1D5DB" />
       <Rectangle id="signOutFocusBg" translation="[12,616]" width="260" height="44" color="#181818" />
       <Label id="signOutNav" text="Sign out" translation="[32,628]" color="#9CA3AF" />
     </Group>
@@ -97,6 +99,74 @@
           <Label id="homeScrollDownChevron" text="v" translation="[938,586]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="homeRailLeftChevron" text="&lt;" translation="[0,310]" width="28" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="homeRailRightChevron" text="&gt;" translation="[1092,310]" width="28" horizAlign="center" color="#D1D5DB" visible="false" />
+        </Group>
+      </Group>
+
+      <Group id="browseContent" visible="false">
+        <Label text="Browse" translation="[0,0]" color="#F5F5F5" />
+
+        <Group id="browseFilterBar" translation="[0,58]">
+          <Group id="browseTypeFilter" translation="[0,0]">
+            <Rectangle id="browseTypeFilterBg" width="188" height="44" color="#171D26" />
+            <Label id="browseTypeFilterLabel" text="Type: All" translation="[12,12]" width="164" color="#D1D5DB" />
+          </Group>
+          <Group id="browseGenreFilter" translation="[200,0]">
+            <Rectangle id="browseGenreFilterBg" width="196" height="44" color="#171D26" />
+            <Label id="browseGenreFilterLabel" text="Genre: Any" translation="[12,12]" width="172" color="#D1D5DB" />
+          </Group>
+          <Group id="browseCountryFilter" translation="[408,0]">
+            <Rectangle id="browseCountryFilterBg" width="208" height="44" color="#171D26" />
+            <Label id="browseCountryFilterLabel" text="Country: Any" translation="[12,12]" width="184" color="#D1D5DB" />
+          </Group>
+          <Group id="browseYearFilter" translation="[628,0]">
+            <Rectangle id="browseYearFilterBg" width="168" height="44" color="#171D26" />
+            <Label id="browseYearFilterLabel" text="Year: All" translation="[12,12]" width="144" color="#D1D5DB" />
+          </Group>
+          <Group id="browseFinishedFilter" translation="[808,0]">
+            <Rectangle id="browseFinishedFilterBg" width="190" height="44" color="#171D26" />
+            <Label id="browseFinishedFilterLabel" text="Finished: Any" translation="[12,12]" width="166" color="#D1D5DB" />
+          </Group>
+        </Group>
+
+        <Group id="browseLoadingGroup" translation="[0,136]" visible="false">
+          <Label text="Loading Browse..." translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="browseEmptyGroup" translation="[0,136]" visible="false">
+          <Label id="browseEmptyLabel" text="No Browse results" translation="[0,0]" width="900" color="#D1D5DB" />
+        </Group>
+
+        <Group id="browseErrorGroup" translation="[0,136]" visible="false">
+          <Label id="browseErrorLabel" text="Unable to load Browse" translation="[0,0]" width="900" color="#FCA5A5" />
+          <Group id="browseRetryGroup" translation="[0,54]">
+            <Rectangle id="browseRetryFocus" width="196" height="44" color="#374151" />
+            <Label text="Retry" translation="[52,12]" color="#F5F5F5" />
+          </Group>
+        </Group>
+
+        <Group id="browseResultsGroup" visible="false">
+          <Label id="browseResultsCountLabel" text="" translation="[0,118]" width="500" color="#9CA3AF" />
+          <Label id="browseOptionStatusLabel" text="" translation="[520,118]" width="500" color="#FCA5A5" />
+          <Group id="browseResultGridHost" translation="[0,156]" />
+          <Group id="browseResultCursor" translation="[0,156]" visible="false">
+            <Rectangle width="160" height="6" color="#60A5FA" />
+            <Rectangle translation="[0,214]" width="160" height="6" color="#60A5FA" />
+            <Rectangle width="6" height="220" color="#60A5FA" />
+            <Rectangle translation="[154,0]" width="6" height="220" color="#60A5FA" />
+          </Group>
+          <Label id="browseScrollUpChevron" text="^" translation="[938,156]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="browseScrollDownChevron" text="v" translation="[938,534]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="browseNextPageStatus" text="" translation="[0,600]" width="900" color="#9CA3AF" />
+        </Group>
+
+        <Group id="browsePickerGroup" translation="[0,108]" visible="false">
+          <Rectangle width="420" height="312" color="#111827" />
+          <Label id="browsePickerTitleLabel" text="Choose filter" translation="[20,16]" width="380" color="#F5F5F5" />
+          <Group id="browsePickerRowsHost" translation="[20,58]" />
+          <Group id="browsePickerCursor" translation="[20,58]" visible="false">
+            <Rectangle id="browsePickerCursorBg" width="380" height="42" color="#2563EB" opacity="0.72" />
+          </Group>
+          <Label id="browsePickerStatusLabel" text="" translation="[20,270]" width="380" color="#9CA3AF" />
         </Group>
       </Group>
 

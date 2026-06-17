@@ -24,6 +24,40 @@ sub init()
     m.homeScrollDownChevron = m.top.findNode("homeScrollDownChevron")
     m.homeRailLeftChevron = m.top.findNode("homeRailLeftChevron")
     m.homeRailRightChevron = m.top.findNode("homeRailRightChevron")
+    m.browseNav = m.top.findNode("browseNav")
+    m.collapsedBrowse = m.top.findNode("collapsedBrowse")
+    m.browseContent = m.top.findNode("browseContent")
+    m.browseFilterBar = m.top.findNode("browseFilterBar")
+    m.browseTypeFilterBg = m.top.findNode("browseTypeFilterBg")
+    m.browseTypeFilterLabel = m.top.findNode("browseTypeFilterLabel")
+    m.browseGenreFilterBg = m.top.findNode("browseGenreFilterBg")
+    m.browseGenreFilterLabel = m.top.findNode("browseGenreFilterLabel")
+    m.browseCountryFilterBg = m.top.findNode("browseCountryFilterBg")
+    m.browseCountryFilterLabel = m.top.findNode("browseCountryFilterLabel")
+    m.browseYearFilterBg = m.top.findNode("browseYearFilterBg")
+    m.browseYearFilterLabel = m.top.findNode("browseYearFilterLabel")
+    m.browseFinishedFilterBg = m.top.findNode("browseFinishedFilterBg")
+    m.browseFinishedFilterLabel = m.top.findNode("browseFinishedFilterLabel")
+    m.browsePickerGroup = m.top.findNode("browsePickerGroup")
+    m.browsePickerTitleLabel = m.top.findNode("browsePickerTitleLabel")
+    m.browsePickerRowsHost = m.top.findNode("browsePickerRowsHost")
+    m.browsePickerCursor = m.top.findNode("browsePickerCursor")
+    m.browsePickerCursorBg = m.top.findNode("browsePickerCursorBg")
+    m.browsePickerStatusLabel = m.top.findNode("browsePickerStatusLabel")
+    m.browseLoadingGroup = m.top.findNode("browseLoadingGroup")
+    m.browseEmptyGroup = m.top.findNode("browseEmptyGroup")
+    m.browseEmptyLabel = m.top.findNode("browseEmptyLabel")
+    m.browseErrorGroup = m.top.findNode("browseErrorGroup")
+    m.browseErrorLabel = m.top.findNode("browseErrorLabel")
+    m.browseRetryGroup = m.top.findNode("browseRetryGroup")
+    m.browseResultsGroup = m.top.findNode("browseResultsGroup")
+    m.browseResultsCountLabel = m.top.findNode("browseResultsCountLabel")
+    m.browseOptionStatusLabel = m.top.findNode("browseOptionStatusLabel")
+    m.browseResultGridHost = m.top.findNode("browseResultGridHost")
+    m.browseResultCursor = m.top.findNode("browseResultCursor")
+    m.browseScrollUpChevron = m.top.findNode("browseScrollUpChevron")
+    m.browseScrollDownChevron = m.top.findNode("browseScrollDownChevron")
+    m.browseNextPageStatus = m.top.findNode("browseNextPageStatus")
     m.searchContent = m.top.findNode("searchContent")
     m.bookmarksContent = m.top.findNode("bookmarksContent")
     m.bookmarksLoadingGroup = m.top.findNode("bookmarksLoadingGroup")
@@ -141,6 +175,45 @@ sub init()
     m.homeRailHeight = 266
     m.homeVisibleCards = 5
     m.homePerPage = 12
+    m.browseLoaded = false
+    m.browseOptionsLoaded = false
+    m.isLoadingBrowse = false
+    m.isLoadingBrowseOptions = false
+    m.isLoadingBrowseNextPage = false
+    m.browsePendingRefresh = false
+    m.browseReachedEnd = false
+    m.browseFailedNextPage = false
+    m.browseItems = []
+    m.browseCardNodes = []
+    m.browseCardBgNodes = []
+    m.browseCardIndexes = []
+    m.browseCurrentPage = 0
+    m.browseTotalPages = 0
+    m.browseTotalItems = 0
+    m.browsePerPage = 20
+    m.browseColumns = 5
+    m.browseVisiblePagePair = 0
+    m.selectedBrowseIndex = 0
+    m.visualSelectedBrowseIndex = -1
+    m.browseFocusArea = "results"
+    m.selectedBrowseFilterIndex = 0
+    m.browsePickerVisible = false
+    m.browsePickerItems = []
+    m.browsePickerFilterId = ""
+    m.selectedBrowsePickerIndex = 0
+    m.browsePickerRowNodes = []
+    m.browsePickerRowIndexes = []
+    m.browseTypeMap = {}
+    m.browseGenres = []
+    m.browseCountries = []
+    m.browseOptionErrorMessage = ""
+    m.browseFilters = {
+        contentType: ""
+        genreId: ""
+        countryId: ""
+        yearRange: "all"
+        finished: "any"
+    }
     m.searchQuery = ""
     m.searchSubmittedQuery = ""
     m.searchSortByYear = true
@@ -472,6 +545,563 @@ function listCountText(totalItems as Integer, loadedItems as Integer, hasMore as
     if count = 1 then label = " video"
     return StrI(count).Trim() + suffix + label
 end function
+
+function browseYearOptions() as Object
+    return [
+        { id: "all", title: "All" }
+        { id: "2020s", title: "2020s" }
+        { id: "2010s", title: "2010s" }
+        { id: "2000s", title: "2000s" }
+        { id: "1990s", title: "1990s" }
+        { id: "1980s", title: "1980s" }
+        { id: "older", title: "Older" }
+    ]
+end function
+
+function browseFinishedOptions() as Object
+    return [
+        { id: "any", title: "Any" }
+        { id: "finished", title: "Finished" }
+        { id: "unfinished", title: "Unfinished" }
+    ]
+end function
+
+function browseTypeOptions() as Object
+    options = [{ id: "", title: "All" }]
+    if m.browseTypeMap <> invalid
+        for each key in m.browseTypeMap
+            entry = m.browseTypeMap[key]
+            if entry <> invalid
+                title = browseOptionTitle(entry, key)
+                options.Push({ id: key, title: title })
+            end if
+        end for
+    end if
+    return options
+end function
+
+function browseOptionsWithAny(items as Object, anyTitle as String) as Object
+    options = [{ id: "", title: anyTitle }]
+    if items <> invalid
+        for each item in items
+            options.Push({ id: browseOptionId(item), title: browseOptionTitle(item, browseOptionId(item)) })
+        end for
+    end if
+    return options
+end function
+
+function browseOptionId(optionItem as Dynamic) as String
+    if optionItem = invalid or type(optionItem) <> "roAssociativeArray" then return ""
+    if optionItem.DoesExist("id") and optionItem.id <> invalid then return optionItem.id
+    return ""
+end function
+
+function browseOptionTitle(optionItem as Dynamic, fallback as String) as String
+    if optionItem = invalid or type(optionItem) <> "roAssociativeArray" then return fallback
+    if optionItem.DoesExist("title") and optionItem.title <> invalid and optionItem.title <> "" then return optionItem.title
+    return fallback
+end function
+
+sub loadBrowseIfNeeded(force as Boolean)
+    loadBrowseOptionsIfNeeded(force)
+    if m.isLoadingBrowse then return
+    if force <> true and m.browseLoaded = true then return
+    requestBrowsePage(1, false)
+end sub
+
+sub loadBrowseOptionsIfNeeded(force as Boolean)
+    if m.isLoadingBrowseOptions then return
+    if force <> true and m.browseOptionsLoaded then return
+
+    m.isLoadingBrowseOptions = true
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadBrowseOptions"
+    task.request = {}
+    task.observeField("response", "onBrowseOptionsResponse")
+    task.control = "RUN"
+    m.browseOptionsTask = task
+end sub
+
+sub onBrowseOptionsResponse(event as Object)
+    response = event.getData()
+    m.isLoadingBrowseOptions = false
+    m.browseOptionErrorMessage = ""
+
+    if response = invalid or response.ok <> true
+        message = "Some Browse filters are unavailable."
+        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+        m.browseOptionErrorMessage = message
+        renderBrowseOptionStatus()
+        return
+    end if
+
+    if response.typeMap <> invalid then m.browseTypeMap = response.typeMap
+    if response.genres <> invalid then m.browseGenres = response.genres
+    if response.countries <> invalid then m.browseCountries = response.countries
+    if response.genreError <> invalid and response.genreError <> "" then m.browseOptionErrorMessage = response.genreError
+    if response.countryError <> invalid and response.countryError <> "" then m.browseOptionErrorMessage = response.countryError
+    m.browseOptionsLoaded = m.browseOptionErrorMessage = ""
+    renderBrowseFilters()
+    renderBrowseOptionStatus()
+end sub
+
+sub requestBrowsePage(page as Integer, append as Boolean)
+    if m.isLoadingBrowse or m.isLoadingBrowseNextPage then return
+
+    if append
+        m.isLoadingBrowseNextPage = true
+        m.browseFailedNextPage = false
+        m.browseNextPageStatus.text = "Loading more..."
+    else
+        m.isLoadingBrowse = true
+        m.browseItems = []
+        m.selectedBrowseIndex = 0
+        m.browseVisiblePagePair = 0
+        m.browseCurrentPage = 0
+        m.browseTotalPages = 0
+        m.browseTotalItems = 0
+        m.browseReachedEnd = false
+        m.browseFailedNextPage = false
+        m.browseNextPageStatus.text = ""
+        clearBrowseGrid()
+        showBrowseState("loading")
+    end if
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadBrowseItems"
+    task.request = browseRequest(page)
+    task.observeField("response", "onBrowseItemsResponse")
+    task.control = "RUN"
+    m.browseTask = task
+end sub
+
+sub requestBrowseRefresh()
+    if m.isLoadingBrowse or m.isLoadingBrowseNextPage
+        m.browsePendingRefresh = true
+        return
+    end if
+
+    requestBrowsePage(1, false)
+end sub
+
+function browseRequest(page as Integer) as Object
+    return {
+        page: page
+        perpage: m.browsePerPage
+        contentType: m.browseFilters.contentType
+        genreId: m.browseFilters.genreId
+        countryId: m.browseFilters.countryId
+        yearRange: m.browseFilters.yearRange
+        finished: m.browseFilters.finished
+    }
+end function
+
+sub onBrowseItemsResponse(event as Object)
+    response = event.getData()
+    wasNextPage = m.isLoadingBrowseNextPage
+    m.isLoadingBrowse = false
+    m.isLoadingBrowseNextPage = false
+    m.browseNextPageStatus.text = ""
+
+    if m.browsePendingRefresh = true
+        m.browsePendingRefresh = false
+        requestBrowsePage(1, false)
+        return
+    end if
+
+    if response = invalid or response.ok <> true
+        message = "Unable to load Browse."
+        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+        if wasNextPage
+            m.browseFailedNextPage = true
+            m.browseNextPageStatus.text = "Unable to load more. Press OK to retry."
+            updateBrowseFocusVisuals()
+        else
+            m.browseErrorLabel.text = message
+            m.browseFocusArea = "error"
+            showBrowseState("error")
+        end if
+        return
+    end if
+
+    if browseResponseMatchesFilters(response) <> true then return
+
+    items = browseResponseItems(response)
+    appendBrowseItems(items)
+    updateBrowsePagination(response)
+    renderBrowseGrid()
+    m.browseLoaded = true
+
+    if m.browseItems.Count() = 0
+        m.browseEmptyLabel.text = "No Browse results for these filters."
+        m.browseFocusArea = "filters"
+        showBrowseState("empty")
+    else
+        if m.browseFocusArea <> "filters" then m.browseFocusArea = "results"
+        showBrowseState("results")
+    end if
+end sub
+
+function browseResponseMatchesFilters(response as Dynamic) as Boolean
+    if response = invalid or type(response) <> "roAssociativeArray" then return false
+    if response.contentType <> m.browseFilters.contentType then return false
+    if response.genreId <> m.browseFilters.genreId then return false
+    if response.countryId <> m.browseFilters.countryId then return false
+    if response.yearRange <> m.browseFilters.yearRange then return false
+    if response.finished <> m.browseFilters.finished then return false
+    return true
+end function
+
+function browseResponseItems(response as Dynamic) as Object
+    if response = invalid or type(response) <> "roAssociativeArray" then return []
+    if response.items = invalid or type(response.items) <> "roArray" then return []
+    return response.items
+end function
+
+sub showBrowseState(state as String)
+    m.browseLoadingGroup.visible = state = "loading"
+    m.browseEmptyGroup.visible = state = "empty"
+    m.browseErrorGroup.visible = state = "error"
+    m.browseResultsGroup.visible = state = "results"
+    m.browseFilterBar.visible = state <> "loading"
+    updateBrowseFocusVisuals()
+    updateBrowseScrollChevrons()
+end sub
+
+sub appendBrowseItems(items as Dynamic)
+    if items = invalid then return
+    if type(items) <> "roArray" then return
+    for each item in items
+        m.browseItems.Push(item)
+    end for
+    if items.Count() = 0 then m.browseReachedEnd = true
+end sub
+
+sub updateBrowsePagination(response as Object)
+    if response <> invalid and response.pagination <> invalid and type(response.pagination) = "roAssociativeArray"
+        pagination = response.pagination
+        if pagination.current <> invalid then m.browseCurrentPage = pagination.current
+        if pagination.total <> invalid then m.browseTotalPages = pagination.total
+        if pagination.total_items <> invalid then m.browseTotalItems = pagination.total_items
+        if pagination.perpage <> invalid then m.browsePerPage = pagination.perpage
+    end if
+    if m.browseTotalItems <= 0 then m.browseTotalItems = m.browseItems.Count()
+    if m.browseTotalPages > 0 and m.browseCurrentPage >= m.browseTotalPages then m.browseReachedEnd = true
+    m.browseResultsCountLabel.text = listCountText(m.browseTotalItems, m.browseItems.Count(), hasMoreBrowsePages())
+    m.browseFailedNextPage = false
+end sub
+
+sub clearBrowseGrid()
+    childCount = m.browseResultGridHost.getChildCount()
+    if childCount > 0 then m.browseResultGridHost.removeChildrenIndex(childCount, 0)
+    m.browseCardNodes = []
+    m.browseCardBgNodes = []
+    m.browseCardIndexes = []
+    m.browseResultCursor.visible = false
+end sub
+
+sub renderBrowseGrid()
+    clearBrowseGrid()
+    if m.browseItems.Count() = 0 then return
+
+    m.browseVisiblePagePair = Int(m.selectedBrowseIndex / (m.browseColumns * 2))
+    startIndex = m.browseVisiblePagePair * m.browseColumns * 2
+    lastIndex = startIndex + (m.browseColumns * 2) - 1
+    if lastIndex >= m.browseItems.Count() then lastIndex = m.browseItems.Count() - 1
+
+    for index = startIndex to lastIndex
+        cardInfo = createBrowseCard(m.browseItems[index], index)
+        m.browseResultGridHost.appendChild(cardInfo.node)
+        m.browseCardNodes.Push(cardInfo.node)
+        m.browseCardBgNodes.Push(cardInfo.focusBg)
+        m.browseCardIndexes.Push(index)
+    end for
+
+    updateBrowseFocusVisuals()
+    updateBrowseScrollChevrons()
+end sub
+
+function createBrowseCard(item as Object, index as Integer) as Object
+    visibleSlot = index MOD (m.browseColumns * 2)
+    column = visibleSlot MOD m.browseColumns
+    row = Int(visibleSlot / m.browseColumns)
+    x = column * 178
+    y = row * 226
+    layout = posterBrowseCardLayout(x, y)
+    layout.showYear = true
+    return createMediaCard(item, layout)
+end function
+
+function browseVisibleWindowLastIndex() as Integer
+    return ((m.browseVisiblePagePair + 1) * m.browseColumns * 2) - 1
+end function
+
+function hasMoreBrowsePages() as Boolean
+    if m.browseReachedEnd then return false
+    if m.browseTotalPages > 0 and m.browseCurrentPage >= m.browseTotalPages then return false
+    return m.browseItems.Count() > 0
+end function
+
+sub updateBrowseFocusVisuals()
+    browseFilterBgs = [m.browseTypeFilterBg, m.browseGenreFilterBg, m.browseCountryFilterBg, m.browseYearFilterBg, m.browseFinishedFilterBg]
+    for index = 0 to browseFilterBgs.Count() - 1
+        bg = browseFilterBgs[index]
+        if index = m.selectedBrowseFilterIndex and m.selectedSection = "browse" and m.focusArea = "content" and m.browseFocusArea = "filters" and m.browsePickerVisible <> true
+            bg.color = cardVisualStateColor(true, false)
+        else
+            bg.color = cardVisualStateColor(false, false)
+        end if
+    end for
+
+    for nodeIndex = 0 to m.browseCardBgNodes.Count() - 1
+        bg = m.browseCardBgNodes[nodeIndex]
+        index = m.browseCardIndexes[nodeIndex]
+        if index = m.selectedBrowseIndex and m.selectedSection = "browse" and m.focusArea = "content" and m.browseFocusArea = "results"
+            bg.color = cardVisualStateColor(true, false)
+        else
+            bg.color = cardVisualStateColor(false, false)
+        end if
+    end for
+
+    updateBrowseCursor()
+    updateBrowsePickerFocus()
+end sub
+
+sub updateBrowseCursor()
+    if m.browseResultCursor = invalid then return
+    showCursor = m.browseResultsGroup.visible and m.focusArea = "content" and m.selectedSection = "browse" and m.browseFocusArea = "results" and m.browseItems.Count() > 0
+    if showCursor <> true
+        m.browseResultCursor.visible = false
+        return
+    end if
+
+    visibleSlot = m.selectedBrowseIndex MOD (m.browseColumns * 2)
+    column = visibleSlot MOD m.browseColumns
+    row = Int(visibleSlot / m.browseColumns)
+    m.browseResultCursor.translation = [column * 178, 156 + (row * 226)]
+    m.browseResultCursor.visible = true
+end sub
+
+sub updateBrowseScrollChevrons()
+    if m.browseScrollUpChevron = invalid or m.browseScrollDownChevron = invalid then return
+    showHints = m.browseResultsGroup.visible and m.browseItems.Count() > 0
+    m.browseScrollUpChevron.visible = showHints and m.browseVisiblePagePair > 0
+    hasLoadedItemsBelow = browseVisibleWindowLastIndex() < (m.browseItems.Count() - 1)
+    m.browseScrollDownChevron.visible = showHints and (hasLoadedItemsBelow or hasMoreBrowsePages())
+end sub
+
+sub openBrowsePicker()
+    m.browsePickerFilterId = browseFilterIdForIndex(m.selectedBrowseFilterIndex)
+    m.browsePickerItems = browsePickerItemsForFilter(m.browsePickerFilterId)
+    m.selectedBrowsePickerIndex = browseSelectedPickerIndex(m.browsePickerItems, browseSelectedFilterValue(m.browsePickerFilterId))
+    m.browsePickerVisible = true
+    m.browsePickerGroup.visible = true
+    m.browsePickerTitleLabel.text = browsePickerTitle(m.browsePickerFilterId)
+    renderBrowsePickerRows()
+end sub
+
+sub closeBrowsePicker()
+    m.browsePickerVisible = false
+    m.browsePickerGroup.visible = false
+    m.browsePickerItems = []
+    m.browsePickerFilterId = ""
+    m.selectedBrowsePickerIndex = 0
+    clearBrowsePickerRows()
+    updateBrowseFocusVisuals()
+end sub
+
+function browseFilterIdForIndex(index as Integer) as String
+    if index = 0 then return "type"
+    if index = 1 then return "genre"
+    if index = 2 then return "country"
+    if index = 3 then return "year"
+    return "finished"
+end function
+
+function browsePickerTitle(filterId as String) as String
+    if filterId = "type" then return "Choose type"
+    if filterId = "genre" then return "Choose genre"
+    if filterId = "country" then return "Choose country"
+    if filterId = "year" then return "Choose year"
+    return "Choose finished status"
+end function
+
+function browsePickerItemsForFilter(filterId as String) as Object
+    if filterId = "type" then return browseTypeOptions()
+    if filterId = "genre" then return browseOptionsWithAny(m.browseGenres, "Any")
+    if filterId = "country" then return browseOptionsWithAny(m.browseCountries, "Any")
+    if filterId = "year" then return browseYearOptions()
+    return browseFinishedOptions()
+end function
+
+function browseSelectedFilterValue(filterId as String) as String
+    if filterId = "type" then return m.browseFilters.contentType
+    if filterId = "genre" then return m.browseFilters.genreId
+    if filterId = "country" then return m.browseFilters.countryId
+    if filterId = "year" then return m.browseFilters.yearRange
+    return m.browseFilters.finished
+end function
+
+function browseSelectedPickerIndex(items as Object, selectedId as String) as Integer
+    for index = 0 to items.Count() - 1
+        if items[index].id = selectedId then return index
+    end for
+    return 0
+end function
+
+sub clearBrowsePickerRows()
+    childCount = m.browsePickerRowsHost.getChildCount()
+    if childCount > 0 then m.browsePickerRowsHost.removeChildrenIndex(childCount, 0)
+    m.browsePickerRowNodes = []
+    m.browsePickerRowIndexes = []
+    m.browsePickerCursor.visible = false
+end sub
+
+sub renderBrowsePickerRows()
+    clearBrowsePickerRows()
+    maxRows = 5
+    startIndex = m.selectedBrowsePickerIndex - 2
+    if startIndex < 0 then startIndex = 0
+    maxStart = m.browsePickerItems.Count() - maxRows
+    if maxStart < 0 then maxStart = 0
+    if startIndex > maxStart then startIndex = maxStart
+    lastIndex = startIndex + maxRows - 1
+    if lastIndex >= m.browsePickerItems.Count() then lastIndex = m.browsePickerItems.Count() - 1
+
+    for index = startIndex to lastIndex
+        row = CreateObject("roSGNode", "Group")
+        row.translation = [0, (index - startIndex) * 44]
+        label = CreateObject("roSGNode", "Label")
+        label.text = m.browsePickerItems[index].title
+        label.translation = [12, 10]
+        label.width = 356
+        label.color = "#F5F5F5"
+        row.appendChild(label)
+        m.browsePickerRowsHost.appendChild(row)
+        m.browsePickerRowNodes.Push(row)
+        m.browsePickerRowIndexes.Push(index)
+    end for
+
+    if m.browsePickerItems.Count() > 0
+        m.browsePickerStatusLabel.text = StrI(m.selectedBrowsePickerIndex + 1).Trim() + " / " + StrI(m.browsePickerItems.Count()).Trim()
+    else
+        m.browsePickerStatusLabel.text = "No options available"
+    end if
+
+    updateBrowsePickerFocus()
+end sub
+
+sub updateBrowsePickerFocus()
+    if m.browsePickerVisible <> true
+        m.browsePickerCursor.visible = false
+        return
+    end if
+
+    for index = 0 to m.browsePickerRowIndexes.Count() - 1
+        optionIndex = m.browsePickerRowIndexes[index]
+        if optionIndex = m.selectedBrowsePickerIndex
+            m.browsePickerCursor.translation = [20, 58 + (index * 44)]
+            m.browsePickerCursor.visible = true
+            return
+        end if
+    end for
+    m.browsePickerCursor.visible = false
+end sub
+
+sub moveBrowsePicker(delta as Integer)
+    if m.browsePickerItems.Count() = 0 then return
+    nextIndex = m.selectedBrowsePickerIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex >= m.browsePickerItems.Count() then nextIndex = m.browsePickerItems.Count() - 1
+    if nextIndex = m.selectedBrowsePickerIndex then return
+    m.selectedBrowsePickerIndex = nextIndex
+    renderBrowsePickerRows()
+end sub
+
+sub selectBrowsePickerItem()
+    if m.browsePickerItems.Count() = 0 then return
+    selected = m.browsePickerItems[m.selectedBrowsePickerIndex]
+    if m.browsePickerFilterId = "type" then m.browseFilters.contentType = selected.id
+    if m.browsePickerFilterId = "genre" then m.browseFilters.genreId = selected.id
+    if m.browsePickerFilterId = "country" then m.browseFilters.countryId = selected.id
+    if m.browsePickerFilterId = "year" then m.browseFilters.yearRange = selected.id
+    if m.browsePickerFilterId = "finished" then m.browseFilters.finished = selected.id
+    closeBrowsePicker()
+    m.browseFocusArea = "filters"
+    renderBrowseFilters()
+    requestBrowseRefresh()
+end sub
+
+sub moveBrowseFilter(delta as Integer)
+    nextIndex = m.selectedBrowseFilterIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex > 4 then nextIndex = 4
+    m.selectedBrowseFilterIndex = nextIndex
+    updateBrowseFocusVisuals()
+end sub
+
+sub moveBrowseFocus(delta as Integer)
+    if m.browseItems.Count() = 0 then return
+    oldPagePair = Int(m.selectedBrowseIndex / (m.browseColumns * 2))
+    nextIndex = m.selectedBrowseIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex >= m.browseItems.Count() then nextIndex = m.browseItems.Count() - 1
+    if nextIndex = m.selectedBrowseIndex then return
+    m.selectedBrowseIndex = nextIndex
+    newPagePair = Int(m.selectedBrowseIndex / (m.browseColumns * 2))
+    if newPagePair <> oldPagePair
+        renderBrowseGrid()
+    else
+        updateBrowseFocusVisuals()
+    end if
+    loadNextBrowsePageIfNeeded()
+end sub
+
+sub loadNextBrowsePageIfNeeded()
+    if m.browseReachedEnd then return
+    if m.browseFailedNextPage then return
+    if m.isLoadingBrowse or m.isLoadingBrowseNextPage then return
+    if m.browseItems.Count() = 0 then return
+    thresholdIndex = m.browseItems.Count() - 4
+    if thresholdIndex < 0 then thresholdIndex = 0
+    if m.selectedBrowseIndex >= thresholdIndex
+        requestBrowsePage(m.browseCurrentPage + 1, true)
+    end if
+end sub
+
+sub selectBrowseCard()
+    if m.browseFailedNextPage
+        requestBrowsePage(m.browseCurrentPage + 1, true)
+        return
+    end if
+    if m.browseItems.Count() = 0 then return
+    item = m.browseItems[m.selectedBrowseIndex]
+    if item = invalid or item.itemId <= 0 then return
+    m.top.videoSelected = item
+end sub
+
+sub renderBrowseFilters()
+    m.browseTypeFilterLabel.text = "Type: " + browseSelectedTitle(browseTypeOptions(), m.browseFilters.contentType, "All")
+    m.browseGenreFilterLabel.text = "Genre: " + browseSelectedTitle(browseOptionsWithAny(m.browseGenres, "Any"), m.browseFilters.genreId, "Any")
+    m.browseCountryFilterLabel.text = "Country: " + browseSelectedTitle(browseOptionsWithAny(m.browseCountries, "Any"), m.browseFilters.countryId, "Any")
+    m.browseYearFilterLabel.text = "Year: " + browseSelectedTitle(browseYearOptions(), m.browseFilters.yearRange, "All")
+    m.browseFinishedFilterLabel.text = "Finished: " + browseSelectedTitle(browseFinishedOptions(), m.browseFilters.finished, "Any")
+end sub
+
+function browseSelectedTitle(options as Object, selectedId as String, fallback as String) as String
+    for each optionItem in options
+        if optionItem.id = selectedId then return optionItem.title
+    end for
+    return fallback
+end function
+
+sub renderBrowseOptionStatus()
+    if m.browseOptionErrorMessage <> invalid and m.browseOptionErrorMessage <> ""
+        m.browseOptionStatusLabel.text = m.browseOptionErrorMessage
+    else
+        m.browseOptionStatusLabel.text = ""
+    end if
+end sub
 
 sub showBookmarksState(state as String)
     m.bookmarksLoadingGroup.visible = state = "loading"
@@ -1649,6 +2279,8 @@ end sub
 function searchKeyboardRows() as Object
     if m.searchKeyboardLayout = "en"
         return [
+            ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+            ["?", "!", ",", ".", ":", "-", "'", """", "/"],
             ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
             ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
             ["z", "x", "c", "v", "b", "n", "m"],
@@ -1657,8 +2289,10 @@ function searchKeyboardRows() as Object
     end if
 
     return [
-        ["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з"],
-        ["ф", "ы", "в", "а", "п", "р", "о", "л", "д"],
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+        ["?", "!", ",", ".", ":", "-", "'", """", "/"],
+        ["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ъ"],
+        ["ф", "ы", "в", "а", "п", "р", "о", "л", "д", "ж", "э"],
         ["я", "ч", "с", "м", "и", "т", "ь", "б", "ю"],
         ["EN", "Space", "Backspace", "Clear", "Search"]
     ]
@@ -1684,8 +2318,9 @@ sub renderSearchKeyboard()
     for rowIndex = 0 to rows.Count() - 1
         row = rows[rowIndex]
         rowOffset = 0
-        if rowIndex = 1 then rowOffset = 28
-        if rowIndex = 2 then rowOffset = 56
+        if row.Count() = 11 then rowOffset = 28
+        if row.Count() = 9 then rowOffset = 56
+        if row.Count() = 7 then rowOffset = 96
 
         for columnIndex = 0 to row.Count() - 1
             labelText = row[columnIndex]
@@ -1697,14 +2332,14 @@ sub renderSearchKeyboard()
             if key.type = "search" then keyWidth = 118
 
             x = rowOffset + (columnIndex * 64)
-            if rowIndex = 3
+            if rowIndex = rows.Count() - 1
                 x = columnIndex * 142
                 if columnIndex = 1 then x = 74
                 if columnIndex = 2 then x = 260
                 if columnIndex = 3 then x = 402
                 if columnIndex = 4 then x = 508
             end if
-            y = rowIndex * 52
+            y = rowIndex * 50
 
             group = CreateObject("roSGNode", "Group")
             group.translation = [x, y]
@@ -2127,6 +2762,7 @@ sub showSection(section as String)
     m.selectedSection = section
     m.watchAgainContent.visible = section = "watchAgain"
     m.homeContent.visible = section = "home"
+    m.browseContent.visible = section = "browse"
     m.searchContent.visible = section = "search"
     m.bookmarksContent.visible = section = "bookmarks"
     m.accountContent.visible = section = "account"
@@ -2136,17 +2772,21 @@ sub showSection(section as String)
     else if section = "home"
         m.menuIndex = 1
         loadHomeIfNeeded(false)
-    else if section = "search"
+    else if section = "browse"
         m.menuIndex = 2
-    else if section = "bookmarks"
+        loadBrowseIfNeeded(false)
+    else if section = "search"
         m.menuIndex = 3
+    else if section = "bookmarks"
+        m.menuIndex = 4
         loadBookmarkFoldersIfNeeded(false)
     else if section = "account"
-        m.menuIndex = 4
+        m.menuIndex = 5
         loadAccountInfo(false)
     end if
 
     updateMenuVisuals()
+    updateBrowseFocusVisuals()
     updateSearchFocusVisuals()
     updateBookmarksFocusVisuals()
 end sub
@@ -2171,6 +2811,7 @@ sub setMenuExpanded(expanded as Boolean)
     updateSearchScrollChevrons()
     updateHomeCursor()
     updateHomeChevrons()
+    updateBrowseFocusVisuals()
     updateBookmarksFocusVisuals()
 end sub
 
@@ -2178,6 +2819,7 @@ sub updateMenuVisuals()
     palette = homeUiPalette()
     m.watchAgainNav.color = "#D1D5DB"
     m.homeNav.color = "#D1D5DB"
+    m.browseNav.color = "#D1D5DB"
     m.searchNav.color = "#D1D5DB"
     m.bookmarksNav.color = "#D1D5DB"
     m.accountNav.color = "#D1D5DB"
@@ -2186,6 +2828,7 @@ sub updateMenuVisuals()
 
     m.collapsedWatchAgain.color = "#9CA3AF"
     m.collapsedHome.color = "#9CA3AF"
+    m.collapsedBrowse.color = "#9CA3AF"
     m.collapsedSearch.color = "#9CA3AF"
     m.collapsedBookmarks.color = "#9CA3AF"
     m.collapsedAccount.color = "#9CA3AF"
@@ -2203,16 +2846,21 @@ sub updateMenuVisuals()
     else if m.menuIndex = 2
         m.navFocusBg.translation = [12, 232]
         m.collapsedActiveIndicator.translation = [0, 232]
-        m.searchNav.color = palette.text
-        m.collapsedSearch.color = palette.text
+        m.browseNav.color = palette.text
+        m.collapsedBrowse.color = palette.text
     else if m.menuIndex = 3
         m.navFocusBg.translation = [12, 292]
         m.collapsedActiveIndicator.translation = [0, 292]
-        m.bookmarksNav.color = palette.text
-        m.collapsedBookmarks.color = palette.text
+        m.searchNav.color = palette.text
+        m.collapsedSearch.color = palette.text
     else if m.menuIndex = 4
         m.navFocusBg.translation = [12, 352]
         m.collapsedActiveIndicator.translation = [0, 352]
+        m.bookmarksNav.color = palette.text
+        m.collapsedBookmarks.color = palette.text
+    else if m.menuIndex = 5
+        m.navFocusBg.translation = [12, 412]
+        m.collapsedActiveIndicator.translation = [0, 412]
         m.accountNav.color = palette.text
         m.collapsedAccount.color = palette.text
     else
@@ -2226,7 +2874,7 @@ end sub
 sub moveMenu(delta as Integer)
     m.menuIndex = m.menuIndex + delta
     if m.menuIndex < 0 then m.menuIndex = 0
-    if m.menuIndex > 5 then m.menuIndex = 5
+    if m.menuIndex > 6 then m.menuIndex = 6
     updateMenuVisuals()
 end sub
 
@@ -2236,11 +2884,13 @@ sub activateMenuItem()
     else if m.menuIndex = 1
         showSection("home")
     else if m.menuIndex = 2
+        showSection("browse")
+    else if m.menuIndex = 3
         showSection("search")
         resetSearchState()
-    else if m.menuIndex = 3
-        showSection("bookmarks")
     else if m.menuIndex = 4
+        showSection("bookmarks")
+    else if m.menuIndex = 5
         showSection("account")
     else
         m.top.signOutRequested = true
@@ -2363,6 +3013,81 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
             else if key = "back"
                 setMenuExpanded(true)
                 return true
+            end if
+        else if m.selectedSection = "browse"
+            if m.browsePickerVisible
+                if key = "up"
+                    moveBrowsePicker(-1)
+                    return true
+                else if key = "down"
+                    moveBrowsePicker(1)
+                    return true
+                else if key = "OK"
+                    selectBrowsePickerItem()
+                    return true
+                else if key = "back" or key = "left"
+                    closeBrowsePicker()
+                    return true
+                end if
+            else if m.browseFocusArea = "error"
+                if key = "OK"
+                    requestBrowsePage(1, false)
+                    return true
+                else if key = "left" or key = "back"
+                    setMenuExpanded(true)
+                    return true
+                end if
+            else if m.browseFocusArea = "filters"
+                if key = "left"
+                    if m.selectedBrowseFilterIndex = 0
+                        setMenuExpanded(true)
+                    else
+                        moveBrowseFilter(-1)
+                    end if
+                    return true
+                else if key = "right"
+                    moveBrowseFilter(1)
+                    return true
+                else if key = "down"
+                    if m.browseItems.Count() > 0 then m.browseFocusArea = "results"
+                    updateBrowseFocusVisuals()
+                    return true
+                else if key = "OK"
+                    openBrowsePicker()
+                    return true
+                else if key = "back"
+                    setMenuExpanded(true)
+                    return true
+                end if
+            else if m.browseFocusArea = "results"
+                if key = "left"
+                    if m.selectedBrowseIndex MOD m.browseColumns = 0
+                        setMenuExpanded(true)
+                    else
+                        moveBrowseFocus(-1)
+                    end if
+                    return true
+                else if key = "right"
+                    moveBrowseFocus(1)
+                    return true
+                else if key = "down"
+                    moveBrowseFocus(m.browseColumns)
+                    return true
+                else if key = "up"
+                    if m.selectedBrowseIndex < m.browseColumns
+                        m.browseFocusArea = "filters"
+                        updateBrowseFocusVisuals()
+                    else
+                        moveBrowseFocus(-m.browseColumns)
+                    end if
+                    return true
+                else if key = "OK"
+                    selectBrowseCard()
+                    return true
+                else if key = "back"
+                    setMenuExpanded(true)
+                    return true
+                end if
             end if
         else if m.selectedSection = "search"
             if m.searchFocusArea = "keyboard"

@@ -7,6 +7,7 @@ sub runContentTask()
     client = KinoApiClient(KinoConfig())
     authService = KinoAuthService(client, tokenStore)
     bookmarkService = KinoBookmarkService(client)
+    browseService = KinoBrowseService(client)
     typeService = KinoContentTypeService(client)
     historyService = KinoHistoryService(client)
     homeService = KinoHomeService(client)
@@ -34,6 +35,10 @@ sub runContentTask()
         m.top.response = contentTaskLoadBookmarkFolders(tokenStore, authService, bookmarkService)
     else if command = "loadBookmarkFolderItems"
         m.top.response = contentTaskLoadBookmarkFolderItems(tokenStore, authService, bookmarkService, typeService, request)
+    else if command = "loadBrowseOptions"
+        m.top.response = contentTaskLoadBrowseOptions(tokenStore, authService, browseService, typeService)
+    else if command = "loadBrowseItems"
+        m.top.response = contentTaskLoadBrowseItems(tokenStore, authService, browseService, typeService, request)
     else if command = "loadItemBookmarkFolders"
         m.top.response = contentTaskLoadItemBookmarkFolders(tokenStore, authService, bookmarkService, request)
     else if command = "toggleItemBookmark"
@@ -277,6 +282,60 @@ function contentTaskToggleItemBookmark(tokenStore as Object, authService as Obje
     result.itemId = itemId
     result.folderId = folderId
     return result
+end function
+
+function contentTaskLoadBrowseOptions(tokenStore as Object, authService as Object, browseService as Object, typeService as Object) as Object
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to load Browse filters.")
+    if tokenResult.ok <> true
+        tokenResult.command = "loadBrowseOptions"
+        return tokenResult
+    end if
+
+    typeMap = contentTaskTypeMap(typeService, tokenResult.accessToken)
+    result = browseService.loadOptions(tokenResult.accessToken, typeMap)
+    result.command = "loadBrowseOptions"
+    return result
+end function
+
+function contentTaskLoadBrowseItems(tokenStore as Object, authService as Object, browseService as Object, typeService as Object, request as Dynamic) as Object
+    page = contentTaskIntegerField(request, "page", 1)
+    perpage = contentTaskIntegerField(request, "perpage", 20)
+    if page < 1 then page = 1
+    if perpage < 1 then perpage = 20
+    if perpage > 50 then perpage = 50
+
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to browse.")
+    if tokenResult.ok <> true
+        tokenResult.command = "loadBrowseItems"
+        tokenResult.page = page
+        tokenResult.perpage = perpage
+        return tokenResult
+    end if
+
+    typeMap = contentTaskTypeMap(typeService, tokenResult.accessToken)
+    browseRequest = contentTaskBrowseRequest(request, page, perpage)
+    result = browseService.listItems(tokenResult.accessToken, browseRequest, typeMap)
+    result.command = "loadBrowseItems"
+    result.page = page
+    result.perpage = perpage
+    result.contentType = browseRequest.contentType
+    result.genreId = browseRequest.genreId
+    result.countryId = browseRequest.countryId
+    result.yearRange = browseRequest.yearRange
+    result.finished = browseRequest.finished
+    return result
+end function
+
+function contentTaskBrowseRequest(request as Dynamic, page as Integer, perpage as Integer) as Object
+    return {
+        page: page
+        perpage: perpage
+        contentType: contentTaskStringField(request, "contentType", "")
+        genreId: contentTaskStringField(request, "genreId", "")
+        countryId: contentTaskStringField(request, "countryId", "")
+        yearRange: contentTaskStringField(request, "yearRange", "all")
+        finished: contentTaskStringField(request, "finished", "any")
+    }
 end function
 
 function contentTaskAccessToken(tokenStore as Object, authService as Object, message as String) as Object
