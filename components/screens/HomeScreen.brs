@@ -2279,6 +2279,8 @@ end sub
 function searchKeyboardRows() as Object
     if m.searchKeyboardLayout = "en"
         return [
+            ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+            ["?", "!", ",", ".", ":", "-", "'", """", "/"],
             ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
             ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
             ["z", "x", "c", "v", "b", "n", "m"],
@@ -2287,8 +2289,10 @@ function searchKeyboardRows() as Object
     end if
 
     return [
-        ["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з"],
-        ["ф", "ы", "в", "а", "п", "р", "о", "л", "д"],
+        ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+        ["?", "!", ",", ".", ":", "-", "'", """", "/"],
+        ["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ъ"],
+        ["ф", "ы", "в", "а", "п", "р", "о", "л", "д", "ж", "э"],
         ["я", "ч", "с", "м", "и", "т", "ь", "б", "ю"],
         ["EN", "Space", "Backspace", "Clear", "Search"]
     ]
@@ -2314,8 +2318,9 @@ sub renderSearchKeyboard()
     for rowIndex = 0 to rows.Count() - 1
         row = rows[rowIndex]
         rowOffset = 0
-        if rowIndex = 1 then rowOffset = 28
-        if rowIndex = 2 then rowOffset = 56
+        if row.Count() = 11 then rowOffset = 28
+        if row.Count() = 9 then rowOffset = 56
+        if row.Count() = 7 then rowOffset = 96
 
         for columnIndex = 0 to row.Count() - 1
             labelText = row[columnIndex]
@@ -2327,14 +2332,14 @@ sub renderSearchKeyboard()
             if key.type = "search" then keyWidth = 118
 
             x = rowOffset + (columnIndex * 64)
-            if rowIndex = 3
+            if rowIndex = rows.Count() - 1
                 x = columnIndex * 142
                 if columnIndex = 1 then x = 74
                 if columnIndex = 2 then x = 260
                 if columnIndex = 3 then x = 402
                 if columnIndex = 4 then x = 508
             end if
-            y = rowIndex * 52
+            y = rowIndex * 50
 
             group = CreateObject("roSGNode", "Group")
             group.translation = [x, y]

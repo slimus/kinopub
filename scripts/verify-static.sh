@@ -213,6 +213,14 @@ grep -q "m.recentSearches = m.searchHistoryStore.load()" components/screens/Home
 grep -q "renderRecentSearches" components/screens/HomeScreen.brs
 grep -q "selectRecentSearch" components/screens/HomeScreen.brs
 grep -q "saveSubmittedSearchQuery" components/screens/HomeScreen.brs
+grep -q '\["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"\]' components/screens/HomeScreen.brs
+grep -Fq "[\"?\", \"!\", \",\", \".\", \":\", \"-\", \"'\", \"\"\"\", \"/\"]" components/screens/HomeScreen.brs
+grep -q '\["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ъ"\]' components/screens/HomeScreen.brs
+grep -q '\["ф", "ы", "в", "а", "п", "р", "о", "л", "д", "ж", "э"\]' components/screens/HomeScreen.brs
+if grep -q '"123"' components/screens/HomeScreen.brs; then
+  echo "Search keyboard must keep digits visible instead of using a 123 layout toggle." >&2
+  exit 1
+fi
 grep -q 'm.selectedSection = "watchAgain"' components/screens/HomeScreen.brs
 grep -q 'm.menuExpanded = false' components/screens/HomeScreen.brs
 grep -q 'showSection("watchAgain")' components/screens/HomeScreen.brs
