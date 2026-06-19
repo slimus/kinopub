@@ -200,20 +200,24 @@ function kinoBrowseNormalizeItemsResponse(body as Dynamic, requestedPage as Inte
         total_items: 0
     }
 
-    if body <> invalid and type(body) = "roAssociativeArray"
-        if body.DoesExist("items") and body.items <> invalid and type(body.items) = "roArray"
-            for each item in body.items
-                normalized = m.normalizeItem(item, typeMap)
-                if normalized.itemId > 0 then items.Push(normalized)
-            end for
-        end if
+    if body = invalid or type(body) <> "roAssociativeArray"
+        return { ok: false, items: [], pagination: pagination, error: "invalid_response", message: "Browse response was not readable.", status: 0 }
+    end if
 
-        if body.DoesExist("pagination") and body.pagination <> invalid and type(body.pagination) = "roAssociativeArray"
-            pagination.total = m.integerField(body.pagination, "total", pagination.total)
-            pagination.current = m.integerField(body.pagination, "current", pagination.current)
-            pagination.perpage = m.integerField(body.pagination, "perpage", pagination.perpage)
-            pagination.total_items = m.integerField(body.pagination, "total_items", pagination.total_items)
-        end if
+    if body.DoesExist("items") <> true or body.items = invalid or type(body.items) <> "roArray"
+        return { ok: false, items: [], pagination: pagination, error: "invalid_response", message: "Browse response did not include an items list.", status: 0 }
+    end if
+
+    for each item in body.items
+        normalized = m.normalizeItem(item, typeMap)
+        if normalized.itemId > 0 then items.Push(normalized)
+    end for
+
+    if body.DoesExist("pagination") and body.pagination <> invalid and type(body.pagination) = "roAssociativeArray"
+        pagination.total = m.integerField(body.pagination, "total", pagination.total)
+        pagination.current = m.integerField(body.pagination, "current", pagination.current)
+        pagination.perpage = m.integerField(body.pagination, "perpage", pagination.perpage)
+        pagination.total_items = m.integerField(body.pagination, "total_items", pagination.total_items)
     end if
 
     return { ok: true, items: items, pagination: pagination }

@@ -2,6 +2,7 @@
 <component name="HomeScreen" extends="Group">
   <interface>
     <field id="signOutRequested" type="boolean" alwaysNotify="true" />
+    <field id="authRequired" type="boolean" alwaysNotify="true" />
     <field id="exitRequested" type="boolean" alwaysNotify="true" />
     <field id="videoSelected" type="assocarray" alwaysNotify="true" />
   </interface>

@@ -35,20 +35,24 @@ function kinoHistoryNormalizeResponse(body as Dynamic, requestedPage as Integer,
         total_items: 0
     }
 
-    if body <> invalid and type(body) = "roAssociativeArray"
-        if body.DoesExist("history") and body.history <> invalid and type(body.history) = "roArray"
-            for each entry in body.history
-                items.Push(m.normalizeEntry(entry, typeMap))
-            end for
-        end if
+    if body = invalid or type(body) <> "roAssociativeArray"
+        return { ok: false, items: [], pagination: pagination, error: "invalid_response", message: "Watch Again response was not readable.", status: 0 }
+    end if
 
-        if body.DoesExist("pagination") and body.pagination <> invalid and type(body.pagination) = "roAssociativeArray"
-            apiPagination = body.pagination
-            pagination.total = m.integerField(apiPagination, "total", pagination.total)
-            pagination.current = m.integerField(apiPagination, "current", pagination.current)
-            pagination.perpage = m.integerField(apiPagination, "perpage", pagination.perpage)
-            pagination.total_items = m.integerField(apiPagination, "total_items", pagination.total_items)
-        end if
+    if body.DoesExist("history") <> true or body.history = invalid or type(body.history) <> "roArray"
+        return { ok: false, items: [], pagination: pagination, error: "invalid_response", message: "Watch Again response did not include a history list.", status: 0 }
+    end if
+
+    for each entry in body.history
+        items.Push(m.normalizeEntry(entry, typeMap))
+    end for
+
+    if body.DoesExist("pagination") and body.pagination <> invalid and type(body.pagination) = "roAssociativeArray"
+        apiPagination = body.pagination
+        pagination.total = m.integerField(apiPagination, "total", pagination.total)
+        pagination.current = m.integerField(apiPagination, "current", pagination.current)
+        pagination.perpage = m.integerField(apiPagination, "perpage", pagination.perpage)
+        pagination.total_items = m.integerField(apiPagination, "total_items", pagination.total_items)
     end if
 
     return { ok: true, items: items, pagination: pagination }

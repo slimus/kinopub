@@ -151,6 +151,10 @@ end sub
 sub onDetailResponse(event as Object)
     response = event.getData()
     if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
         message = "Unable to load video details."
         if response <> invalid and response.message <> invalid and response.message <> ""
             message = response.message
@@ -601,7 +605,10 @@ end sub
 
 sub onItemBookmarkFoldersResponse(event as Object)
     response = event.getData()
-    if response = invalid or response.ok <> true then return
+    if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response) then requestSignInAgain(response)
+        return
+    end if
     m.itemBookmarkFolders = []
     if response.folders <> invalid then m.itemBookmarkFolders = response.folders
     renderBookmarkAction()
@@ -659,6 +666,10 @@ end sub
 sub onBookmarkOverlayFoldersResponse(event as Object)
     response = event.getData()
     if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
         message = "Unable to load bookmark folders."
         if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
         m.bookmarkOverlayStatusLabel.text = message
@@ -784,6 +795,10 @@ end sub
 sub onToggleItemBookmarkResponse(event as Object)
     response = event.getData()
     if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
         message = "Unable to update bookmark."
         if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
         m.bookmarkOverlayStatusLabel.text = message
@@ -1163,6 +1178,20 @@ sub showError(message as String)
     showState("error")
 end sub
 
+function responseRequiresSignIn(response as Dynamic) as Boolean
+    if response = invalid or type(response) <> "roAssociativeArray" then return false
+    if response.DoesExist("status") and response.status <> invalid and response.status = 401 then return true
+    if response.DoesExist("error") <> true or response.error = invalid then return false
+    errorCode = response.error
+    if type(errorCode) <> "String" and type(errorCode) <> "roString" then return false
+    errorCode = LCase(errorCode)
+    return errorCode = "auth_required" or errorCode = "unauthorized" or errorCode = "invalid_grant"
+end function
+
+sub requestSignInAgain(response as Dynamic)
+    m.top.authRequired = true
+end sub
+
 function currentMedia() as Dynamic
     if m.seasons.Count() = 0 then return invalid
 
@@ -1423,6 +1452,11 @@ sub onMediaLinksRefreshResponse(event as Object)
 
     if pendingMediaId <= 0 then return
 
+    if responseRequiresSignIn(response)
+        requestSignInAgain(response)
+        return
+    end if
+
     if response <> invalid and response.ok = true and response.media <> invalid
         responseMediaId = 0
         if response.media.mediaId <> invalid then responseMediaId = response.media.mediaId
@@ -1564,6 +1598,11 @@ sub onNextMediaLinksRefreshResponse(event as Object)
     m.nextMediaLinksTask = invalid
 
     if pendingMediaId <= 0 then return
+
+    if responseRequiresSignIn(response)
+        requestSignInAgain(response)
+        return
+    end if
 
     if response <> invalid and response.ok = true and response.media <> invalid
         responseMediaId = 0

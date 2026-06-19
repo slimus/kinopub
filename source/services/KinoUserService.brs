@@ -14,6 +14,9 @@ end function
 function kinoUserInfo(accessToken as String) as Object
     response = m.client.get("/v1/user", { access_token: accessToken }, m.client.defaultTimeoutMs)
     if response.ok <> true then return m.failure(response)
+    if response.body = invalid or type(response.body) <> "roAssociativeArray"
+        return { ok: false, error: "invalid_response", message: "Account response was not readable.", status: response.status }
+    end if
     return { ok: true, user: m.normalizeResponse(response.body) }
 end function
 

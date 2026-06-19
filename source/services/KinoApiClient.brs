@@ -48,8 +48,13 @@ function kinoApiGet(path as String, queryParams as Object, timeoutMs = invalid a
     status = msg.GetResponseCode()
     body = msg.GetString()
     json = invalid
-    if kinoApiLooksLikeJson(body) then json = ParseJson(body)
+    looksJson = kinoApiLooksLikeJson(body)
+    if looksJson then json = ParseJson(body)
     print "KinoApiClient: response path="; path; " status="; status; " body="; kinoApiBodySnippet(body)
+
+    if looksJson and json = invalid
+        return { ok: false, status: status, error: "invalid_response", message: "KinoAPI returned malformed JSON.", rawBody: body }
+    end if
 
     if status >= 200 and status < 300
         return { ok: true, status: status, body: json, rawBody: body }
@@ -92,8 +97,13 @@ function kinoApiPost(path as String, queryParams as Object, bodyParams as Object
     status = msg.GetResponseCode()
     body = msg.GetString()
     json = invalid
-    if kinoApiLooksLikeJson(body) then json = ParseJson(body)
+    looksJson = kinoApiLooksLikeJson(body)
+    if looksJson then json = ParseJson(body)
     print "KinoApiClient: response path="; path; " status="; status; " body="; kinoApiBodySnippet(body)
+
+    if looksJson and json = invalid
+        return { ok: false, status: status, error: "invalid_response", message: "KinoAPI returned malformed JSON.", rawBody: body }
+    end if
 
     if status >= 200 and status < 300
         return { ok: true, status: status, body: json, rawBody: body }
@@ -107,6 +117,11 @@ end function
 function kinoApiNormalizeError(status as Integer, body as Dynamic, rawBody = "" as String) as Object
     errorCode = "network"
     message = "KinoAPI request failed."
+
+    if status = 401
+        errorCode = "unauthorized"
+        message = "Device authorization was removed. Sign in again."
+    end if
 
     if body <> invalid and type(body) = "roAssociativeArray"
         if body.DoesExist("error") then errorCode = body.error
