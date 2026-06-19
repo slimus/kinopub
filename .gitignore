@@ -2,6 +2,7 @@
 config/kinoapi.local.json
 dist/
 source/config/KinoConfig.brs
+source/config/BuildInfo.brs
 .DS_Store
 out
 docs

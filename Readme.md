@@ -23,10 +23,6 @@ Edit `config/kinoapi.local.json` and replace the placeholder values:
 }
 ```
 
-If you do not have a `client_id` and `client_secret` yet, the [KinoAPI authentication docs](https://kinoapi.com/authentication.html) say to request them from `support@kino.pub`. The archived [karpeychik/Kinopub Roku channel](https://github.com/karpeychik/Kinopub/blob/master/KinoPub/source/main.brs#L14) also shows the public client values it used.
-
-`config/kinoapi.local.json` is intentionally ignored by git.
-
 ### 2. Build the Roku package
 
 Run:
@@ -40,6 +36,9 @@ The script generates `source/config/KinoConfig.brs` from your local config and c
 ```text
 dist/kinopub.zip
 ```
+
+The package embeds a display version in the form `0.0.1-abcdef0`. Override the
+local defaults with `APP_VERSION`, `APP_SHA`, and `PACKAGE_NAME`.
 
 ### 3. Sideload on Roku
 

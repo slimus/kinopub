@@ -275,6 +275,7 @@
 
       <Group id="accountContent" visible="false">
         <Label text="Account" translation="[0,0]" color="#F5F5F5" />
+        <Label id="accountVersionLabel" text="" translation="[760,4]" width="340" horizAlign="right" color="#6B7280" />
 
         <Group id="accountLoadingGroup" translation="[0,96]" visible="false">
           <Label text="Loading account..." translation="[0,0]" color="#D1D5DB" />
@@ -321,6 +322,7 @@
       </Group>
     </Group>
   </children>
+  <script type="text/brightscript" uri="pkg:/source/config/BuildInfo.brs" />
   <script type="text/brightscript" uri="pkg:/source/services/SearchHistoryStore.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/HomeScreen.brs" />
 </component>

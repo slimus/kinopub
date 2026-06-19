@@ -112,6 +112,7 @@ sub init()
     m.accountSubscriptionDaysLabel = m.top.findNode("accountSubscriptionDaysLabel")
     m.accountSubscriptionEndLabel = m.top.findNode("accountSubscriptionEndLabel")
     m.accountRegisteredLabel = m.top.findNode("accountRegisteredLabel")
+    m.accountVersionLabel = m.top.findNode("accountVersionLabel")
     m.historyLoadingGroup = m.top.findNode("historyLoadingGroup")
     m.historyEmptyGroup = m.top.findNode("historyEmptyGroup")
     m.historyErrorGroup = m.top.findNode("historyErrorGroup")
@@ -273,6 +274,8 @@ sub init()
     m.isLoadingAccount = false
     m.accountInfo = invalid
     m.accountErrorMessage = ""
+    buildInfo = BuildInfo()
+    m.accountVersionLabel.text = "Version: " + buildInfo.displayVersion
 
     showSection("watchAgain")
     setMenuExpanded(false)
