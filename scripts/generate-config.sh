@@ -6,11 +6,18 @@ LOCAL_CONFIG="$ROOT_DIR/config/kinoapi.local.json"
 OUTPUT_DIR="$ROOT_DIR/source/config"
 OUTPUT_FILE="$OUTPUT_DIR/KinoConfig.brs"
 
-if [[ ! -f "$LOCAL_CONFIG" ]]; then
+if [[ -n "${KINOAPI_CLIENT_ID:-}" && -n "${KINOAPI_CLIENT_SECRET:-}" ]]; then
+  CLIENT_ID="$KINOAPI_CLIENT_ID"
+  CLIENT_SECRET="$KINOAPI_CLIENT_SECRET"
+elif [[ -f "$LOCAL_CONFIG" ]]; then
+  CLIENT_ID=""
+  CLIENT_SECRET=""
+else
   echo "Missing config/kinoapi.local.json. Copy config/kinoapi.example.json and add KinoAPI credentials." >&2
   exit 1
 fi
 
+CONFIG_CLIENT_ID="$CLIENT_ID" CONFIG_CLIENT_SECRET="$CLIENT_SECRET" \
 python3 - "$LOCAL_CONFIG" "$OUTPUT_FILE" <<'PY'
 import json
 import os
@@ -18,12 +25,14 @@ import sys
 
 local_config = sys.argv[1]
 output_file = sys.argv[2]
+client_id = os.environ.get("CONFIG_CLIENT_ID", "")
+client_secret = os.environ.get("CONFIG_CLIENT_SECRET", "")
 
-with open(local_config, encoding="utf-8") as config_file:
-    config = json.load(config_file)
-
-client_id = config.get("client_id", "")
-client_secret = config.get("client_secret", "")
+if not client_id or not client_secret:
+    with open(local_config, encoding="utf-8") as config_file:
+        config = json.load(config_file)
+    client_id = config.get("client_id", "")
+    client_secret = config.get("client_secret", "")
 
 if not client_id or not client_secret:
     print(

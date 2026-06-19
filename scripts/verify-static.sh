@@ -38,7 +38,9 @@ required_files=(
   images/kino-icon-source.png
   config/kinoapi.example.json
   scripts/generate-config.sh
+  scripts/generate-build-info.sh
   scripts/package.sh
+  .github/workflows/release-package.yml
 )
 
 for file in "${required_files[@]}"; do
@@ -50,6 +52,12 @@ grep -q "mm_icon_focus_hd=pkg:/images/channel-icon_hd.png" manifest
 grep -q "mm_icon_focus_fhd=pkg:/images/channel-icon_fhd.png" manifest
 grep -q "config/kinoapi.local.json" .gitignore
 grep -q "source/config/KinoConfig.brs" .gitignore
+grep -q "source/config/BuildInfo.brs" .gitignore
+grep -q 'id="accountVersionLabel"' components/screens/HomeScreen.xml
+grep -q 'release:' .github/workflows/release-package.yml
+grep -q 'types: \[published\]' .github/workflows/release-package.yml
+grep -q 'KINOAPI_CLIENT_ID' .github/workflows/release-package.yml
+grep -q 'KINOAPI_CLIENT_SECRET' .github/workflows/release-package.yml
 grep -q "wait(requestTimeoutMs" source/services/KinoApiClient.brs
 grep -q "AsyncCancel" source/services/KinoApiClient.brs
 grep -q "pollTimeoutMs: 10000" source/services/KinoApiClient.brs
@@ -832,6 +840,7 @@ fi
 ./scripts/package.sh >/dev/null
 test -f dist/kinopub.zip
 unzip -p dist/kinopub.zip manifest | grep -q "mm_icon_focus_hd=pkg:/images/channel-icon_hd.png"
+unzip -p dist/kinopub.zip source/config/BuildInfo.brs | grep -q "displayVersion:"
 unzip -p dist/kinopub.zip images/channel-icon_hd.png >/dev/null
 unzip -p dist/kinopub.zip images/channel-icon_fhd.png >/dev/null
 unzip -p dist/kinopub.zip components/screens/PlayerScreen.xml | grep -q "bottomRailGroup"

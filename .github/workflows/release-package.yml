@@ -1,0 +1,44 @@
+name: Build Roku release package
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Build package
+        id: build
+        env:
+          KINOAPI_CLIENT_ID: ${{ secrets.KINOAPI_CLIENT_ID }}
+          KINOAPI_CLIENT_SECRET: ${{ secrets.KINOAPI_CLIENT_SECRET }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          set -euo pipefail
+          version="${RELEASE_TAG#v}"
+          sha="$(git rev-parse --short=7 HEAD)"
+          package_name="kinopub-${version}-${sha}.zip"
+
+          APP_VERSION="$version" \
+          APP_SHA="$sha" \
+          PACKAGE_NAME="$package_name" \
+            ./scripts/package.sh
+
+          echo "asset=dist/$package_name" >> "$GITHUB_OUTPUT"
+
+      - name: Upload package to release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          ASSET: ${{ steps.build.outputs.asset }}
+        run: gh release upload "$RELEASE_TAG" "$ASSET" --clobber
