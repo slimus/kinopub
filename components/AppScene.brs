@@ -57,6 +57,7 @@ sub showHomeScreen()
     clearScreenHost()
     homeScreen = CreateObject("roSGNode", "HomeScreen")
     homeScreen.observeField("signOutRequested", "onSignOutRequested")
+    homeScreen.observeField("authRequired", "onAuthRequired")
     homeScreen.observeField("exitRequested", "onExitRequested")
     homeScreen.observeField("videoSelected", "onVideoSelected")
     m.homeScreen = homeScreen
@@ -74,6 +75,7 @@ sub showVideoDetailScreen(selection as Object)
     detailScreen.id = "detailScreen"
     detailScreen.selection = selection
     detailScreen.observeField("backRequested", "onVideoDetailBackRequested")
+    detailScreen.observeField("authRequired", "onAuthRequired")
     detailScreen.observeField("playbackRequested", "onPlaybackRequested")
     detailScreen.observeField("nextPlayback", "onVideoDetailNextPlayback")
     m.detailScreen = detailScreen
@@ -196,6 +198,14 @@ sub onSignOutRequested(event as Object)
         task.control = "RUN"
         m.clearTokensTask = task
     end if
+end sub
+
+sub onAuthRequired(event as Object)
+    if event.getData() <> true then return
+    task = createAuthTask("clearTokens", {})
+    task.observeField("response", "onClearTokensResponse")
+    task.control = "RUN"
+    m.clearTokensTask = task
 end sub
 
 sub onExitRequested(event as Object)

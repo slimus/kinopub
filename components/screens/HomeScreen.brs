@@ -440,6 +440,10 @@ sub onAccountInfoResponse(event as Object)
     m.isLoadingAccount = false
 
     if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
         message = "Unable to load account information"
         if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
         m.accountErrorMessage = message
@@ -549,6 +553,20 @@ function listCountText(totalItems as Integer, loadedItems as Integer, hasMore as
     return StrI(count).Trim() + suffix + label
 end function
 
+function responseRequiresSignIn(response as Dynamic) as Boolean
+    if response = invalid or type(response) <> "roAssociativeArray" then return false
+    if response.DoesExist("status") and response.status <> invalid and response.status = 401 then return true
+    if response.DoesExist("error") <> true or response.error = invalid then return false
+    errorCode = response.error
+    if type(errorCode) <> "String" and type(errorCode) <> "roString" then return false
+    errorCode = LCase(errorCode)
+    return errorCode = "auth_required" or errorCode = "unauthorized" or errorCode = "invalid_grant"
+end function
+
+sub requestSignInAgain(response as Dynamic)
+    m.top.authRequired = true
+end sub
+
 function browseYearOptions() as Object
     return [
         { id: "all", title: "All" }
@@ -631,6 +649,10 @@ sub onBrowseOptionsResponse(event as Object)
     m.browseOptionErrorMessage = ""
 
     if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
         message = "Some Browse filters are unavailable."
         if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
         m.browseOptionErrorMessage = message
@@ -713,6 +735,10 @@ sub onBrowseItemsResponse(event as Object)
     end if
 
     if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
         message = "Unable to load Browse."
         if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
         if wasNextPage
@@ -1135,6 +1161,10 @@ sub onBookmarkFoldersResponse(event as Object)
     m.isLoadingBookmarks = false
 
     if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
         message = "Unable to load bookmarks"
         if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
         m.bookmarksErrorLabel.text = message
@@ -1288,6 +1318,10 @@ sub onBookmarkFolderItemsResponse(event as Object)
     end if
 
     if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
         message = "Unable to load bookmark folder."
         if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
         if wasNextPage
@@ -1723,6 +1757,11 @@ sub onHistoryPageResponse(event as Object)
 end sub
 
 sub handleHistoryError(response as Dynamic, wasNextPage as Boolean)
+    if responseRequiresSignIn(response)
+        requestSignInAgain(response)
+        return
+    end if
+
     message = "Unable to load Watch Again"
     if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
 
@@ -2044,6 +2083,10 @@ sub onHomeResponse(event as Object)
     m.isLoadingHome = false
 
     if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
         m.homeLoaded = false
         message = "Unable to load Home."
         if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
@@ -2573,6 +2616,11 @@ sub onSearchPageResponse(event as Object)
 end sub
 
 sub handleSearchError(response as Dynamic, wasNextPage as Boolean)
+    if responseRequiresSignIn(response)
+        requestSignInAgain(response)
+        return
+    end if
+
     message = "Unable to search."
     if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
 

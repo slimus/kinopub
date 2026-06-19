@@ -438,10 +438,24 @@ function contentTaskUsableTokens(tokenStore as Object, authService as Object) as
             if tokenStore.hasUsableAccessToken(refreshedTokens) then return { ok: true, tokens: refreshedTokens }
             return { ok: false, error: "auth_required", message: "Sign in again to load Watch Again.", status: 0 }
         end if
+        if contentTaskAuthFailure(result)
+            tokenStore.clear()
+            return { ok: false, error: "auth_required", message: "Device authorization was removed. Sign in again.", status: result.status }
+        end if
         return { ok: false, error: result.error, message: result.message, status: result.status }
     end if
 
     return { ok: false, error: "auth_required", message: "Sign in again to load Watch Again.", status: 0 }
+end function
+
+function contentTaskAuthFailure(result as Dynamic) as Boolean
+    if result = invalid or type(result) <> "roAssociativeArray" then return false
+    if result.DoesExist("status") and result.status <> invalid and result.status = 401 then return true
+    if result.DoesExist("error") <> true or result.error = invalid then return false
+    errorCode = result.error
+    if type(errorCode) <> "String" and type(errorCode) <> "roString" then return false
+    errorCode = LCase(errorCode)
+    return errorCode = "unauthorized" or errorCode = "invalid_grant" or errorCode = "auth_required"
 end function
 
 function contentTaskStringField(source as Dynamic, key as String, fallback as String) as String

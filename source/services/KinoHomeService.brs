@@ -92,13 +92,18 @@ end function
 function kinoHomeNormalizeResponse(body as Dynamic, typeMap = invalid as Dynamic) as Object
     items = []
 
-    if body <> invalid and type(body) = "roAssociativeArray"
-        if body.DoesExist("items") and body.items <> invalid and type(body.items) = "roArray"
-            for each item in body.items
-                items.Push(m.normalizeItem(item, typeMap))
-            end for
-        end if
+    if body = invalid or type(body) <> "roAssociativeArray"
+        return { ok: false, items: [], error: "invalid_response", message: "Home response was not readable.", status: 0 }
     end if
+
+    if body.DoesExist("items") <> true or body.items = invalid or type(body.items) <> "roArray"
+        return { ok: false, items: [], error: "invalid_response", message: "Home response did not include an items list.", status: 0 }
+    end if
+
+    for each item in body.items
+        normalized = m.normalizeItem(item, typeMap)
+        if normalized.itemId > 0 then items.Push(normalized)
+    end for
 
     return { ok: true, items: items }
 end function
