@@ -13,6 +13,7 @@ required_files=(
   source/services/KinoHomeService.brs
   source/services/KinoItemService.brs
   source/services/KinoSearchService.brs
+  source/services/KinoTvService.brs
   source/services/KinoUserService.brs
   source/services/KinoWatchingService.brs
   source/services/PlayerPreferenceStore.brs
@@ -53,7 +54,7 @@ grep -q "mm_icon_focus_fhd=pkg:/images/channel-icon_fhd.png" manifest
 grep -q "config/kinoapi.local.json" .gitignore
 grep -q "source/config/KinoConfig.brs" .gitignore
 grep -q "source/config/BuildInfo.brs" .gitignore
-grep -q 'id="accountVersionLabel"' components/screens/HomeScreen.xml
+grep -q 'id="accountVersionLabel".*translation="\[420,4\]".*width="520"' components/screens/HomeScreen.xml
 grep -q 'release:' .github/workflows/release-package.yml
 grep -q 'types: \[published\]' .github/workflows/release-package.yml
 grep -q 'KINOAPI_CLIENT_ID' .github/workflows/release-package.yml
@@ -493,8 +494,9 @@ grep -q "loadNextSearchPageIfNeeded" components/screens/HomeScreen.brs
 grep -q 'source: "search"' components/screens/HomeScreen.brs
 grep -q 'm.browseContent.visible = section = "browse"' components/screens/HomeScreen.brs
 grep -q 'loadBrowseIfNeeded(false)' components/screens/HomeScreen.brs
-grep -q 'm.menuIndex = 2' components/screens/HomeScreen.brs
-grep -q 'showSection("browse")' components/screens/HomeScreen.brs
+grep -q 'function menuEntries' components/screens/HomeScreen.brs
+grep -q 'function menuIndexForSection' components/screens/HomeScreen.brs
+grep -q 'section = entries\[m.menuIndex\].section' components/screens/HomeScreen.brs
 grep -q 'function browseYearOptions' components/screens/HomeScreen.brs
 grep -q 'function browseFinishedOptions' components/screens/HomeScreen.brs
 grep -q 'sub openBrowsePicker' components/screens/HomeScreen.brs
@@ -506,13 +508,35 @@ grep -q 'm.accountContent.visible = section = "account"' components/screens/Home
 grep -q 'loadAccountInfo' components/screens/HomeScreen.brs
 grep -q 'onAccountInfoResponse' components/screens/HomeScreen.brs
 grep -q 'renderAccountInfo' components/screens/HomeScreen.brs
-grep -q 'm.menuIndex > 6' components/screens/HomeScreen.brs
-grep -q 'showSection("bookmarks")' components/screens/HomeScreen.brs
+grep -q 'm.menuIndex >= entries.Count()' components/screens/HomeScreen.brs
 grep -q "updateBookmarkScrollChevrons" components/screens/HomeScreen.brs
 grep -q "hasMoreBookmarkPages" components/screens/HomeScreen.brs
 grep -q "loadNextBookmarkPageIfNeeded" components/screens/HomeScreen.brs
 grep -q "requestBookmarkFolderItems(m.bookmarkCurrentFolderId, m.bookmarkCurrentPage + 1, true)" components/screens/HomeScreen.brs
-grep -q 'showSection("account")' components/screens/HomeScreen.brs
+grep -q 'showSection(section)' components/screens/HomeScreen.brs
+grep -q 'KinoTvService.brs' components/tasks/ContentTask.xml
+grep -q 'KinoTvService(client)' components/tasks/ContentTask.brs
+grep -q 'command = "probeLiveTv" or command = "loadLiveTv"' components/tasks/ContentTask.brs
+grep -q 'm.client.get("/v1/tv"' source/services/KinoTvService.brs
+grep -q 'function kinoTvNormalizeResponse' source/services/KinoTvService.brs
+grep -q 'artworkUrl: kinoTvArtworkUrl' source/services/KinoTvService.brs
+grep -q 'function kinoTvArtworkUrl' source/services/KinoTvService.brs
+grep -q 'containers = \["channel", "event", "item", "station", "metadata", "data"\]' source/services/KinoTvService.brs
+grep -q 'typeBadge: "LIVE"' source/services/KinoTvService.brs
+grep -q 'id="liveNav".*visible="false"' components/screens/HomeScreen.xml
+grep -q 'id="liveContent".*visible="false"' components/screens/HomeScreen.xml
+grep -q 'field id="livePlaybackSelected"' components/screens/HomeScreen.xml
+grep -q 'probeLiveTv()' components/screens/HomeScreen.brs
+grep -q 'setLiveAvailable(m.liveItems.Count() > 0)' components/screens/HomeScreen.brs
+grep -q 'if m.liveAvailable then entries.Push' components/screens/HomeScreen.brs
+grep -q 'm.top.livePlaybackSelected' components/screens/HomeScreen.brs
+grep -q 'function createLiveCard' components/screens/HomeScreen.brs
+grep -q 'logo.loadDisplayMode = "scaleToFit"' components/screens/HomeScreen.brs
+grep -q 'homeScreen.observeField("livePlaybackSelected", "onLivePlaybackSelected")' components/AppScene.brs
+grep -q 'sub onLivePlaybackSelected' components/AppScene.brs
+grep -q 'function isLivePlayback' components/screens/PlayerScreen.brs
+grep -q 'if isLivePlayback() then return' components/screens/PlayerScreen.brs
+grep -q 'm.timeLabel.text = "LIVE"' components/screens/PlayerScreen.brs
 grep -q "No playable video is available" components/screens/VideoDetailScreen.xml
 grep -q 'field id="playbackRequested"' components/screens/VideoDetailScreen.xml
 grep -q 'field id="playbackError"' components/screens/VideoDetailScreen.xml
@@ -605,6 +629,7 @@ grep -q '<field id="playbackError" type="string"' components/screens/PlayerScree
 grep -q '<field id="playbackError" type="string" alwaysNotify="true"' components/screens/PlayerScreen.xml
 grep -q '<Video id="videoNode"' components/screens/PlayerScreen.xml
 grep -q 'bottomRailGroup' components/screens/PlayerScreen.xml
+grep -q 'id="bottomRailBackground"' components/screens/PlayerScreen.xml
 grep -q 'railHideTimer' components/screens/PlayerScreen.xml
 grep -q '<Timer id="railHideTimer" repeat="false" duration="4"' components/screens/PlayerScreen.xml
 grep -q 'progressTimer' components/screens/PlayerScreen.xml
@@ -620,6 +645,12 @@ grep -q "m.videoNode.enableUI = false" components/screens/PlayerScreen.brs
 grep -q "itemTitle:" components/screens/VideoDetailScreen.brs
 grep -q "m.playback.itemTitle" components/screens/PlayerScreen.brs
 grep -q 'sub buildControls' components/screens/PlayerScreen.brs
+grep -q 'sub applyBottomRailLayout' components/screens/PlayerScreen.brs
+grep -q 'railY = 516' components/screens/PlayerScreen.brs
+grep -q 'railY = 400' components/screens/PlayerScreen.brs
+grep -q 'railY = 550' components/screens/PlayerScreen.brs
+grep -q 'm.bottomRailBackground.height = railHeight' components/screens/PlayerScreen.brs
+grep -q 'm.controlFocusY = controlsY' components/screens/PlayerScreen.brs
 grep -q 'sub showRail' components/screens/PlayerScreen.brs
 grep -q 'function formatTime' components/screens/PlayerScreen.brs
 grep -q 'function onKeyEvent' components/screens/PlayerScreen.brs
@@ -851,6 +882,7 @@ unzip -p dist/kinopub.zip source/services/KinoItemService.brs | grep -q '"/v1/it
 unzip -p dist/kinopub.zip source/services/PlayerPreferenceStore.brs | grep -q "playerprefs"
 unzip -p dist/kinopub.zip source/services/KinoSearchService.brs | grep -q '"/v1/items"'
 unzip -p dist/kinopub.zip source/services/KinoContentTypeService.brs | grep -q '"/v1/types"'
+unzip -p dist/kinopub.zip source/services/KinoTvService.brs | grep -q '"/v1/tv"'
 if unzip -p dist/kinopub.zip source/services/KinoSearchService.brs | grep -q '"/v1/items/search"'; then
   echo "Packaged search service must use /v1/items with title filtering, not /v1/items/search." >&2
   exit 1
@@ -859,9 +891,10 @@ unzip -p dist/kinopub.zip components/tasks/ContentTask.brs | grep -q "searchItem
 unzip -p dist/kinopub.zip components/tasks/ContentTask.brs | grep -q "refreshMediaLinks"
 unzip -p dist/kinopub.zip components/tasks/ContentTask.xml | grep -q "KinoContentTypeService.brs"
 unzip -p dist/kinopub.zip components/tasks/ContentTask.xml | grep -q "KinoBookmarkService.brs"
-unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep -q 'source: "search"'
-unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep -q 'showSection("bookmarks")'
-unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep -q "appendTypeBadge"
+unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep 'source: "search"' >/dev/null
+unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep 'function menuEntries' >/dev/null
+unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep 'm.top.livePlaybackSelected' >/dev/null
+unzip -p dist/kinopub.zip components/screens/HomeScreen.brs | grep "appendTypeBadge" >/dev/null
 unzip -p dist/kinopub.zip components/screens/HomeScreen.xml | grep -q "searchKeyboardGroup"
 unzip -p dist/kinopub.zip components/screens/VideoDetailScreen.brs | grep -q "Preparing video..."
 

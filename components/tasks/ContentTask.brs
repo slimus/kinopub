@@ -13,6 +13,7 @@ sub runContentTask()
     homeService = KinoHomeService(client)
     itemService = KinoItemService(client)
     searchService = KinoSearchService(client)
+    tvService = KinoTvService(client)
     userService = KinoUserService(client)
     watchingService = KinoWatchingService(client)
     command = m.top.command
@@ -39,6 +40,8 @@ sub runContentTask()
         m.top.response = contentTaskLoadBrowseOptions(tokenStore, authService, browseService, typeService)
     else if command = "loadBrowseItems"
         m.top.response = contentTaskLoadBrowseItems(tokenStore, authService, browseService, typeService, request)
+    else if command = "probeLiveTv" or command = "loadLiveTv"
+        m.top.response = contentTaskLoadLiveTv(tokenStore, authService, tvService, command)
     else if command = "loadItemBookmarkFolders"
         m.top.response = contentTaskLoadItemBookmarkFolders(tokenStore, authService, bookmarkService, request)
     else if command = "toggleItemBookmark"
@@ -51,6 +54,19 @@ sub runContentTask()
         m.top.response = { command: command, ok: false, error: "unknown_command", message: "Unknown content task command." }
     end if
 end sub
+
+function contentTaskLoadLiveTv(tokenStore as Object, authService as Object, tvService as Object, command as String) as Object
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to load Live.")
+    if tokenResult.ok <> true
+        tokenResult.command = command
+        tokenResult.items = []
+        return tokenResult
+    end if
+
+    result = tvService.load(tokenResult.accessToken)
+    result.command = command
+    return result
+end function
 
 function contentTaskLoadHome(tokenStore as Object, authService as Object, homeService as Object, typeService as Object, request as Dynamic) as Object
     perpage = contentTaskIntegerField(request, "perpage", 12)

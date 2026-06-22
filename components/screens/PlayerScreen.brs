@@ -7,6 +7,7 @@ sub init()
     m.resumePromptOptionsHost = m.top.findNode("resumePromptOptionsHost")
     m.resumePromptCountdownLabel = m.top.findNode("resumePromptCountdownLabel")
     m.bottomRailGroup = m.top.findNode("bottomRailGroup")
+    m.bottomRailBackground = m.top.findNode("bottomRailBackground")
     m.titleLabel = m.top.findNode("titleLabel")
     m.timeLabel = m.top.findNode("timeLabel")
     m.seasonCarouselGroup = m.top.findNode("seasonCarouselGroup")
@@ -116,6 +117,7 @@ sub onPlaybackChanged(event as Object)
         resetSeasonCarouselState()
         if m.focusArea = "seasonCarousel" then m.focusArea = "controls"
         renderSeasonCarousel()
+        applyBottomRailLayout()
         updateFocusCursor()
         return
     end if
@@ -123,6 +125,8 @@ sub onPlaybackChanged(event as Object)
     resetNextEpisodeState()
     m.preferences = m.preferenceStore.load(m.playback)
     m.titleLabel.text = playbackTitle()
+    m.progressTrack.visible = isLivePlayback() <> true
+    m.progressFill.visible = isLivePlayback() <> true
     buildSeasonCarouselFromPlayback()
     buildControls()
     showRail()
@@ -343,8 +347,10 @@ sub startPlaybackAtPosition(startPosition as Integer)
     m.top.setFocus(true)
     m.videoNode.control = "play"
     m.isPlaying = true
-    m.progressTimer.control = "start"
-    sendProgressUpdate("start")
+    if isLivePlayback() <> true
+        m.progressTimer.control = "start"
+        sendProgressUpdate("start")
+    end if
 end sub
 
 sub showResumePrompt(startPosition as Integer)
@@ -520,6 +526,7 @@ sub startNextPlayback(playback as Object)
 end sub
 
 function resumeStartSeconds() as Integer
+    if isLivePlayback() then return 0
     if m.playback = invalid or m.playback.progressSeconds = invalid then return 0
     progress = m.playback.progressSeconds
     duration = playbackDurationSeconds()
@@ -572,6 +579,7 @@ sub maybeRequestNextEpisodePrompt(reason as String)
 end sub
 
 function canAskForNextEpisode() as Boolean
+    if isLivePlayback() then return false
     if m.playback = invalid then return false
     itemId = playbackIntegerField("itemId", 0)
     mediaId = playbackIntegerField("mediaId", 0)
@@ -588,6 +596,14 @@ function playbackIntegerField(key as String, fallback as Integer) as Integer
     if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value
     if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble" then return Int(value)
     return fallback
+end function
+
+function isLivePlayback() as Boolean
+    if m.playback = invalid or type(m.playback) <> "roAssociativeArray" then return false
+    if m.playback.DoesExist("isLive") <> true or m.playback.isLive = invalid then return false
+    valueType = type(m.playback.isLive)
+    if valueType = "Boolean" or valueType = "roBoolean" then return m.playback.isLive
+    return false
 end function
 
 sub resetSeasonCarouselState()
@@ -850,8 +866,57 @@ sub buildControls()
         m.controlNodes.Push(label)
     end for
 
-    updateFocusCursor()
     renderSeasonCarousel()
+    applyBottomRailLayout()
+    updateFocusCursor()
+end sub
+
+sub applyBottomRailLayout()
+    hasCarousel = hasSeasonCarousel()
+    isLive = isLivePlayback()
+
+    railY = 516
+    railHeight = 204
+    titleY = 18
+    timeY = 22
+    progressFocusY = 72
+    progressTrackY = 80
+    controlsY = 110
+    statusY = 164
+    menuY = -268
+
+    if hasCarousel
+        railY = 400
+        railHeight = 320
+        titleY = 24
+        timeY = 28
+        progressFocusY = 196
+        progressTrackY = 204
+        controlsY = 234
+        statusY = 286
+        menuY = -238
+    else if isLive
+        railY = 550
+        railHeight = 170
+        titleY = 18
+        timeY = 22
+        controlsY = 72
+        statusY = 132
+        menuY = -302
+    end if
+
+    m.bottomRailGroup.translation = [0, railY]
+    m.bottomRailBackground.height = railHeight
+    m.titleLabel.translation = [72, titleY]
+    m.timeLabel.translation = [1030, timeY]
+    m.progressFocus.translation = [68, progressFocusY]
+    m.progressTrack.translation = [72, progressTrackY]
+    m.progressFill.translation = [72, progressTrackY]
+    m.controlsHost.translation = [72, controlsY]
+    m.controlFocusY = controlsY
+    m.seasonCarouselStatusLabel.translation = [72, statusY]
+    m.statusLabel.translation = [72, statusY]
+    m.menuPopover.translation = [720, menuY]
 end sub
 
 function controlLabels() as Object
@@ -909,6 +974,12 @@ sub updateFocusCursor()
 end sub
 
 sub updateProgressVisuals()
+    if isLivePlayback()
+        m.timeLabel.text = "LIVE"
+        m.progressFill.width = 0
+        m.progressFocus.visible = false
+        return
+    end if
     position = displayPositionSeconds()
     duration = playbackDurationSeconds()
     m.timeLabel.text = formatTime(position) + " / " + formatTime(duration)
@@ -951,7 +1022,7 @@ sub onVideoStateChanged(event as Object)
     if state = "playing"
         m.isPlaying = true
         m.playbackStarted = true
-        m.progressTimer.control = "start"
+        if isLivePlayback() <> true then m.progressTimer.control = "start"
         updatePlayPauseControlLabel()
         showRail()
     else if state = "paused" or state = "buffering"
@@ -1049,7 +1120,7 @@ sub onAvailableSubtitleTracksChanged()
 end sub
 
 sub onProgressTimer()
-    if m.isPlaying
+    if m.isPlaying and isLivePlayback() <> true
         sendProgressUpdate("interval")
         maybeRequestNextEpisodePrompt("threshold")
     end if
@@ -1068,6 +1139,7 @@ end sub
 
 sub sendProgressUpdate(reason as String)
     if m.playback = invalid then return
+    if isLivePlayback() then return
 
     position = currentPositionSeconds()
     if position < 0 then position = 0
@@ -1104,6 +1176,7 @@ end sub
 
 sub markCompletedIfSafe()
     if m.playback = invalid then return
+    if isLivePlayback() then return
 
     if m.playback.watched = true
         sendProgressUpdate("finished")
@@ -1157,6 +1230,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     if m.focusArea = "seasonCarousel" then return handleSeasonCarouselKey(key)
 
     if key = "up"
+        if isLivePlayback() then return true
         m.focusArea = "progress"
         updateFocusCursor()
         showRail()
@@ -1234,9 +1308,9 @@ end function
 function handleTransportKey(key as String) as Boolean
     if key = "play"
         togglePlayPause()
-    else if key = "replay" or key = "rewind" or key = "rev"
+    else if (key = "replay" or key = "rewind" or key = "rev") and isLivePlayback() <> true
         seekBy(0 - m.seekStepSeconds)
-    else if key = "fastforward" or key = "fwd"
+    else if (key = "fastforward" or key = "fwd") and isLivePlayback() <> true
         seekBy(m.seekStepSeconds)
     end if
     return true
@@ -1351,6 +1425,7 @@ sub togglePlayPause()
 end sub
 
 sub seekBy(deltaSeconds as Integer)
+    if isLivePlayback() then return
     basePosition = currentPositionSeconds()
     if m.seekPending and m.pendingSeekPosition <> invalid then basePosition = m.pendingSeekPosition
 

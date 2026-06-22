@@ -5,6 +5,7 @@
     <field id="authRequired" type="boolean" alwaysNotify="true" />
     <field id="exitRequested" type="boolean" alwaysNotify="true" />
     <field id="videoSelected" type="assocarray" alwaysNotify="true" />
+    <field id="livePlaybackSelected" type="assocarray" alwaysNotify="true" />
   </interface>
   <children>
     <Rectangle width="1280" height="720" color="#090B0F" />
@@ -14,6 +15,7 @@
       <Rectangle id="collapsedActiveIndicator" translation="[0,112]" width="4" height="44" color="#60A5FA" />
       <Label id="collapsedWatchAgain" text="WA" translation="[0,118]" width="84" horizAlign="center" color="#F5F5F5" />
       <Label id="collapsedHome" text="HO" translation="[0,178]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedLive" text="LI" translation="[0,238]" width="84" horizAlign="center" color="#9CA3AF" visible="false" />
       <Label id="collapsedBrowse" text="BR" translation="[0,238]" width="84" horizAlign="center" color="#9CA3AF" />
       <Label id="collapsedSearch" text="SE" translation="[0,298]" width="84" horizAlign="center" color="#9CA3AF" />
       <Label id="collapsedBookmarks" text="BK" translation="[0,358]" width="84" horizAlign="center" color="#9CA3AF" />
@@ -26,6 +28,7 @@
       <Rectangle id="navFocusBg" translation="[12,112]" width="260" height="44" color="#2563EB" />
       <Label id="watchAgainNav" text="W  Watch Again" translation="[32,124]" color="#F8FAFC" />
       <Label id="homeNav" text="H  Home" translation="[32,184]" color="#D1D5DB" />
+      <Label id="liveNav" text="L  Live" translation="[32,244]" color="#D1D5DB" visible="false" />
       <Label id="browseNav" text="B  Browse" translation="[32,244]" color="#D1D5DB" />
       <Label id="searchNav" text="S  Search" translation="[32,304]" color="#D1D5DB" />
       <Label id="bookmarksNav" text="K  Bookmarks" translation="[32,364]" color="#D1D5DB" />
@@ -100,6 +103,40 @@
           <Label id="homeScrollDownChevron" text="v" translation="[938,586]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="homeRailLeftChevron" text="&lt;" translation="[0,310]" width="28" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="homeRailRightChevron" text="&gt;" translation="[1092,310]" width="28" horizAlign="center" color="#D1D5DB" visible="false" />
+        </Group>
+      </Group>
+
+      <Group id="liveContent" visible="false">
+        <Label text="Live" translation="[0,0]" color="#F5F5F5" />
+        <Label text="Experimental live events and channels" translation="[0,38]" color="#9CA3AF" />
+
+        <Group id="liveLoadingGroup" translation="[0,96]" visible="false">
+          <Label text="Loading Live..." translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="liveEmptyGroup" translation="[0,96]" visible="false">
+          <Label text="No live events currently available" translation="[0,0]" color="#D1D5DB" />
+        </Group>
+
+        <Group id="liveErrorGroup" translation="[0,96]" visible="false">
+          <Label id="liveErrorLabel" text="Unable to load Live" translation="[0,0]" width="900" color="#FCA5A5" />
+          <Group id="liveRetryGroup" translation="[0,54]">
+            <Rectangle width="196" height="44" color="#374151" />
+            <Label text="Retry" translation="[52,12]" color="#F5F5F5" />
+          </Group>
+        </Group>
+
+        <Group id="liveResultsGroup" visible="false">
+          <Label id="liveCountLabel" text="" translation="[0,82]" color="#9CA3AF" />
+          <Group id="liveGridHost" translation="[0,122]" />
+          <Group id="liveCursor" translation="[0,122]" visible="false">
+            <Rectangle width="160" height="6" color="#60A5FA" />
+            <Rectangle translation="[0,214]" width="160" height="6" color="#60A5FA" />
+            <Rectangle width="6" height="220" color="#60A5FA" />
+            <Rectangle translation="[154,0]" width="6" height="220" color="#60A5FA" />
+          </Group>
+          <Label id="liveScrollUpChevron" text="^" translation="[938,122]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="liveScrollDownChevron" text="v" translation="[938,500]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
         </Group>
       </Group>
 
@@ -276,7 +313,7 @@
 
       <Group id="accountContent" visible="false">
         <Label text="Account" translation="[0,0]" color="#F5F5F5" />
-        <Label id="accountVersionLabel" text="" translation="[760,4]" width="340" horizAlign="right" color="#6B7280" />
+        <Label id="accountVersionLabel" text="" translation="[420,4]" width="520" height="36" horizAlign="right" color="#9CA3AF" />
 
         <Group id="accountLoadingGroup" translation="[0,96]" visible="false">
           <Label text="Loading account..." translation="[0,0]" color="#D1D5DB" />

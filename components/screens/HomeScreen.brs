@@ -5,6 +5,7 @@ sub init()
     m.signOutFocusBg = m.top.findNode("signOutFocusBg")
     m.watchAgainNav = m.top.findNode("watchAgainNav")
     m.homeNav = m.top.findNode("homeNav")
+    m.liveNav = m.top.findNode("liveNav")
     m.searchNav = m.top.findNode("searchNav")
     m.bookmarksNav = m.top.findNode("bookmarksNav")
     m.accountNav = m.top.findNode("accountNav")
@@ -24,6 +25,17 @@ sub init()
     m.homeScrollDownChevron = m.top.findNode("homeScrollDownChevron")
     m.homeRailLeftChevron = m.top.findNode("homeRailLeftChevron")
     m.homeRailRightChevron = m.top.findNode("homeRailRightChevron")
+    m.liveContent = m.top.findNode("liveContent")
+    m.liveLoadingGroup = m.top.findNode("liveLoadingGroup")
+    m.liveEmptyGroup = m.top.findNode("liveEmptyGroup")
+    m.liveErrorGroup = m.top.findNode("liveErrorGroup")
+    m.liveErrorLabel = m.top.findNode("liveErrorLabel")
+    m.liveResultsGroup = m.top.findNode("liveResultsGroup")
+    m.liveGridHost = m.top.findNode("liveGridHost")
+    m.liveCountLabel = m.top.findNode("liveCountLabel")
+    m.liveCursor = m.top.findNode("liveCursor")
+    m.liveScrollUpChevron = m.top.findNode("liveScrollUpChevron")
+    m.liveScrollDownChevron = m.top.findNode("liveScrollDownChevron")
     m.browseNav = m.top.findNode("browseNav")
     m.collapsedBrowse = m.top.findNode("collapsedBrowse")
     m.browseContent = m.top.findNode("browseContent")
@@ -128,6 +140,7 @@ sub init()
     m.collapsedActiveIndicator = m.top.findNode("collapsedActiveIndicator")
     m.collapsedWatchAgain = m.top.findNode("collapsedWatchAgain")
     m.collapsedHome = m.top.findNode("collapsedHome")
+    m.collapsedLive = m.top.findNode("collapsedLive")
     m.collapsedSearch = m.top.findNode("collapsedSearch")
     m.collapsedBookmarks = m.top.findNode("collapsedBookmarks")
     m.collapsedAccount = m.top.findNode("collapsedAccount")
@@ -176,6 +189,17 @@ sub init()
     m.homeRailHeight = 266
     m.homeVisibleCards = 5
     m.homePerPage = 12
+    m.liveAvailable = false
+    m.liveLoaded = false
+    m.isLoadingLive = false
+    m.liveItems = []
+    m.liveCardNodes = []
+    m.liveCardBgNodes = []
+    m.liveCardIndexes = []
+    m.liveColumns = 5
+    m.liveVisiblePagePair = 0
+    m.selectedLiveIndex = 0
+    m.visualSelectedLiveIndex = -1
     m.browseLoaded = false
     m.browseOptionsLoaded = false
     m.isLoadingBrowse = false
@@ -280,6 +304,7 @@ sub init()
     showSection("watchAgain")
     setMenuExpanded(false)
     loadInitialHistory()
+    probeLiveTv()
     m.top.setFocus(true)
 end sub
 
@@ -2322,6 +2347,246 @@ sub selectHomeCard()
     }
 end sub
 
+sub probeLiveTv()
+    if m.isLoadingLive then return
+    m.isLoadingLive = true
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "probeLiveTv"
+    m.liveTaskCommand = "probeLiveTv"
+    task.request = {}
+    task.observeField("response", "onLiveTvResponse")
+    task.control = "RUN"
+    m.liveTask = task
+end sub
+
+sub loadLiveTv()
+    if m.isLoadingLive then return
+    m.isLoadingLive = true
+    showLiveState("loading")
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadLiveTv"
+    m.liveTaskCommand = "loadLiveTv"
+    task.request = {}
+    task.observeField("response", "onLiveTvResponse")
+    task.control = "RUN"
+    m.liveTask = task
+end sub
+
+sub onLiveTvResponse(event as Object)
+    response = event.getData()
+    m.isLoadingLive = false
+    isProbe = m.liveTaskCommand = "probeLiveTv"
+    m.liveTaskCommand = ""
+
+    if response = invalid or response.ok <> true
+        if responseRequiresSignIn(response)
+            requestSignInAgain(response)
+            return
+        end if
+
+        if isProbe
+            setLiveAvailable(false)
+            return
+        end if
+
+        message = "Unable to load Live."
+        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+        m.liveErrorLabel.text = message
+        showLiveState("error")
+        return
+    end if
+
+    m.liveItems = []
+    if response.items <> invalid then m.liveItems = response.items
+    m.liveLoaded = true
+    m.selectedLiveIndex = 0
+    m.visualSelectedLiveIndex = -1
+    m.liveVisiblePagePair = 0
+    setLiveAvailable(m.liveItems.Count() > 0)
+
+    if m.liveItems.Count() = 0
+        clearLiveGrid()
+        if m.selectedSection = "live" then showLiveState("empty")
+    else
+        renderLiveGrid()
+        if m.selectedSection = "live" then showLiveState("results")
+    end if
+end sub
+
+sub setLiveAvailable(available as Boolean)
+    if m.liveAvailable = available
+        updateMenuLayout()
+        return
+    end if
+
+    m.liveAvailable = available
+    if available <> true and m.selectedSection = "live" then showSection("home")
+    updateMenuLayout()
+end sub
+
+sub showLiveState(state as String)
+    m.liveLoadingGroup.visible = state = "loading"
+    m.liveEmptyGroup.visible = state = "empty"
+    m.liveErrorGroup.visible = state = "error"
+    m.liveResultsGroup.visible = state = "results"
+    updateLiveFocusVisuals()
+end sub
+
+sub clearLiveGrid()
+    childCount = m.liveGridHost.getChildCount()
+    if childCount > 0 then m.liveGridHost.removeChildrenIndex(childCount, 0)
+    m.liveCardNodes = []
+    m.liveCardBgNodes = []
+    m.liveCardIndexes = []
+end sub
+
+sub renderLiveGrid()
+    clearLiveGrid()
+    if m.liveItems.Count() = 0 then return
+
+    m.liveVisiblePagePair = Int(m.selectedLiveIndex / (m.liveColumns * 2))
+    startIndex = m.liveVisiblePagePair * m.liveColumns * 2
+    endIndex = startIndex + (m.liveColumns * 2) - 1
+    if endIndex >= m.liveItems.Count() then endIndex = m.liveItems.Count() - 1
+
+    for index = startIndex to endIndex
+        visibleSlot = index - startIndex
+        column = visibleSlot MOD m.liveColumns
+        row = Int(visibleSlot / m.liveColumns)
+        cardInfo = createLiveCard(m.liveItems[index], column * 180, row * 226)
+        m.liveGridHost.appendChild(cardInfo.node)
+        m.liveCardNodes.Push(cardInfo.node)
+        m.liveCardBgNodes.Push(cardInfo.focusBg)
+        m.liveCardIndexes.Push(index)
+    end for
+
+    countLabel = StrI(m.liveItems.Count()).Trim() + " live event"
+    if m.liveItems.Count() <> 1 then countLabel = countLabel + "s"
+    m.liveCountLabel.text = countLabel
+    updateLiveFocusVisuals()
+end sub
+
+function createLiveCard(item as Object, x as Integer, y as Integer) as Object
+    palette = homeUiPalette()
+    card = CreateObject("roSGNode", "Group")
+    card.translation = [x, y]
+
+    focusBg = CreateObject("roSGNode", "Rectangle")
+    focusBg.width = 160
+    focusBg.height = 220
+    focusBg.color = palette.surface
+    card.appendChild(focusBg)
+
+    logoBg = CreateObject("roSGNode", "Rectangle")
+    logoBg.translation = [8, 12]
+    logoBg.width = 144
+    logoBg.height = 116
+    logoBg.color = palette.posterFallback
+    card.appendChild(logoBg)
+
+    logo = CreateObject("roSGNode", "Poster")
+    logo.translation = [12, 16]
+    logo.width = 136
+    logo.height = 108
+    logo.uri = item.posterUrl
+    logo.loadDisplayMode = "scaleToFit"
+    card.appendChild(logo)
+
+    title = CreateObject("roSGNode", "Label")
+    title.text = item.title
+    title.translation = [8, 142]
+    title.width = 144
+    title.height = 30
+    title.color = palette.text
+    card.appendChild(title)
+
+    subtitle = CreateObject("roSGNode", "Label")
+    subtitle.text = item.subtitle
+    subtitle.translation = [8, 178]
+    subtitle.width = 144
+    subtitle.height = 28
+    subtitle.color = palette.muted
+    card.appendChild(subtitle)
+
+    return { node: card, focusBg: focusBg }
+end function
+
+sub updateLiveFocusVisuals()
+    for index = 0 to m.liveCardBgNodes.Count() - 1
+        itemIndex = m.liveCardIndexes[index]
+        if itemIndex = m.selectedLiveIndex and m.selectedSection = "live" and m.focusArea = "content"
+            m.liveCardBgNodes[index].color = cardVisualStateColor(true, false)
+        else if itemIndex = m.visualSelectedLiveIndex
+            m.liveCardBgNodes[index].color = cardVisualStateColor(false, true)
+        else
+            m.liveCardBgNodes[index].color = cardVisualStateColor(false, false)
+        end if
+    end for
+    updateLiveCursor()
+    updateLiveChevrons()
+end sub
+
+sub updateLiveCursor()
+    showCursor = m.liveResultsGroup.visible and m.selectedSection = "live" and m.focusArea = "content" and m.liveItems.Count() > 0
+    if showCursor <> true
+        m.liveCursor.visible = false
+        return
+    end if
+
+    visibleSlot = m.selectedLiveIndex MOD (m.liveColumns * 2)
+    column = visibleSlot MOD m.liveColumns
+    row = Int(visibleSlot / m.liveColumns)
+    m.liveCursor.translation = [column * 180, 122 + (row * 226)]
+    m.liveCursor.visible = true
+end sub
+
+sub updateLiveChevrons()
+    if m.liveScrollUpChevron = invalid or m.liveScrollDownChevron = invalid then return
+    showHints = m.liveResultsGroup.visible and m.liveItems.Count() > 0
+    m.liveScrollUpChevron.visible = showHints and m.liveVisiblePagePair > 0
+    m.liveScrollDownChevron.visible = showHints and ((m.liveVisiblePagePair + 1) * m.liveColumns * 2) < m.liveItems.Count()
+end sub
+
+sub moveLiveFocus(delta as Integer)
+    if m.liveItems.Count() = 0 then return
+    oldPagePair = Int(m.selectedLiveIndex / (m.liveColumns * 2))
+    nextIndex = m.selectedLiveIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex >= m.liveItems.Count() then nextIndex = m.liveItems.Count() - 1
+    m.selectedLiveIndex = nextIndex
+    newPagePair = Int(m.selectedLiveIndex / (m.liveColumns * 2))
+    if newPagePair <> oldPagePair then renderLiveGrid() else updateLiveFocusVisuals()
+end sub
+
+sub selectLiveItem()
+    if m.liveItems.Count() = 0 then return
+    item = m.liveItems[m.selectedLiveIndex]
+    if item.streamUrl = invalid or item.streamUrl = ""
+        m.liveErrorLabel.text = "This live event is not playable."
+        showLiveState("error")
+        return
+    end if
+
+    m.visualSelectedLiveIndex = m.selectedLiveIndex
+    updateLiveFocusVisuals()
+    m.top.livePlaybackSelected = {
+        title: item.title
+        subtitle: item.subtitle
+        itemId: 0
+        mediaId: 0
+        seasonNumber: 0
+        videoNumber: 0
+        progressSeconds: 0
+        durationSeconds: 0
+        streamUrl: item.streamUrl
+        streamFormat: item.streamFormat
+        qualityOptions: item.qualityOptions
+        isLive: true
+    }
+end sub
+
 function searchKeyboardRows() as Object
     if m.searchKeyboardLayout = "en"
         return [
@@ -2813,30 +3078,29 @@ sub showSection(section as String)
     m.selectedSection = section
     m.watchAgainContent.visible = section = "watchAgain"
     m.homeContent.visible = section = "home"
+    m.liveContent.visible = section = "live"
     m.browseContent.visible = section = "browse"
     m.searchContent.visible = section = "search"
     m.bookmarksContent.visible = section = "bookmarks"
     m.accountContent.visible = section = "account"
 
-    if section = "watchAgain"
-        m.menuIndex = 0
-    else if section = "home"
-        m.menuIndex = 1
+    m.menuIndex = menuIndexForSection(section)
+
+    if section = "home"
         loadHomeIfNeeded(false)
+    else if section = "live"
+        loadLiveTv()
     else if section = "browse"
-        m.menuIndex = 2
         loadBrowseIfNeeded(false)
-    else if section = "search"
-        m.menuIndex = 3
     else if section = "bookmarks"
-        m.menuIndex = 4
         loadBookmarkFoldersIfNeeded(false)
     else if section = "account"
-        m.menuIndex = 5
         loadAccountInfo(false)
     end if
 
+    updateMenuLayout()
     updateMenuVisuals()
+    updateLiveFocusVisuals()
     updateBrowseFocusVisuals()
     updateSearchFocusVisuals()
     updateBookmarksFocusVisuals()
@@ -2862,89 +3126,97 @@ sub setMenuExpanded(expanded as Boolean)
     updateSearchScrollChevrons()
     updateHomeCursor()
     updateHomeChevrons()
+    updateLiveFocusVisuals()
     updateBrowseFocusVisuals()
     updateBookmarksFocusVisuals()
 end sub
 
+function menuEntries() as Object
+    entries = [
+        { section: "watchAgain", nav: m.watchAgainNav, collapsed: m.collapsedWatchAgain }
+        { section: "home", nav: m.homeNav, collapsed: m.collapsedHome }
+    ]
+    if m.liveAvailable then entries.Push({ section: "live", nav: m.liveNav, collapsed: m.collapsedLive })
+    entries.Push({ section: "browse", nav: m.browseNav, collapsed: m.collapsedBrowse })
+    entries.Push({ section: "search", nav: m.searchNav, collapsed: m.collapsedSearch })
+    entries.Push({ section: "bookmarks", nav: m.bookmarksNav, collapsed: m.collapsedBookmarks })
+    entries.Push({ section: "account", nav: m.accountNav, collapsed: m.collapsedAccount })
+    entries.Push({ section: "signOut", nav: m.signOutNav, collapsed: invalid })
+    return entries
+end function
+
+function menuIndexForSection(section as String) as Integer
+    entries = menuEntries()
+    for index = 0 to entries.Count() - 1
+        if entries[index].section = section then return index
+    end for
+    return 0
+end function
+
+sub updateMenuLayout()
+    m.liveNav.visible = m.liveAvailable
+    m.collapsedLive.visible = m.liveAvailable
+    entries = menuEntries()
+    for index = 0 to entries.Count() - 1
+        entry = entries[index]
+        if entry.section <> "signOut"
+            y = 124 + (index * 60)
+            entry.nav.translation = [32, y]
+            entry.collapsed.translation = [0, y - 6]
+        end if
+    end for
+    m.menuIndex = menuIndexForSection(m.selectedSection)
+end sub
+
 sub updateMenuVisuals()
     palette = homeUiPalette()
-    m.watchAgainNav.color = "#D1D5DB"
-    m.homeNav.color = "#D1D5DB"
-    m.browseNav.color = "#D1D5DB"
-    m.searchNav.color = "#D1D5DB"
-    m.bookmarksNav.color = "#D1D5DB"
-    m.accountNav.color = "#D1D5DB"
-    m.signOutNav.color = "#9CA3AF"
+    entries = menuEntries()
+    if m.menuIndex < 0 then m.menuIndex = 0
+    if m.menuIndex >= entries.Count() then m.menuIndex = entries.Count() - 1
+
+    for each entry in entries
+        if entry.section = "signOut"
+            entry.nav.color = "#9CA3AF"
+        else
+            entry.nav.color = "#D1D5DB"
+            entry.collapsed.color = "#9CA3AF"
+        end if
+    end for
     m.signOutFocusBg.color = "#0F131A"
 
-    m.collapsedWatchAgain.color = "#9CA3AF"
-    m.collapsedHome.color = "#9CA3AF"
-    m.collapsedBrowse.color = "#9CA3AF"
-    m.collapsedSearch.color = "#9CA3AF"
-    m.collapsedBookmarks.color = "#9CA3AF"
-    m.collapsedAccount.color = "#9CA3AF"
-
-    if m.menuIndex = 0
-        m.navFocusBg.translation = [12, 112]
-        m.collapsedActiveIndicator.translation = [0, 112]
-        m.watchAgainNav.color = palette.text
-        m.collapsedWatchAgain.color = palette.text
-    else if m.menuIndex = 1
-        m.navFocusBg.translation = [12, 172]
-        m.collapsedActiveIndicator.translation = [0, 172]
-        m.homeNav.color = palette.text
-        m.collapsedHome.color = palette.text
-    else if m.menuIndex = 2
-        m.navFocusBg.translation = [12, 232]
-        m.collapsedActiveIndicator.translation = [0, 232]
-        m.browseNav.color = palette.text
-        m.collapsedBrowse.color = palette.text
-    else if m.menuIndex = 3
-        m.navFocusBg.translation = [12, 292]
-        m.collapsedActiveIndicator.translation = [0, 292]
-        m.searchNav.color = palette.text
-        m.collapsedSearch.color = palette.text
-    else if m.menuIndex = 4
-        m.navFocusBg.translation = [12, 352]
-        m.collapsedActiveIndicator.translation = [0, 352]
-        m.bookmarksNav.color = palette.text
-        m.collapsedBookmarks.color = palette.text
-    else if m.menuIndex = 5
-        m.navFocusBg.translation = [12, 412]
-        m.collapsedActiveIndicator.translation = [0, 412]
-        m.accountNav.color = palette.text
-        m.collapsedAccount.color = palette.text
-    else
-        m.navFocusBg.translation = [12, 616]
-        m.collapsedActiveIndicator.translation = [0, 616]
-        m.signOutNav.color = palette.text
+    selected = entries[m.menuIndex]
+    if selected.section = "signOut"
+        focusY = 616
+        selected.nav.color = palette.text
         m.signOutFocusBg.color = "#2563EB"
+    else
+        focusY = 112 + (m.menuIndex * 60)
+        selected.nav.color = palette.text
+        selected.collapsed.color = palette.text
     end if
+    m.navFocusBg.translation = [12, focusY]
+    m.collapsedActiveIndicator.translation = [0, focusY]
 end sub
 
 sub moveMenu(delta as Integer)
+    entries = menuEntries()
     m.menuIndex = m.menuIndex + delta
     if m.menuIndex < 0 then m.menuIndex = 0
-    if m.menuIndex > 6 then m.menuIndex = 6
+    if m.menuIndex >= entries.Count() then m.menuIndex = entries.Count() - 1
     updateMenuVisuals()
 end sub
 
 sub activateMenuItem()
-    if m.menuIndex = 0
-        showSection("watchAgain")
-    else if m.menuIndex = 1
-        showSection("home")
-    else if m.menuIndex = 2
-        showSection("browse")
-    else if m.menuIndex = 3
-        showSection("search")
-        resetSearchState()
-    else if m.menuIndex = 4
-        showSection("bookmarks")
-    else if m.menuIndex = 5
-        showSection("account")
-    else
+    entries = menuEntries()
+    if m.menuIndex < 0 or m.menuIndex >= entries.Count() then return
+    section = entries[m.menuIndex].section
+    if section = "signOut"
         m.top.signOutRequested = true
+    else
+        showSection(section)
+    end if
+    if section = "search"
+        resetSearchState()
     end if
 end sub
 
@@ -3059,6 +3331,34 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                     retryHome()
                 else
                     selectHomeCard()
+                end if
+                return true
+            else if key = "back"
+                setMenuExpanded(true)
+                return true
+            end if
+        else if m.selectedSection = "live"
+            if key = "left"
+                if m.selectedLiveIndex MOD m.liveColumns = 0
+                    setMenuExpanded(true)
+                else
+                    moveLiveFocus(-1)
+                end if
+                return true
+            else if key = "right"
+                moveLiveFocus(1)
+                return true
+            else if key = "down"
+                moveLiveFocus(m.liveColumns)
+                return true
+            else if key = "up"
+                moveLiveFocus(-m.liveColumns)
+                return true
+            else if key = "OK"
+                if m.liveErrorGroup.visible
+                    loadLiveTv()
+                else
+                    selectLiveItem()
                 end if
                 return true
             else if key = "back"
