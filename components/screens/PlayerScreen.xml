@@ -19,7 +19,7 @@
     </Group>
 
     <Group id="bottomRailGroup" translation="[0,400]" visible="false">
-      <Rectangle width="1280" height="320" color="#101010" opacity="0.84" />
+      <Rectangle id="bottomRailBackground" width="1280" height="320" color="#101010" opacity="0.84" />
       <Label id="titleLabel" translation="[72,24]" width="860" color="#F5F5F5" />
       <Label id="timeLabel" translation="[1030,28]" width="180" horizAlign="right" color="#D1D5DB" />
       <Group id="seasonCarouselGroup" translation="[72,54]" visible="false">

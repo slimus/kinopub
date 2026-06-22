@@ -60,9 +60,16 @@ sub showHomeScreen()
     homeScreen.observeField("authRequired", "onAuthRequired")
     homeScreen.observeField("exitRequested", "onExitRequested")
     homeScreen.observeField("videoSelected", "onVideoSelected")
+    homeScreen.observeField("livePlaybackSelected", "onLivePlaybackSelected")
     m.homeScreen = homeScreen
     m.screenHost.appendChild(homeScreen)
     homeScreen.setFocus(true)
+end sub
+
+sub onLivePlaybackSelected(event as Object)
+    playback = event.getData()
+    if playback = invalid or playback.streamUrl = invalid or playback.streamUrl = "" then return
+    showPlayerScreen(playback)
 end sub
 
 sub showVideoDetailScreen(selection as Object)
@@ -146,6 +153,9 @@ sub closePlayerScreen()
         m.detailScreen.visible = true
         m.detailScreen.setFocus(true)
         m.detailScreen.reloadRequested = true
+    else if m.homeScreen <> invalid
+        m.homeScreen.visible = true
+        m.homeScreen.setFocus(true)
     end if
 end sub
 
