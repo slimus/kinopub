@@ -232,7 +232,7 @@ grep -q "actionGap = 10" components/screens/HomeScreen.brs
 grep -q "key.row = rowIndex" components/screens/HomeScreen.brs
 grep -q "key.column = columnIndex" components/screens/HomeScreen.brs
 grep -q "targetRow = current.row + direction" components/screens/HomeScreen.brs
-grep -q 'm.selectedSection = "watchAgain"' components/screens/HomeScreen.brs
+grep -q 'm.selectedSection = "continue"' components/screens/HomeScreen.brs
 grep -q 'm.menuExpanded = false' components/screens/HomeScreen.brs
 grep -q 'showSection("continue")' components/screens/HomeScreen.brs
 grep -q 'setMenuExpanded(true)' components/screens/HomeScreen.brs
