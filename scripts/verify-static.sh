@@ -230,12 +230,14 @@ if grep -q '"123"' components/screens/HomeScreen.brs; then
   echo "Search keyboard must keep digits visible instead of using a 123 layout toggle." >&2
   exit 1
 fi
-grep -q 'm.selectedSection = "watchAgain"' components/screens/HomeScreen.brs
+grep -q 'm.selectedSection = "continue"' components/screens/HomeScreen.brs
 grep -q 'm.menuExpanded = false' components/screens/HomeScreen.brs
-grep -q 'showSection("watchAgain")' components/screens/HomeScreen.brs
+grep -q 'showSection("continue")' components/screens/HomeScreen.brs
 grep -q 'setMenuExpanded(true)' components/screens/HomeScreen.brs
 grep -q 'setMenuExpanded(false)' components/screens/HomeScreen.brs
-grep -q 'Watch Again' components/screens/HomeScreen.xml
+grep -q 'Continue Watching' components/screens/HomeScreen.xml
+grep -q 'text="C  Continue"' components/screens/HomeScreen.xml
+grep -q 'id="collapsedContinue"' components/screens/HomeScreen.xml
 grep -q 'Home' components/screens/HomeScreen.xml
 grep -q 'Browse' components/screens/HomeScreen.xml
 grep -q 'Search' components/screens/HomeScreen.xml
@@ -246,7 +248,14 @@ grep -q 'id="browseNav" text="B  Browse" translation="\[32,244\]"' components/sc
 grep -q 'id="searchNav" text="S  Search" translation="\[32,304\]"' components/screens/HomeScreen.xml
 grep -q 'id="bookmarksNav" text="K  Bookmarks" translation="\[32,364\]"' components/screens/HomeScreen.xml
 grep -q 'id="accountNav" text="A  Account" translation="\[32,424\]"' components/screens/HomeScreen.xml
-grep -q 'watchAgainContent' components/screens/HomeScreen.xml
+grep -q 'continueSummaryGroup' components/screens/HomeScreen.xml
+grep -q 'continueFullListGroup' components/screens/HomeScreen.xml
+grep -q "renderContinueSummary" components/screens/HomeScreen.brs
+grep -q "openContinueFullList" components/screens/HomeScreen.brs
+grep -q "selectContinueCard" components/screens/HomeScreen.brs
+grep -q "continueNewEpisodes" components/screens/HomeScreen.brs
+grep -q "targetSeasonNumber" components/screens/HomeScreen.brs
+grep -q "targetEpisodeNumber" components/screens/HomeScreen.brs
 grep -q 'homeContent' components/screens/HomeScreen.xml
 grep -q 'browseContent' components/screens/HomeScreen.xml
 grep -q 'browseFilterBar' components/screens/HomeScreen.xml
@@ -309,7 +318,8 @@ grep -q "function kinoApiGet(" source/services/KinoApiClient.brs
 grep -q '"/v1/history"' source/services/KinoHistoryService.brs
 grep -q "perpage: 20" components/screens/HomeScreen.brs
 grep -q "loadHistoryPage" components/tasks/ContentTask.brs
-grep -q "loadHistoryPage" components/screens/HomeScreen.brs
+grep -q "loadContinueHistoryPage" components/screens/HomeScreen.brs
+grep -q "loadContinueNewEpisodesPage" components/screens/HomeScreen.brs
 grep -q "historyLoadingGroup" components/screens/HomeScreen.xml
 grep -q "historyEmptyGroup" components/screens/HomeScreen.xml
 grep -q "historyErrorGroup" components/screens/HomeScreen.xml
@@ -590,6 +600,11 @@ grep -q 'field id="reloadRequested" type="boolean" alwaysNotify="true"' componen
 grep -q 'm.top.observeField("reloadRequested", "onReloadRequested")' components/screens/VideoDetailScreen.brs
 grep -q "sub onReloadRequested" components/screens/VideoDetailScreen.brs
 grep -q "m.detailScreen.reloadRequested = true" components/AppScene.brs
+grep -q "targetSeasonNumber" components/AppScene.brs
+grep -q "targetEpisodeNumber" components/AppScene.brs
+grep -q "targetSeasonNumber" components/tasks/ContentTask.brs
+grep -q "targetEpisodeNumber" components/tasks/ContentTask.brs
+grep -q "selectTargetEpisodeFromResponse" components/screens/VideoDetailScreen.brs
 grep -q "PlayerScreen" components/AppScene.brs
 grep -q 'playerScreen.id = "playerScreen"' components/AppScene.brs
 grep -q 'removeScreenHostChild("playerScreen")' components/AppScene.brs
@@ -602,8 +617,19 @@ grep -q "KinoWatchingService.brs" components/tasks/ContentTask.xml
 grep -q "KinoWatchingService(client)" components/tasks/ContentTask.brs
 grep -q "savePlaybackProgress" components/tasks/ContentTask.brs
 grep -q "markPlaybackWatched" components/tasks/ContentTask.brs
+grep -q 'command = "loadContinueSummary"' components/tasks/ContentTask.brs
+grep -q 'command = "loadContinueHistoryPage"' components/tasks/ContentTask.brs
+grep -q 'command = "loadContinueNewEpisodesPage"' components/tasks/ContentTask.brs
+grep -q "contentTaskLoadContinueSummary" components/tasks/ContentTask.brs
+grep -q "contentTaskLoadContinueHistoryPage" components/tasks/ContentTask.brs
+grep -q "contentTaskLoadContinueNewEpisodesPage" components/tasks/ContentTask.brs
+grep -q 'listSerials: kinoWatchingListSerials' source/services/KinoWatchingService.brs
 grep -q '"/v1/watching/marktime"' source/services/KinoWatchingService.brs
 grep -q '"/v1/watching/toggle"' source/services/KinoWatchingService.brs
+grep -q '"/v1/watching/serials"' source/services/KinoWatchingService.brs
+grep -q "normalizeSerialsResponse" source/services/KinoWatchingService.brs
+grep -q "normalizeSerialEntry" source/services/KinoWatchingService.brs
+grep -q "normalizeWatchingPagination" source/services/KinoWatchingService.brs
 grep -q "function PlayerPreferenceStore" source/services/PlayerPreferenceStore.brs
 grep -q "playerprefs" source/services/PlayerPreferenceStore.brs
 

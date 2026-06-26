@@ -143,6 +143,10 @@ sub loadDetail()
         itemId: m.selection.itemId
         mediaId: selectedMediaId()
     }
+    if m.selection.DoesExist("targetSeasonNumber") then task.request.targetSeasonNumber = m.selection.targetSeasonNumber
+    if m.selection.DoesExist("targetEpisodeNumber") then task.request.targetEpisodeNumber = m.selection.targetEpisodeNumber
+    if m.selection.DoesExist("seasonNumber") then task.request.seasonNumber = m.selection.seasonNumber
+    if m.selection.DoesExist("episodeNumber") then task.request.episodeNumber = m.selection.episodeNumber
     task.observeField("response", "onDetailResponse")
     task.control = "RUN"
     m.detailTask = task
@@ -212,6 +216,7 @@ sub buildPlayableModel()
 
     m.currentSeasonIndex = 0
     m.currentEpisodeIndex = 0
+    if selectTargetEpisodeFromResponse(m.selection) then return
     targetMediaId = selectedMediaId()
 
     if targetMediaId > 0
@@ -240,6 +245,45 @@ sub buildPlayableModel()
         end for
     end for
 end sub
+
+function selectTargetEpisodeFromResponse(response as Dynamic) as Boolean
+    if response = invalid or type(response) <> "roAssociativeArray" then return false
+
+    targetSeasonNumber = 0
+    targetEpisodeNumber = 0
+    if response.DoesExist("targetSeasonNumber") then targetSeasonNumber = detailIntegerField(response, "targetSeasonNumber", 0)
+    if response.DoesExist("targetEpisodeNumber") then targetEpisodeNumber = detailIntegerField(response, "targetEpisodeNumber", 0)
+    if targetSeasonNumber <= 0 and response.DoesExist("seasonNumber") then targetSeasonNumber = detailIntegerField(response, "seasonNumber", 0)
+    if targetEpisodeNumber <= 0 and response.DoesExist("episodeNumber") then targetEpisodeNumber = detailIntegerField(response, "episodeNumber", 0)
+    if targetSeasonNumber <= 0 and targetEpisodeNumber <= 0 then return false
+
+    for seasonIndex = 0 to m.seasons.Count() - 1
+        season = m.seasons[seasonIndex]
+        if targetSeasonNumber <= 0 or season.number = targetSeasonNumber
+            episodes = playableEpisodesForSeason(seasonIndex)
+            for episodeIndex = 0 to episodes.Count() - 1
+                episode = episodes[episodeIndex]
+                if targetEpisodeNumber <= 0 or episode.episodeNumber = targetEpisodeNumber
+                    m.currentSeasonIndex = seasonIndex
+                    m.currentEpisodeIndex = episodeIndex
+                    return true
+                end if
+            end for
+        end if
+    end for
+
+    return false
+end function
+
+function detailIntegerField(source as Dynamic, key as String, fallback as Integer) as Integer
+    if source = invalid or type(source) <> "roAssociativeArray" then return fallback
+    if source.DoesExist(key) <> true or source[key] = invalid then return fallback
+    value = source[key]
+    valueType = type(value)
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value
+    if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble" then return Int(value)
+    return fallback
+end function
 
 function playableEpisodesForSeason(seasonIndex as Integer) as Object
     if seasonIndex < 0 or seasonIndex >= m.seasons.Count() then return []

@@ -36,11 +36,11 @@ function kinoHistoryNormalizeResponse(body as Dynamic, requestedPage as Integer,
     }
 
     if body = invalid or type(body) <> "roAssociativeArray"
-        return { ok: false, items: [], pagination: pagination, error: "invalid_response", message: "Watch Again response was not readable.", status: 0 }
+        return { ok: false, items: [], pagination: pagination, error: "invalid_response", message: "History response was not readable.", status: 0 }
     end if
 
     if body.DoesExist("history") <> true or body.history = invalid or type(body.history) <> "roArray"
-        return { ok: false, items: [], pagination: pagination, error: "invalid_response", message: "Watch Again response did not include a history list.", status: 0 }
+        return { ok: false, items: [], pagination: pagination, error: "invalid_response", message: "History response did not include a history list.", status: 0 }
     end if
 
     for each entry in body.history
