@@ -19,18 +19,24 @@ function KinoSearchService(client as Object) as Object
     }
 end function
 
-function kinoSearchItems(accessToken as String, query as String, page as Integer, perpage as Integer, typeMap = invalid as Dynamic, sortByYear = true as Boolean) as Object
+function kinoSearchItems(accessToken as String, query as String, page as Integer, perpage as Integer, typeMap = invalid as Dynamic, sortByYear = true as Boolean, contentType = "" as String, searchField = "title" as String) as Object
     trimmedQuery = query.Trim()
     if trimmedQuery = ""
         return { ok: false, error: "invalid_query", message: "Enter a search term.", status: 0 }
     end if
 
+    normalizedField = LCase(searchField.Trim())
+    if normalizedField <> "director" and normalizedField <> "cast" then normalizedField = "title"
+
     queryParams = {
         access_token: accessToken
-        title: trimmedQuery
         page: page
         perpage: perpage
     }
+    queryParams[normalizedField] = trimmedQuery
+
+    selectedType = contentType.Trim()
+    if selectedType <> "" then queryParams.type = selectedType
     if sortByYear then queryParams.sort = "year-"
 
     response = m.client.get("/v1/items", queryParams, m.client.defaultTimeoutMs)
