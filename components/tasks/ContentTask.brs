@@ -28,6 +28,8 @@ sub runContentTask()
         m.top.response = contentTaskLoadItemDetail(tokenStore, authService, itemService, request)
     else if command = "refreshMediaLinks"
         m.top.response = contentTaskRefreshMediaLinks(tokenStore, authService, itemService, request)
+    else if command = "loadSearchOptions"
+        m.top.response = contentTaskLoadSearchOptions(tokenStore, authService, typeService)
     else if command = "searchItems"
         m.top.response = contentTaskSearchItems(tokenStore, authService, searchService, typeService, request)
     else if command = "loadUserInfo"
@@ -54,6 +56,21 @@ sub runContentTask()
         m.top.response = { command: command, ok: false, error: "unknown_command", message: "Unknown content task command." }
     end if
 end sub
+
+function contentTaskLoadSearchOptions(tokenStore as Object, authService as Object, typeService as Object) as Object
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to load Search filters.")
+    if tokenResult.ok <> true
+        tokenResult.command = "loadSearchOptions"
+        tokenResult.typeMap = {}
+        return tokenResult
+    end if
+
+    return {
+        command: "loadSearchOptions"
+        ok: true
+        typeMap: contentTaskTypeMap(typeService, tokenResult.accessToken)
+    }
+end function
 
 function contentTaskLoadLiveTv(tokenStore as Object, authService as Object, tvService as Object, command as String) as Object
     tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to load Live.")
@@ -193,12 +210,15 @@ function contentTaskSearchItems(tokenStore as Object, authService as Object, sea
     page = contentTaskIntegerField(request, "page", 1)
     perpage = contentTaskIntegerField(request, "perpage", 20)
     sortByYear = contentTaskBooleanField(request, "sortByYear", true)
+    contentType = contentTaskStringField(request, "contentType", "")
+    searchField = LCase(contentTaskStringField(request, "searchField", "title").Trim())
+    if searchField <> "director" and searchField <> "cast" then searchField = "title"
     if page < 1 then page = 1
     if perpage < 1 then perpage = 20
     if perpage > 50 then perpage = 50
 
     if query = ""
-        return { command: "searchItems", ok: false, q: query, page: page, perpage: perpage, error: "invalid_query", message: "Enter a search term.", status: 0 }
+        return { command: "searchItems", ok: false, q: query, page: page, perpage: perpage, sortByYear: sortByYear, contentType: contentType, searchField: searchField, error: "invalid_query", message: "Enter a search term.", status: 0 }
     end if
 
     tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to search.")
@@ -207,16 +227,21 @@ function contentTaskSearchItems(tokenStore as Object, authService as Object, sea
         tokenResult.q = query
         tokenResult.page = page
         tokenResult.perpage = perpage
+        tokenResult.sortByYear = sortByYear
+        tokenResult.contentType = contentType
+        tokenResult.searchField = searchField
         return tokenResult
     end if
 
     typeMap = contentTaskTypeMap(typeService, tokenResult.accessToken)
-    result = searchService.search(tokenResult.accessToken, query, page, perpage, typeMap, sortByYear)
+    result = searchService.search(tokenResult.accessToken, query, page, perpage, typeMap, sortByYear, contentType, searchField)
     result.command = "searchItems"
     result.q = query
     result.page = page
     result.perpage = perpage
     result.sortByYear = sortByYear
+    result.contentType = contentType
+    result.searchField = searchField
     return result
 end function
 
