@@ -91,8 +91,17 @@ sub init()
     m.accountContent = m.top.findNode("accountContent")
     m.searchBoxFocusBg = m.top.findNode("searchBoxFocusBg")
     m.searchQueryLabel = m.top.findNode("searchQueryLabel")
-    m.searchYearSortFocusBg = m.top.findNode("searchYearSortFocusBg")
-    m.searchYearSortCheckLabel = m.top.findNode("searchYearSortCheckLabel")
+    m.searchTypeFilterBg = m.top.findNode("searchTypeFilterBg")
+    m.searchTypeFilterLabel = m.top.findNode("searchTypeFilterLabel")
+    m.searchFieldFilterBg = m.top.findNode("searchFieldFilterBg")
+    m.searchFieldFilterLabel = m.top.findNode("searchFieldFilterLabel")
+    m.searchSortFilterBg = m.top.findNode("searchSortFilterBg")
+    m.searchSortFilterLabel = m.top.findNode("searchSortFilterLabel")
+    m.searchPickerGroup = m.top.findNode("searchPickerGroup")
+    m.searchPickerTitleLabel = m.top.findNode("searchPickerTitleLabel")
+    m.searchPickerRowsHost = m.top.findNode("searchPickerRowsHost")
+    m.searchPickerCursor = m.top.findNode("searchPickerCursor")
+    m.searchPickerStatusLabel = m.top.findNode("searchPickerStatusLabel")
     m.searchMessageLabel = m.top.findNode("searchMessageLabel")
     m.recentSearchesGroup = m.top.findNode("recentSearchesGroup")
     m.recentSearchesHost = m.top.findNode("recentSearchesHost")
@@ -271,6 +280,10 @@ sub init()
     m.searchSubmittedQuery = ""
     m.searchSortByYear = true
     m.searchRequestSortByYear = true
+    m.searchContentType = ""
+    m.searchField = "title"
+    m.searchRequestContentType = ""
+    m.searchRequestField = "title"
     m.searchItems = []
     m.searchCardNodes = []
     m.searchCardBgNodes = []
@@ -288,7 +301,18 @@ sub init()
     m.searchColumns = 5
     m.searchVisiblePagePair = 0
     m.searchFocusArea = "box"
+    m.selectedSearchFilterIndex = 0
+    m.searchPickerVisible = false
+    m.searchPickerItems = []
+    m.searchPickerFilterId = ""
+    m.selectedSearchPickerIndex = 0
+    m.searchPickerRowNodes = []
+    m.searchPickerRowIndexes = []
+    m.searchTypeMap = {}
+    m.searchOptionsLoaded = false
+    m.isLoadingSearchOptions = false
     m.searchKeyboardLayout = "ru"
+    m.searchKeyboardPreviousTextLayout = "ru"
     m.searchKeyboardIndex = 0
     m.searchKeyboardKeys = []
     m.searchHistoryStore = SearchHistoryStore()
@@ -340,6 +364,10 @@ sub resetSearchState()
     m.searchSubmittedQuery = ""
     m.searchSortByYear = true
     m.searchRequestSortByYear = true
+    m.searchContentType = ""
+    m.searchField = "title"
+    m.searchRequestContentType = ""
+    m.searchRequestField = "title"
     m.searchItems = []
     m.searchCardNodes = []
     m.searchCardBgNodes = []
@@ -355,7 +383,19 @@ sub resetSearchState()
     m.visualSelectedSearchIndex = -1
     m.searchVisiblePagePair = 0
     m.searchFocusArea = "box"
+    m.selectedSearchFilterIndex = 0
+    m.searchPickerVisible = false
+    m.searchPickerItems = []
+    m.searchPickerFilterId = ""
+    m.selectedSearchPickerIndex = 0
+    m.searchPickerRowNodes = []
+    m.searchPickerRowIndexes = []
+    if m.searchTypeMap = invalid then m.searchTypeMap = {}
+    if m.searchOptionsLoaded <> true then m.searchOptionsLoaded = false
+    m.isLoadingSearchOptions = false
+    if m.searchPickerGroup <> invalid then m.searchPickerGroup.visible = false
     m.searchKeyboardLayout = "ru"
+    m.searchKeyboardPreviousTextLayout = "ru"
     m.searchKeyboardIndex = 0
     m.selectedRecentSearchIndex = 0
     m.recentSearches = m.searchHistoryStore.load()
@@ -366,7 +406,8 @@ sub resetSearchState()
     renderSearchCount()
     clearSearchGrid()
     renderSearchQuery()
-    renderSearchYearSort()
+    renderSearchFilters()
+    loadSearchOptionsIfNeeded()
     renderRecentSearches()
     showSearchState("empty")
 end sub
@@ -382,11 +423,18 @@ sub renderSearchQuery()
 end sub
 
 sub renderSearchYearSort()
-    if m.searchYearSortCheckLabel = invalid then return
-    if m.searchSortByYear
-        m.searchYearSortCheckLabel.text = "On"
-    else
-        m.searchYearSortCheckLabel.text = "Off"
+    renderSearchFilters()
+end sub
+
+sub renderSearchFilters()
+    if m.searchTypeFilterLabel <> invalid
+        m.searchTypeFilterLabel.text = "Type: " + browseSelectedTitle(searchTypeOptions(), m.searchContentType, "All")
+    end if
+    if m.searchFieldFilterLabel <> invalid
+        m.searchFieldFilterLabel.text = "Field: " + browseSelectedTitle(searchFieldOptions(), m.searchField, "Title")
+    end if
+    if m.searchSortFilterLabel <> invalid
+        m.searchSortFilterLabel.text = "Sort: " + browseSelectedTitle(searchSortOptions(), searchSortId(), "Newest")
     end if
 end sub
 
@@ -463,6 +511,142 @@ sub selectRecentSearch()
     m.searchQuery = m.recentSearches[m.selectedRecentSearchIndex]
     renderSearchQuery()
     submitSearch()
+end sub
+
+sub loadSearchOptionsIfNeeded()
+    if m.searchOptionsLoaded = true or m.isLoadingSearchOptions = true then return
+    m.isLoadingSearchOptions = true
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadSearchOptions"
+    task.observeField("response", "onSearchOptionsResponse")
+    task.control = "RUN"
+    m.searchOptionsTask = task
+end sub
+
+sub onSearchOptionsResponse(event as Object)
+    response = event.getData()
+    m.isLoadingSearchOptions = false
+    if response <> invalid and response.ok = true and response.typeMap <> invalid
+        m.searchTypeMap = response.typeMap
+        m.searchOptionsLoaded = true
+        renderSearchFilters()
+    end if
+end sub
+
+function searchPickerTitle(filterId as String) as String
+    if filterId = "type" then return "Choose type"
+    if filterId = "field" then return "Choose search field"
+    return "Choose sort"
+end function
+
+sub clearSearchPickerRows()
+    childCount = m.searchPickerRowsHost.getChildCount()
+    if childCount > 0 then m.searchPickerRowsHost.removeChildrenIndex(childCount, 0)
+    m.searchPickerRowNodes = []
+    m.searchPickerRowIndexes = []
+    m.searchPickerCursor.visible = false
+end sub
+
+sub openSearchPicker()
+    m.searchPickerFilterId = searchFilterIdForIndex(m.selectedSearchFilterIndex)
+    m.searchPickerItems = searchPickerItemsForFilter(m.searchPickerFilterId)
+    m.selectedSearchPickerIndex = browseSelectedPickerIndex(m.searchPickerItems, searchSelectedFilterValue(m.searchPickerFilterId))
+    m.searchPickerVisible = true
+    m.searchPickerGroup.visible = true
+    m.searchPickerTitleLabel.text = searchPickerTitle(m.searchPickerFilterId)
+    renderSearchPickerRows()
+end sub
+
+sub closeSearchPicker()
+    m.searchPickerVisible = false
+    m.searchPickerGroup.visible = false
+    m.searchPickerItems = []
+    m.searchPickerFilterId = ""
+    m.selectedSearchPickerIndex = 0
+    clearSearchPickerRows()
+    updateSearchFocusVisuals()
+end sub
+
+sub renderSearchPickerRows()
+    clearSearchPickerRows()
+    maxRows = 5
+    startIndex = m.selectedSearchPickerIndex - 2
+    if startIndex < 0 then startIndex = 0
+    maxStart = m.searchPickerItems.Count() - maxRows
+    if maxStart < 0 then maxStart = 0
+    if startIndex > maxStart then startIndex = maxStart
+    lastIndex = startIndex + maxRows - 1
+    if lastIndex >= m.searchPickerItems.Count() then lastIndex = m.searchPickerItems.Count() - 1
+
+    for index = startIndex to lastIndex
+        row = CreateObject("roSGNode", "Group")
+        row.translation = [0, (index - startIndex) * 44]
+        label = CreateObject("roSGNode", "Label")
+        label.text = m.searchPickerItems[index].title
+        label.translation = [12, 10]
+        label.width = 356
+        label.color = "#F5F5F5"
+        row.appendChild(label)
+        m.searchPickerRowsHost.appendChild(row)
+        m.searchPickerRowNodes.Push(row)
+        m.searchPickerRowIndexes.Push(index)
+    end for
+
+    if m.searchPickerItems.Count() > 0
+        m.searchPickerStatusLabel.text = StrI(m.selectedSearchPickerIndex + 1).Trim() + " / " + StrI(m.searchPickerItems.Count()).Trim()
+    else
+        m.searchPickerStatusLabel.text = "No options available"
+    end if
+
+    updateSearchPickerFocus()
+end sub
+
+sub updateSearchPickerFocus()
+    if m.searchPickerVisible <> true
+        m.searchPickerCursor.visible = false
+        return
+    end if
+
+    for index = 0 to m.searchPickerRowIndexes.Count() - 1
+        optionIndex = m.searchPickerRowIndexes[index]
+        if optionIndex = m.selectedSearchPickerIndex
+            m.searchPickerCursor.translation = [20, 58 + (index * 44)]
+            m.searchPickerCursor.visible = true
+            return
+        end if
+    end for
+    m.searchPickerCursor.visible = false
+end sub
+
+sub moveSearchPicker(delta as Integer)
+    if m.searchPickerItems.Count() = 0 then return
+    nextIndex = m.selectedSearchPickerIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex >= m.searchPickerItems.Count() then nextIndex = m.searchPickerItems.Count() - 1
+    if nextIndex = m.selectedSearchPickerIndex then return
+    m.selectedSearchPickerIndex = nextIndex
+    renderSearchPickerRows()
+end sub
+
+sub selectSearchPickerItem()
+    if m.searchPickerItems.Count() = 0 then return
+    selected = m.searchPickerItems[m.selectedSearchPickerIndex]
+    if m.searchPickerFilterId = "type" then m.searchContentType = selected.id
+    if m.searchPickerFilterId = "field" then m.searchField = selected.id
+    if m.searchPickerFilterId = "sort" then m.searchSortByYear = selected.id = "newest"
+    closeSearchPicker()
+    m.searchFocusArea = "filters"
+    renderSearchFilters()
+    refreshSubmittedSearchAfterFilterChange()
+end sub
+
+sub moveSearchFilter(delta as Integer)
+    nextIndex = m.selectedSearchFilterIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex > 2 then nextIndex = 2
+    if nextIndex = m.selectedSearchFilterIndex then return
+    m.selectedSearchFilterIndex = nextIndex
+    updateSearchFocusVisuals()
 end sub
 
 sub showAccountState(state as String)
@@ -651,6 +835,58 @@ function browseTypeOptions() as Object
         end for
     end if
     return options
+end function
+
+function searchFilterIdForIndex(index as Integer) as String
+    if index = 0 then return "type"
+    if index = 1 then return "field"
+    return "sort"
+end function
+
+function searchFieldOptions() as Object
+    return [
+        { id: "title", title: "Title" }
+        { id: "director", title: "Director" }
+        { id: "cast", title: "Cast" }
+    ]
+end function
+
+function searchTypeOptions() as Object
+    options = [{ id: "", title: "All" }]
+    if m.searchTypeMap <> invalid
+        for each key in m.searchTypeMap
+            entry = m.searchTypeMap[key]
+            if entry <> invalid
+                title = browseOptionTitle(entry, key)
+                options.Push({ id: key, title: title })
+            end if
+        end for
+    end if
+    return options
+end function
+
+function searchSortOptions() as Object
+    return [
+        { id: "newest", title: "Newest" }
+        { id: "relevance", title: "Relevance" }
+    ]
+end function
+
+function searchSortId() as String
+    if m.searchSortByYear then return "newest"
+    return "relevance"
+end function
+
+function searchPickerItemsForFilter(filterId as String) as Object
+    if filterId = "type" then return searchTypeOptions()
+    if filterId = "field" then return searchFieldOptions()
+    return searchSortOptions()
+end function
+
+function searchSelectedFilterValue(filterId as String) as String
+    if filterId = "type" then return m.searchContentType
+    if filterId = "field" then return m.searchField
+    return searchSortId()
 end function
 
 function browseOptionsWithAny(items as Object, anyTitle as String) as Object
@@ -1745,18 +1981,21 @@ sub updateSearchFocusVisuals()
             m.searchBoxFocusBg.color = "#374151"
         end if
     end if
-    if m.searchYearSortFocusBg <> invalid
-        if m.selectedSection = "search" and m.focusArea = "content" and m.searchFocusArea = "sort"
-            m.searchYearSortFocusBg.opacity = 1
-            m.searchYearSortFocusBg.color = "#3B82F6"
-        else
-            m.searchYearSortFocusBg.opacity = 0
-            m.searchYearSortFocusBg.color = "#374151"
+    filterBgs = [m.searchTypeFilterBg, m.searchFieldFilterBg, m.searchSortFilterBg]
+    for index = 0 to filterBgs.Count() - 1
+        bg = filterBgs[index]
+        if bg <> invalid
+            if index = m.selectedSearchFilterIndex and m.selectedSection = "search" and m.focusArea = "content" and m.searchFocusArea = "filters" and m.searchPickerVisible <> true
+                bg.color = "#3B82F6"
+            else
+                bg.color = "#1E293B"
+            end if
         end if
-    end if
+    end for
     updateSearchCardFocus()
     updateSearchKeyboardFocus()
     updateRecentSearchFocus()
+    updateSearchPickerFocus()
 end sub
 
 sub loadInitialHistory()
@@ -2927,28 +3166,40 @@ end sub
 function searchKeyboardRows() as Object
     if m.searchKeyboardLayout = "en"
         return [
-            ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
-            ["?", "!", ",", ".", ":", "-", "'", """", "/"],
-            ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
-            ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-            ["z", "x", "c", "v", "b", "n", "m"],
-            ["RU", "Space", "Backspace", "Clear", "Search"]
+            ["a", "b", "c", "d", "e", "f"],
+            ["g", "h", "i", "j", "k", "l"],
+            ["m", "n", "o", "p", "q", "r"],
+            ["s", "t", "u", "v", "w", "x"],
+            ["y", "z"],
+            ["RU", "123", "Space", "Backspace", "Clear", "Search"]
+        ]
+    else if m.searchKeyboardLayout = "symbols"
+        return [
+            ["1", "2", "3", "4", "5", "6"],
+            ["7", "8", "9", "0", "?", "!"],
+            [",", ".", ":", "-", "'", """"],
+            ["/", "@", "#", "&", "(", ")"],
+            ["+", "=", "_"],
+            ["ABC", "Space", "Backspace", "Clear", "Search"]
         ]
     end if
 
     return [
-        ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
-        ["?", "!", ",", ".", ":", "-", "'", """", "/"],
-        ["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ъ"],
-        ["ф", "ы", "в", "а", "п", "р", "о", "л", "д", "ж", "э"],
-        ["я", "ч", "с", "м", "и", "т", "ь", "б", "ю"],
-        ["EN", "Space", "Backspace", "Clear", "Search"]
+        ["а", "б", "в", "г", "д", "е"],
+        ["ё", "ж", "з", "и", "й", "к"],
+        ["л", "м", "н", "о", "п", "р"],
+        ["с", "т", "у", "ф", "х", "ц"],
+        ["ч", "ш", "щ", "ъ", "ы", "ь"],
+        ["э", "ю", "я"],
+        ["EN", "123", "Space", "Backspace", "Clear", "Search"]
     ]
 end function
 
 function searchKeyboardActionForLabel(label as String) as Object
     if label = "RU" then return { type: "layout", value: "ru", label: "RU" }
     if label = "EN" then return { type: "layout", value: "en", label: "EN" }
+    if label = "123" then return { type: "layout", value: "symbols", label: "123" }
+    if label = "ABC" then return { type: "layout", value: "alpha", label: "ABC" }
     if label = "Space" then return { type: "space", value: " ", label: "Space" }
     if label = "Backspace" then return { type: "backspace", value: "", label: "Backspace" }
     if label = "Clear" then return { type: "clear", value: "", label: "Clear" }
@@ -2965,27 +3216,24 @@ sub renderSearchKeyboard()
 
     for rowIndex = 0 to rows.Count() - 1
         row = rows[rowIndex]
-        rowOffset = 0
-        if row.Count() = 11 then rowOffset = 28
-        if row.Count() = 9 then rowOffset = 56
-        if row.Count() = 7 then rowOffset = 96
+        actionX = 0
 
         for columnIndex = 0 to row.Count() - 1
             labelText = row[columnIndex]
             key = searchKeyboardActionForLabel(labelText)
-            keyWidth = 56
-            if key.type = "space" then keyWidth = 176
+            keyWidth = 52
+            keyHeight = 42
+            keyGap = 10
+            actionGap = 10
+            if key.type = "space" then keyWidth = 118
             if key.type = "backspace" then keyWidth = 132
-            if key.type = "clear" then keyWidth = 96
-            if key.type = "search" then keyWidth = 118
+            if key.type = "clear" then keyWidth = 92
+            if key.type = "search" then keyWidth = 112
 
-            x = rowOffset + (columnIndex * 64)
+            x = columnIndex * (52 + keyGap)
             if rowIndex = rows.Count() - 1
-                x = columnIndex * 142
-                if columnIndex = 1 then x = 74
-                if columnIndex = 2 then x = 260
-                if columnIndex = 3 then x = 402
-                if columnIndex = 4 then x = 508
+                x = actionX
+                actionX = actionX + keyWidth + actionGap
             end if
             y = rowIndex * 50
 
@@ -2994,7 +3242,7 @@ sub renderSearchKeyboard()
 
             bg = CreateObject("roSGNode", "Rectangle")
             bg.width = keyWidth
-            bg.height = 42
+            bg.height = keyHeight
             bg.color = "#2A2A2A"
             group.appendChild(bg)
 
@@ -3010,6 +3258,8 @@ sub renderSearchKeyboard()
             key.x = x
             key.y = y
             key.width = keyWidth
+            key.row = rowIndex
+            key.column = columnIndex
             key.bg = bg
             m.searchKeyboardKeys.Push(key)
         end for
@@ -3040,6 +3290,7 @@ sub updateSearchKeyboardFocus()
     selectedKey = m.searchKeyboardKeys[m.searchKeyboardIndex]
     m.searchKeyboardCursor.translation = [selectedKey.x, selectedKey.y]
     if m.searchKeyboardCursorBg <> invalid then m.searchKeyboardCursorBg.width = selectedKey.width
+    if m.searchKeyboardCursorBg <> invalid then m.searchKeyboardCursorBg.height = 42
     m.searchKeyboardCursor.visible = m.searchKeyboardGroup.visible
 end sub
 
@@ -3056,7 +3307,18 @@ sub activateSearchKeyboardKey()
     else if key.type = "clear"
         m.searchQuery = ""
     else if key.type = "layout"
-        m.searchKeyboardLayout = key.value
+        if key.value = "symbols"
+            if m.searchKeyboardLayout <> "symbols" then m.searchKeyboardPreviousTextLayout = m.searchKeyboardLayout
+            m.searchKeyboardLayout = "symbols"
+        else if key.value = "alpha"
+            if m.searchKeyboardPreviousTextLayout <> "en" and m.searchKeyboardPreviousTextLayout <> "ru"
+                m.searchKeyboardPreviousTextLayout = "ru"
+            end if
+            m.searchKeyboardLayout = m.searchKeyboardPreviousTextLayout
+        else
+            m.searchKeyboardLayout = key.value
+            m.searchKeyboardPreviousTextLayout = key.value
+        end if
         m.searchKeyboardIndex = 0
         renderSearchKeyboard()
     else if key.type = "search"
@@ -3094,19 +3356,14 @@ end sub
 sub moveSearchKeyboardVertical(direction as Integer)
     if m.searchKeyboardKeys.Count() = 0 then return
     current = m.searchKeyboardKeys[m.searchKeyboardIndex]
+    targetRow = current.row + direction
     bestIndex = m.searchKeyboardIndex
     bestDistance = 9999
 
     for index = 0 to m.searchKeyboardKeys.Count() - 1
         candidate = m.searchKeyboardKeys[index]
-        if direction < 0 and candidate.y < current.y
-            distance = Abs(candidate.x - current.x) + ((current.y - candidate.y) * 4)
-            if distance < bestDistance
-                bestDistance = distance
-                bestIndex = index
-            end if
-        else if direction > 0 and candidate.y > current.y
-            distance = Abs(candidate.x - current.x) + ((candidate.y - current.y) * 4)
+        if candidate.row = targetRow
+            distance = Abs(candidate.column - current.column)
             if distance < bestDistance
                 bestDistance = distance
                 bestIndex = index
@@ -3154,11 +3411,14 @@ end sub
 
 sub toggleSearchYearSort()
     m.searchSortByYear = m.searchSortByYear <> true
-    renderSearchYearSort()
+    renderSearchFilters()
     updateSearchFocusVisuals()
-    if m.searchSubmittedQuery.Trim() <> ""
-        submitSearch()
-    end if
+    refreshSubmittedSearchAfterFilterChange()
+end sub
+
+sub refreshSubmittedSearchAfterFilterChange()
+    if m.searchSubmittedQuery.Trim() = "" then return
+    submitSearch()
 end sub
 
 sub requestSearchPage(page as Integer, append as Boolean)
@@ -3173,12 +3433,21 @@ sub requestSearchPage(page as Integer, append as Boolean)
         m.isLoadingSearch = true
         m.searchRequestQuery = m.searchSubmittedQuery
         m.searchRequestSortByYear = m.searchSortByYear
+        m.searchRequestContentType = m.searchContentType
+        m.searchRequestField = m.searchField
         showSearchState("loading")
     end if
 
     task = CreateObject("roSGNode", "ContentTask")
     task.command = "searchItems"
-    task.request = { q: m.searchSubmittedQuery, page: page, perpage: 20, sortByYear: m.searchSortByYear }
+    task.request = {
+        q: m.searchSubmittedQuery
+        page: page
+        perpage: 20
+        sortByYear: m.searchSortByYear
+        contentType: m.searchContentType
+        searchField: m.searchField
+    }
     task.observeField("response", "onSearchPageResponse")
     task.control = "RUN"
     m.searchTask = task
@@ -3191,6 +3460,12 @@ sub onSearchPageResponse(event as Object)
         return
     end if
     if response <> invalid and response.sortByYear <> invalid and response.sortByYear <> m.searchSortByYear
+        return
+    end if
+    if response <> invalid and response.contentType <> invalid and response.contentType <> m.searchContentType
+        return
+    end if
+    if response <> invalid and response.searchField <> invalid and response.searchField <> m.searchField
         return
     end if
 
@@ -3813,7 +4088,21 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                 end if
             end if
         else if m.selectedSection = "search"
-            if m.searchFocusArea = "keyboard"
+            if m.searchPickerVisible
+                if key = "up"
+                    moveSearchPicker(-1)
+                    return true
+                else if key = "down"
+                    moveSearchPicker(1)
+                    return true
+                else if key = "OK"
+                    selectSearchPickerItem()
+                    return true
+                else if key = "back"
+                    closeSearchPicker()
+                    return true
+                end if
+            else if m.searchFocusArea = "keyboard"
                 if key = "left"
                     moveSearchKeyboard(-1)
                     return true
@@ -3838,16 +4127,26 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                     openSearchKeyboard()
                     return true
                 else if key = "down"
-                    m.searchFocusArea = "sort"
+                    m.searchFocusArea = "filters"
                     updateSearchFocusVisuals()
                     return true
                 else if key = "left" or key = "back"
                     setMenuExpanded(true)
                     return true
                 end if
-            else if m.searchFocusArea = "sort"
-                if key = "OK"
-                    toggleSearchYearSort()
+            else if m.searchFocusArea = "filters"
+                if key = "left"
+                    moveSearchFilter(-1)
+                    return true
+                else if key = "right"
+                    moveSearchFilter(1)
+                    return true
+                else if key = "OK"
+                    if searchFilterIdForIndex(m.selectedSearchFilterIndex) = "sort"
+                        toggleSearchYearSort()
+                    else
+                        openSearchPicker()
+                    end if
                     return true
                 else if key = "up"
                     m.searchFocusArea = "box"
@@ -3870,7 +4169,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
             else if m.searchFocusArea = "recent"
                 if key = "up"
                     if m.selectedRecentSearchIndex = 0
-                        m.searchFocusArea = "sort"
+                        m.searchFocusArea = "filters"
                         updateSearchFocusVisuals()
                     else
                         moveRecentSearchFocus(-1)
@@ -3910,7 +4209,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                     return true
                 else if key = "up"
                     if m.selectedSearchIndex < m.searchColumns
-                        m.searchFocusArea = "sort"
+                        m.searchFocusArea = "filters"
                         updateSearchFocusVisuals()
                     else
                         moveSearchFocus(-m.searchColumns)

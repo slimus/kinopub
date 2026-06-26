@@ -199,7 +199,7 @@ grep -q "year.translation = \\[layout.textX, 190\\]" components/screens/HomeScre
 grep -q "year.width = layout.textWidth" components/screens/HomeScreen.brs
 grep -q "year.font.size = 24" components/screens/HomeScreen.brs
 grep -q "cardVisualStateColor" components/screens/HomeScreen.brs
-grep -q "m.searchYearSortCheckLabel.text = \"On\"" components/screens/HomeScreen.brs
+grep -q "renderSearchFilters" components/screens/HomeScreen.brs
 grep -q "m.homeMaxVisibleRails = 2" components/screens/HomeScreen.brs
 grep -q "m.homeVisibleCards = 5" components/screens/HomeScreen.brs
 grep -q "m.historyColumns = 5" components/screens/HomeScreen.brs
@@ -222,15 +222,17 @@ grep -q "m.recentSearches = m.searchHistoryStore.load()" components/screens/Home
 grep -q "renderRecentSearches" components/screens/HomeScreen.brs
 grep -q "selectRecentSearch" components/screens/HomeScreen.brs
 grep -q "saveSubmittedSearchQuery" components/screens/HomeScreen.brs
-grep -q '\["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"\]' components/screens/HomeScreen.brs
-grep -Fq "[\"?\", \"!\", \",\", \".\", \":\", \"-\", \"'\", \"\"\"\", \"/\"]" components/screens/HomeScreen.brs
-grep -q '\["й", "ц", "у", "к", "е", "н", "г", "ш", "щ", "з", "х", "ъ"\]' components/screens/HomeScreen.brs
-grep -q '\["ф", "ы", "в", "а", "п", "р", "о", "л", "д", "ж", "э"\]' components/screens/HomeScreen.brs
-if grep -q '"123"' components/screens/HomeScreen.brs; then
-  echo "Search keyboard must keep digits visible instead of using a 123 layout toggle." >&2
-  exit 1
-fi
-grep -q 'm.selectedSection = "continue"' components/screens/HomeScreen.brs
+grep -q '\["a", "b", "c", "d", "e", "f"\]' components/screens/HomeScreen.brs
+grep -q '\["а", "б", "в", "г", "д", "е"\]' components/screens/HomeScreen.brs
+grep -q '\["1", "2", "3", "4", "5", "6"\]' components/screens/HomeScreen.brs
+grep -q 'if label = "123" then return { type: "layout", value: "symbols", label: "123" }' components/screens/HomeScreen.brs
+grep -q 'if label = "ABC" then return { type: "layout", value: "alpha", label: "ABC" }' components/screens/HomeScreen.brs
+grep -q "m.searchKeyboardPreviousTextLayout = m.searchKeyboardLayout" components/screens/HomeScreen.brs
+grep -q "actionGap = 10" components/screens/HomeScreen.brs
+grep -q "key.row = rowIndex" components/screens/HomeScreen.brs
+grep -q "key.column = columnIndex" components/screens/HomeScreen.brs
+grep -q "targetRow = current.row + direction" components/screens/HomeScreen.brs
+grep -q 'm.selectedSection = "watchAgain"' components/screens/HomeScreen.brs
 grep -q 'm.menuExpanded = false' components/screens/HomeScreen.brs
 grep -q 'showSection("continue")' components/screens/HomeScreen.brs
 grep -q 'setMenuExpanded(true)' components/screens/HomeScreen.brs
@@ -446,7 +448,8 @@ grep -q "searchItems" components/tasks/ContentTask.brs
 grep -q "contentTaskSearchItems" components/tasks/ContentTask.brs
 grep -q "KinoSearchService" source/services/KinoSearchService.brs
 grep -q '"/v1/items"' source/services/KinoSearchService.brs
-grep -q "title: trimmedQuery" source/services/KinoSearchService.brs
+grep -q "queryParams\\[normalizedField\\] = trimmedQuery" source/services/KinoSearchService.brs
+grep -q "if selectedType <> \"\" then queryParams.type = selectedType" source/services/KinoSearchService.brs
 if grep -q '"/v1/items/search"' source/services/KinoSearchService.brs; then
   echo "Search service must use /v1/items with title filtering, not /v1/items/search." >&2
   exit 1
@@ -466,18 +469,27 @@ grep -q '"/v1/user"' source/services/KinoUserService.brs
 grep -q "normalizeResponse" source/services/KinoUserService.brs
 grep -q "subscriptionDaysLeft" source/services/KinoUserService.brs
 grep -q "searchQueryLabel" components/screens/HomeScreen.xml
-grep -q "searchYearSortGroup" components/screens/HomeScreen.xml
-grep -q "searchYearSortFocusBg" components/screens/HomeScreen.xml
-grep -q "searchYearSortCheckLabel" components/screens/HomeScreen.xml
+grep -q 'id="searchTypeFilterBg"' components/screens/HomeScreen.xml
+grep -q 'id="searchFieldFilterBg"' components/screens/HomeScreen.xml
+grep -q 'id="searchSortFilterBg"' components/screens/HomeScreen.xml
+grep -q 'id="searchPickerGroup"' components/screens/HomeScreen.xml
 grep -q "m.searchSortByYear = true" components/screens/HomeScreen.brs
 grep -q "m.searchRequestSortByYear = m.searchSortByYear" components/screens/HomeScreen.brs
 grep -q "sortByYear: m.searchSortByYear" components/screens/HomeScreen.brs
 grep -q "response.sortByYear <> m.searchSortByYear" components/screens/HomeScreen.brs
 grep -q "sub toggleSearchYearSort" components/screens/HomeScreen.brs
-grep -q 'm.searchFocusArea = "sort"' components/screens/HomeScreen.brs
+grep -q 'm.searchFocusArea = "filters"' components/screens/HomeScreen.brs
+grep -q "searchFieldOptions" components/screens/HomeScreen.brs
+grep -q "searchTypeOptions" components/screens/HomeScreen.brs
+grep -q "openSearchPicker" components/screens/HomeScreen.brs
+grep -q "loadSearchOptionsIfNeeded" components/screens/HomeScreen.brs
+grep -q "refreshSubmittedSearchAfterFilterChange" components/screens/HomeScreen.brs
 grep -q 'queryParams.sort = "year-"' source/services/KinoSearchService.brs
 grep -q 'sortByYear = contentTaskBooleanField(request, "sortByYear", true)' components/tasks/ContentTask.brs
-grep -q "searchService.search(tokenResult.accessToken, query, page, perpage, typeMap, sortByYear)" components/tasks/ContentTask.brs
+grep -q 'command = "loadSearchOptions"' components/tasks/ContentTask.brs
+grep -q "contentType = contentTaskStringField(request, \"contentType\"" components/tasks/ContentTask.brs
+grep -q "searchField = LCase(contentTaskStringField(request, \"searchField\"" components/tasks/ContentTask.brs
+grep -q "searchService.search(tokenResult.accessToken, query, page, perpage, typeMap, sortByYear, contentType, searchField)" components/tasks/ContentTask.brs
 grep -q "searchKeyboardGroup" components/screens/HomeScreen.xml
 grep -q "searchKeyboardCursorBg" components/screens/HomeScreen.xml
 grep -q "searchResultGridHost" components/screens/HomeScreen.xml

@@ -241,13 +241,22 @@
           <Rectangle id="searchBoxFocusBg" width="760" height="58" color="#1E293B" />
           <Label id="searchQueryLabel" text="Search KinoPub" translation="[28,16]" width="704" color="#D1D5DB" />
         </Group>
-        <Group id="searchYearSortGroup" translation="[0,122]">
-          <Rectangle id="searchYearSortFocusBg" width="316" height="40" color="#1E293B" opacity="0" />
-          <Label id="searchYearSortCheckLabel" text="On" translation="[12,9]" width="58" color="#D1D5DB" />
-          <Label text="Newest year first" translation="[82,9]" width="220" color="#D1D5DB" />
+        <Group id="searchFilterRowGroup" translation="[0,122]">
+          <Group id="searchTypeFilterGroup" translation="[0,0]">
+            <Rectangle id="searchTypeFilterBg" width="248" height="40" color="#1E293B" opacity="1" />
+            <Label id="searchTypeFilterLabel" text="Type: All" translation="[12,9]" width="224" color="#D1D5DB" />
+          </Group>
+          <Group id="searchFieldFilterGroup" translation="[264,0]">
+            <Rectangle id="searchFieldFilterBg" width="248" height="40" color="#1E293B" opacity="1" />
+            <Label id="searchFieldFilterLabel" text="Field: Title" translation="[12,9]" width="224" color="#D1D5DB" />
+          </Group>
+          <Group id="searchSortFilterGroup" translation="[528,0]">
+            <Rectangle id="searchSortFilterBg" width="248" height="40" color="#1E293B" opacity="1" />
+            <Label id="searchSortFilterLabel" text="Sort: Newest" translation="[12,9]" width="224" color="#D1D5DB" />
+          </Group>
         </Group>
 
-        <Label id="searchMessageLabel" text="" translation="[0,164]" width="900" color="#FCA5A5" />
+        <Label id="searchMessageLabel" text="" translation="[0,172]" width="900" color="#FCA5A5" />
 
         <Group id="recentSearchesGroup" translation="[0,198]" visible="false">
           <Label text="Recent searches" translation="[0,0]" color="#D1D5DB" />
@@ -294,6 +303,16 @@
           <Label id="searchScrollUpChevron" text="^" translation="[938,236]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="searchScrollDownChevron" text="v" translation="[938,614]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="searchNextPageStatus" text="" translation="[0,660]" color="#9CA3AF" />
+        </Group>
+
+        <Group id="searchPickerGroup" translation="[0,170]" visible="false">
+          <Rectangle width="420" height="312" color="#111827" />
+          <Label id="searchPickerTitleLabel" text="Choose filter" translation="[20,16]" width="380" color="#F5F5F5" />
+          <Group id="searchPickerRowsHost" translation="[20,58]" />
+          <Group id="searchPickerCursor" translation="[20,58]" visible="false">
+            <Rectangle id="searchPickerCursorBg" width="380" height="42" color="#2563EB" opacity="0.72" />
+          </Group>
+          <Label id="searchPickerStatusLabel" text="" translation="[20,270]" width="380" color="#9CA3AF" />
         </Group>
       </Group>
 
