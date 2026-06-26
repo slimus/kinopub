@@ -757,7 +757,7 @@ grep -q "applyQualitySelection" components/screens/PlayerScreen.brs
 grep -q "contentSubtitleTracks" components/screens/PlayerScreen.brs
 grep -q 'setStatusMessage("Audio: " + selectedAudioLabel(), true)' components/screens/PlayerScreen.brs
 grep -q 'setStatusMessage("Subtitles: " + selectedSubtitleLabel(), true)' components/screens/PlayerScreen.brs
-grep -q 'setStatusMessage("Quality disabled for debugging", true)' components/screens/PlayerScreen.brs
+grep -q 'setStatusMessage("Quality: " + selectedQualityLabel(), true)' components/screens/PlayerScreen.brs
 grep -q 'm.videoNode.subtitleTrack = trackName' components/screens/PlayerScreen.brs
 grep -q 'm.videoNode.globalCaptionMode = "On"' components/screens/PlayerScreen.brs
 grep -q 'm.videoNode.globalCaptionMode = "Off"' components/screens/PlayerScreen.brs
@@ -767,8 +767,8 @@ if grep -q "m.videoNode.suppressCaptions" components/screens/PlayerScreen.brs; t
 fi
 grep -q "content.SubtitleTracks = subtitleTracks" components/screens/PlayerScreen.brs
 grep -q "content.SubtitleConfig = { TrackName: preferredSubtitleTrackName }" components/screens/PlayerScreen.brs
-if grep -A 20 "sub startPlayback" components/screens/PlayerScreen.brs | grep -q "applySavedQualityPreference()"; then
-  echo "Debug playback isolation must not apply saved quality on startup." >&2
+if ! grep -A 20 "sub startPlayback" components/screens/PlayerScreen.brs | grep -q "applySavedQualityPreference()"; then
+  echo "Saved quality preference must be applied before playback content is created." >&2
   exit 1
 fi
 if grep -A 20 "sub startPlayback" components/screens/PlayerScreen.brs | grep -q "applySavedPreferences()"; then
@@ -912,6 +912,7 @@ unzip -p dist/kinopub.zip components/screens/VideoDetailScreen.brs | grep -q "Pr
 
 bash scripts/tests/player-track-dedupe.sh
 bash scripts/tests/player-subtitle-selection.sh
+bash scripts/tests/player-quality-selection.sh
 bash scripts/tests/next-episode-flow.sh
 bash scripts/tests/player-season-carousel.sh
 

@@ -204,6 +204,7 @@ sub startPlayback()
 
     m.playbackOptions = playbackStreamOptions()
     m.playbackOptionIndex = 0
+    applySavedQualityPreference()
     m.savedAudioPreferenceApplied = false
     logPlaybackStart()
     content = playbackContentNode(savedPreferredSubtitleTrackName())
@@ -1942,13 +1943,60 @@ sub reloadPlaybackWithSubtitle(trackName as String)
 end sub
 
 sub applyQualitySelection(option as Object)
-    updateControlLabels()
-    if option = invalid
-        setStatusMessage("Quality disabled for debugging", true)
-    else
-        setStatusMessage("Quality disabled for debugging", true)
+    if option = invalid then return
+    if m.preferences = invalid then m.preferences = {}
+
+    selectedIndex = playbackOptionIndexForQuality(option)
+    if selectedIndex < 0
+        setStatusMessage("Quality unavailable", true)
+        return
     end if
+
+    previousIndex = m.playbackOptionIndex
+    m.playbackOptionIndex = selectedIndex
+    stream = currentPlaybackStream()
+
+    m.preferences["qualityId"] = menuItemId(option)
+    m.preferences["qualityUrl"] = stream.url
+    m.preferences["qualityLabel"] = trackLabel(option)
+    m.preferences["qualityStreamFormat"] = stream.streamFormat
+    m.preferenceStore.save(m.playback, m.preferences)
+
+    updateControlLabels()
+    setStatusMessage("Quality: " + selectedQualityLabel(), true)
+    if previousIndex <> selectedIndex then reloadPlaybackWithQuality(option)
     sendProgressUpdate("quality")
+end sub
+
+function playbackOptionIndexForQuality(option as Dynamic) as Integer
+    if option = invalid or m.playbackOptions = invalid then return -1
+
+    optionId = menuItemId(option)
+    optionUrl = ""
+    if type(option) = "roAssociativeArray" and option.DoesExist("url") and option.url <> invalid then optionUrl = option.url
+
+    for index = 0 to m.playbackOptions.Count() - 1
+        stream = m.playbackOptions[index]
+        if optionUrl <> "" and stream.url <> invalid and stream.url = optionUrl then return index
+        if optionId <> "" and stream.id <> invalid and stream.id = optionId then return index
+    end for
+
+    return -1
+end function
+
+sub reloadPlaybackWithQuality(option as Object)
+    if m.videoNode = invalid then return
+
+    position = currentPositionSeconds()
+    wasPlaying = m.isPlaying
+    clearPendingSeek()
+    m.videoNode.control = "stop"
+    m.videoNode.content = playbackContentNode(savedPreferredSubtitleTrackName())
+    if position > 0 then m.videoNode.seek = position
+    if wasPlaying
+        m.videoNode.control = "play"
+        m.isPlaying = true
+    end if
 end sub
 
 sub applySavedPreferences()
@@ -2035,7 +2083,23 @@ sub applySavedSubtitlePreference()
 end sub
 
 sub applySavedQualityPreference()
-    return
+    if m.preferences = invalid or m.playbackOptions = invalid then return
+
+    savedId = m.preferenceStore.stringField(m.preferences, "qualityId", "")
+    savedUrl = m.preferenceStore.stringField(m.preferences, "qualityUrl", "")
+    if savedId = "" and savedUrl = "" then return
+
+    for index = 0 to m.playbackOptions.Count() - 1
+        stream = m.playbackOptions[index]
+        if savedUrl <> "" and stream.url <> invalid and stream.url = savedUrl
+            m.playbackOptionIndex = index
+            return
+        end if
+        if savedId <> "" and stream.id <> invalid and stream.id = savedId
+            m.playbackOptionIndex = index
+            return
+        end if
+    end for
 end sub
 
 sub setStatusMessage(message as String, autoClear as Boolean)
