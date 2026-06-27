@@ -1212,6 +1212,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
 
     if m.resumePromptOpen then return handleResumePromptKey(key)
     if m.nextEpisodePromptOpen then return handleNextEpisodePromptKey(key)
+    if m.menuOpen then return handleMenuKey(key)
 
     if key = "back"
         sendProgressUpdate("exit")
@@ -1224,8 +1225,6 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
         if isTransportKey(key) then return handleTransportKey(key)
         return true
     end if
-
-    if m.menuOpen then return handleMenuKey(key)
 
     if m.focusArea = "progress" then return handleProgressKey(key)
     if m.focusArea = "seasonCarousel" then return handleSeasonCarouselKey(key)

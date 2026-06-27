@@ -939,6 +939,7 @@ unzip -p dist/kinopub.zip components/screens/VideoDetailScreen.brs | grep -q "Pr
 bash scripts/tests/player-track-dedupe.sh
 bash scripts/tests/player-subtitle-selection.sh
 bash scripts/tests/player-quality-selection.sh
+bash scripts/tests/player-menu-back.sh
 bash scripts/tests/next-episode-flow.sh
 bash scripts/tests/player-season-carousel.sh
 
