@@ -178,6 +178,7 @@ sub init()
     m.historyItems = []
     m.historyCardNodes = []
     m.historyCardBgNodes = []
+    m.historyFocusOverlay = invalid
     m.historyCurrentPage = 0
     m.historyTotalPages = 0
     m.historyTotalItems = 0
@@ -198,6 +199,7 @@ sub init()
     m.continueCardNodes = []
     m.continueCardBgNodes = []
     m.continueCardPositions = []
+    m.continueFocusOverlay = invalid
     m.selectedContinueRailIndex = 0
     m.selectedContinueCardIndex = 0
     m.visualSelectedContinueRailIndex = -1
@@ -215,6 +217,7 @@ sub init()
     m.homeCardNodes = []
     m.homeCardBgNodes = []
     m.homeCardPositions = []
+    m.homeFocusOverlay = invalid
     m.selectedHomeRailIndex = 0
     m.selectedHomeCardIndex = 0
     m.visualSelectedHomeRailIndex = -1
@@ -249,6 +252,7 @@ sub init()
     m.browseCardNodes = []
     m.browseCardBgNodes = []
     m.browseCardIndexes = []
+    m.browseFocusOverlay = invalid
     m.browseCurrentPage = 0
     m.browseTotalPages = 0
     m.browseTotalItems = 0
@@ -288,6 +292,7 @@ sub init()
     m.searchCardNodes = []
     m.searchCardBgNodes = []
     m.searchCardIndexes = []
+    m.searchFocusOverlay = invalid
     m.searchCurrentPage = 0
     m.searchTotalPages = 0
     m.searchTotalItems = 0
@@ -334,6 +339,7 @@ sub init()
     m.bookmarkItemNodes = []
     m.bookmarkItemBgNodes = []
     m.bookmarkItemIndexes = []
+    m.bookmarkFocusOverlay = invalid
     m.selectedBookmarkFolderIndex = 0
     m.selectedBookmarkItemIndex = 0
     m.bookmarkCurrentFolderId = 0
@@ -1114,6 +1120,7 @@ sub clearBrowseGrid()
     m.browseCardNodes = []
     m.browseCardBgNodes = []
     m.browseCardIndexes = []
+    m.browseFocusOverlay = invalid
     m.browseResultCursor.visible = false
 end sub
 
@@ -1133,6 +1140,8 @@ sub renderBrowseGrid()
         m.browseCardBgNodes.Push(cardInfo.focusBg)
         m.browseCardIndexes.Push(index)
     end for
+
+    m.browseFocusOverlay = ensureFocusedMediaCardOverlay(m.browseResultGridHost, m.browseFocusOverlay)
 
     updateBrowseFocusVisuals()
     updateBrowseScrollChevrons()
@@ -1180,6 +1189,14 @@ sub updateBrowseFocusVisuals()
         end if
     end for
 
+    selectedSlot = m.selectedBrowseIndex MOD (m.browseColumns * 2)
+    selectedColumn = selectedSlot MOD m.browseColumns
+    selectedRow = Int(selectedSlot / m.browseColumns)
+    showOverlay = m.selectedSection = "browse" and m.focusArea = "content" and m.browseFocusArea = "results" and m.browsePickerVisible <> true and m.browseItems.Count() > 0
+    overlayItem = invalid
+    if showOverlay then overlayItem = m.browseItems[m.selectedBrowseIndex]
+    refreshFocusedMediaCardOverlay(m.browseFocusOverlay, overlayItem, selectedColumn * 178, selectedRow * 226, showOverlay, true)
+
     updateBrowseCursor()
     updateBrowsePickerFocus()
 end sub
@@ -1188,6 +1205,10 @@ sub updateBrowseCursor()
     if m.browseResultCursor = invalid then return
     showCursor = m.browseResultsGroup.visible and m.focusArea = "content" and m.selectedSection = "browse" and m.browseFocusArea = "results" and m.browseItems.Count() > 0
     if showCursor <> true
+        m.browseResultCursor.visible = false
+        return
+    end if
+    if m.browseFocusOverlay <> invalid and m.browseFocusOverlay.visible
         m.browseResultCursor.visible = false
         return
     end if
@@ -1658,6 +1679,7 @@ sub clearBookmarkItemsGrid()
     m.bookmarkItemNodes = []
     m.bookmarkItemBgNodes = []
     m.bookmarkItemIndexes = []
+    m.bookmarkFocusOverlay = invalid
     m.bookmarksCursor.visible = false
 end sub
 
@@ -1681,6 +1703,8 @@ sub renderBookmarkItems()
         m.bookmarkItemBgNodes.Push(cardInfo.focusBg)
         m.bookmarkItemIndexes.Push(index)
     end for
+
+    m.bookmarkFocusOverlay = ensureFocusedMediaCardOverlay(m.bookmarkItemsHost, m.bookmarkFocusOverlay)
 
     updateBookmarksFocusVisuals()
     updateBookmarkScrollChevrons()
@@ -1747,7 +1771,11 @@ function createMediaCard(item as Object, layout as Object) as Object
     focusBg = CreateObject("roSGNode", "Rectangle")
     focusBg.width = layout.cardWidth
     focusBg.height = layout.cardHeight
-    focusBg.color = palette.surface
+    if layout.DoesExist("focusOverlay") and layout.focusOverlay
+        focusBg.color = cardVisualStateColor(true, false)
+    else
+        focusBg.color = palette.surface
+    end if
     card.appendChild(focusBg)
 
     fallback = CreateObject("roSGNode", "Rectangle")
@@ -1769,9 +1797,10 @@ function createMediaCard(item as Object, layout as Object) as Object
 
     title = CreateObject("roSGNode", "Label")
     title.text = item.title
-    title.translation = [layout.textX, 164]
+    title.translation = [layout.textX, layout.titleY]
     title.width = layout.textWidth
-    title.height = 28
+    title.height = layout.titleHeight
+    title.wrap = true
     title.color = palette.text
     card.appendChild(title)
 
@@ -1780,7 +1809,9 @@ function createMediaCard(item as Object, layout as Object) as Object
         if yearText <> ""
             year = CreateObject("roSGNode", "Label")
             year.text = yearText
-            year.translation = [layout.textX, 190]
+            yearY = 190
+            if layout.DoesExist("yearY") then yearY = layout.yearY
+            year.translation = [layout.textX, yearY]
             year.width = layout.textWidth
             year.height = 24
             year.font.size = 24
@@ -1793,11 +1824,13 @@ function createMediaCard(item as Object, layout as Object) as Object
     subtitle = CreateObject("roSGNode", "Label")
     subtitle.text = item.subtitle
     if subtitle.text = "" and item.metadata <> invalid then subtitle.text = item.metadata
-    subtitle.translation = [layout.textX, 188]
+    subtitle.translation = [layout.textX, layout.subtitleY]
     subtitle.width = layout.textWidth
-    subtitle.height = 0
+    subtitle.height = layout.subtitleHeight
     subtitle.color = palette.muted
     subtitle.visible = false
+    if layout.DoesExist("focusOverlay") and layout.focusOverlay and subtitle.text <> "" then subtitle.visible = true
+    if layout.DoesExist("showYear") and layout.showYear then subtitle.visible = false
     card.appendChild(subtitle)
 
     if layout.DoesExist("showProgress") and layout.showProgress
@@ -1849,8 +1882,66 @@ function posterBrowseCardLayout(x as Integer, y as Integer) as Object
         posterHeight: 150
         textX: 8
         textWidth: 144
+        titleY: 164
+        titleHeight: 28
+        subtitleY: 188
+        subtitleHeight: 0
     }
 end function
+
+function expandedPosterCardLayout(x as Integer, y as Integer) as Object
+    return {
+        x: x
+        y: focusedMediaCardOverlayY(y)
+        cardWidth: 220
+        cardHeight: 286
+        posterX: 38
+        posterWidth: 144
+        posterHeight: 192
+        textX: 8
+        textWidth: 204
+        titleY: 206
+        titleHeight: 58
+        subtitleY: 258
+        subtitleHeight: 24
+        yearY: 258
+        focusOverlay: true
+    }
+end function
+
+function focusedMediaCardOverlayY(y as Integer) as Integer
+    if y > 180 then return y - 66
+    return y
+end function
+
+function ensureFocusedMediaCardOverlay(host as Object, overlay as Dynamic) as Object
+    if overlay <> invalid then return overlay
+
+    overlayGroup = CreateObject("roSGNode", "Group")
+    overlayGroup.visible = false
+    host.appendChild(overlayGroup)
+    return overlayGroup
+end function
+
+sub refreshFocusedMediaCardOverlay(overlay as Object, item as Dynamic, x as Integer, y as Integer, showOverlay as Boolean, showYear = false as Boolean, showProgress = false as Boolean)
+    if overlay = invalid then return
+
+    childCount = overlay.getChildCount()
+    if childCount > 0 then overlay.removeChildrenIndex(childCount, 0)
+    overlay.visible = false
+
+    if showOverlay <> true then return
+    if item = invalid or type(item) <> "roAssociativeArray" then return
+
+    layout = expandedPosterCardLayout(x, y)
+    layout.focusOverlay = true
+    layout.showYear = showYear
+    layout.showProgress = showProgress
+
+    cardInfo = createMediaCard(item, layout)
+    overlay.appendChild(cardInfo.node)
+    overlay.visible = true
+end sub
 
 function mediaItemIntegerField(item as Dynamic, key as String, fallback as Integer) as Integer
     if item = invalid or type(item) <> "roAssociativeArray" then return fallback
@@ -1926,6 +2017,14 @@ sub updateBookmarksFocusVisuals()
         end if
     end for
 
+    selectedSlot = m.selectedBookmarkItemIndex MOD (m.bookmarkColumns * 2)
+    selectedColumn = selectedSlot MOD m.bookmarkColumns
+    selectedRow = Int(selectedSlot / m.bookmarkColumns)
+    showOverlay = m.bookmarksBodyGroup.visible and m.focusArea = "content" and m.selectedSection = "bookmarks" and m.bookmarksFocusArea = "items" and m.bookmarkItems.Count() > 0
+    overlayItem = invalid
+    if showOverlay then overlayItem = m.bookmarkItems[m.selectedBookmarkItemIndex]
+    refreshFocusedMediaCardOverlay(m.bookmarkFocusOverlay, overlayItem, selectedColumn * 178, selectedRow * 226, showOverlay)
+
     updateBookmarksCursor()
     updateBookmarkScrollChevrons()
 end sub
@@ -1934,6 +2033,10 @@ sub updateBookmarksCursor()
     if m.bookmarksCursor = invalid then return
     showCursor = m.bookmarksBodyGroup.visible and m.focusArea = "content" and m.selectedSection = "bookmarks" and m.bookmarksFocusArea = "items" and m.bookmarkItems.Count() > 0
     if showCursor <> true
+        m.bookmarksCursor.visible = false
+        return
+    end if
+    if m.bookmarkFocusOverlay <> invalid and m.bookmarkFocusOverlay.visible
         m.bookmarksCursor.visible = false
         return
     end if
@@ -2252,6 +2355,7 @@ sub clearContinueSummary()
     m.continueCardNodes = []
     m.continueCardBgNodes = []
     m.continueCardPositions = []
+    m.continueFocusOverlay = invalid
 end sub
 
 sub renderContinueSummary()
@@ -2280,6 +2384,7 @@ sub renderContinueSummary()
             m.continueCardPositions.Push({ railIndex: railIndex, cardIndex: cardIndex })
         end for
     end for
+    m.continueFocusOverlay = ensureFocusedMediaCardOverlay(m.continueSummaryRailsHost, m.continueFocusOverlay)
     updateContinueCardFocus()
 end sub
 
@@ -2316,6 +2421,23 @@ sub updateContinueCardFocus()
             focusBg.color = cardVisualStateColor(false, false)
         end if
     end for
+    showOverlay = m.continueSummaryGroup.visible and m.focusArea = "content" and m.selectedSection = "continue" and m.continueMode = "summary" and m.continueRails.Count() > 0
+    overlayItem = invalid
+    overlayX = 0
+    overlayY = 0
+    overlayShowProgress = false
+    if showOverlay
+        rail = m.continueRails[m.selectedContinueRailIndex]
+        if m.selectedContinueCardIndex >= 0 and m.selectedContinueCardIndex < rail.items.Count()
+            overlayX = m.selectedContinueCardIndex * m.continueCardSpacing
+            overlayY = (m.selectedContinueRailIndex * m.continueRailHeight) + 38
+            overlayItem = rail.items[m.selectedContinueCardIndex]
+            overlayShowProgress = rail.id = "history"
+        else
+            showOverlay = false
+        end if
+    end if
+    refreshFocusedMediaCardOverlay(m.continueFocusOverlay, overlayItem, overlayX, overlayY, showOverlay, false, overlayShowProgress)
     updateContinueCursor()
 end sub
 
@@ -2323,6 +2445,10 @@ sub updateContinueCursor()
     if m.continueSummaryCursor = invalid then return
     showCursor = m.continueSummaryGroup.visible and m.focusArea = "content" and m.selectedSection = "continue" and m.continueMode = "summary" and m.continueRails.Count() > 0
     if showCursor <> true
+        m.continueSummaryCursor.visible = false
+        return
+    end if
+    if m.continueFocusOverlay <> invalid and m.continueFocusOverlay.visible
         m.continueSummaryCursor.visible = false
         return
     end if
@@ -2410,6 +2536,7 @@ sub clearHistoryGrid()
     m.historyCardNodes = []
     m.historyCardBgNodes = []
     m.historyCardIndexes = []
+    m.historyFocusOverlay = invalid
 end sub
 
 sub renderHistoryGrid()
@@ -2429,6 +2556,7 @@ sub renderHistoryGrid()
         m.historyCardBgNodes.Push(cardInfo.focusBg)
         m.historyCardIndexes.Push(index)
     end for
+    m.historyFocusOverlay = ensureFocusedMediaCardOverlay(m.historyGridHost, m.historyFocusOverlay)
     m.historyGridHost.translation = [0, 82]
     updateHistoryCardFocus()
     updateHistoryScrollChevrons()
@@ -2541,6 +2669,13 @@ sub updateHistoryCardFocus()
             focusBg.color = cardVisualStateColor(false, false)
         end if
     end for
+    selectedSlot = m.selectedHistoryIndex MOD (m.historyColumns * 2)
+    selectedColumn = selectedSlot MOD m.historyColumns
+    selectedRow = Int(selectedSlot / m.historyColumns)
+    showOverlay = m.continueFullListGroup.visible and m.focusArea = "content" and m.selectedSection = "continue" and m.continueMode = "fullList" and m.historyItems.Count() > 0
+    overlayItem = invalid
+    if showOverlay then overlayItem = m.historyItems[m.selectedHistoryIndex]
+    refreshFocusedMediaCardOverlay(m.historyFocusOverlay, overlayItem, selectedColumn * 180, selectedRow * 226, showOverlay, false, true)
     updateHistoryCursor()
     updateHistoryScrollChevrons()
 end sub
@@ -2550,6 +2685,10 @@ sub updateHistoryCursor()
 
     showCursor = m.continueFullListGroup.visible and m.focusArea = "content" and m.selectedSection = "continue" and m.continueMode = "fullList" and m.historyItems.Count() > 0
     if showCursor <> true
+        m.historyCursor.visible = false
+        return
+    end if
+    if m.historyFocusOverlay <> invalid and m.historyFocusOverlay.visible
         m.historyCursor.visible = false
         return
     end if
@@ -2726,6 +2865,7 @@ sub clearHomeRails()
     m.homeCardNodes = []
     m.homeCardBgNodes = []
     m.homeCardPositions = []
+    m.homeFocusOverlay = invalid
 end sub
 
 sub renderHomeRails()
@@ -2743,6 +2883,8 @@ sub renderHomeRails()
         m.homeRailsHost.appendChild(railNode)
         m.homeRailNodes.Push(railNode)
     end for
+
+    m.homeFocusOverlay = ensureFocusedMediaCardOverlay(m.homeRailsHost, m.homeFocusOverlay)
 
     updateHomeCardFocus()
     updateHomeChevrons()
@@ -2820,6 +2962,23 @@ sub updateHomeCardFocus()
             focusBg.color = cardVisualStateColor(false, false)
         end if
     end for
+    showOverlay = m.homeRailsGroup.visible and m.focusArea = "content" and m.selectedSection = "home" and m.homeRails.Count() > 0
+    overlayItem = invalid
+    overlayX = 0
+    overlayY = 0
+    if showOverlay
+        rail = m.homeRails[m.selectedHomeRailIndex]
+        if m.selectedHomeCardIndex >= 0 and m.selectedHomeCardIndex < rail.items.Count()
+            startCard = homeRailWindowStart(m.selectedHomeRailIndex)
+            visibleRailSlot = m.selectedHomeRailIndex - m.homeVisibleRailStart
+            overlayX = (m.selectedHomeCardIndex - startCard) * m.homeCardSpacing
+            overlayY = (visibleRailSlot * m.homeRailHeight) + 38
+            overlayItem = rail.items[m.selectedHomeCardIndex]
+        else
+            showOverlay = false
+        end if
+    end if
+    refreshFocusedMediaCardOverlay(m.homeFocusOverlay, overlayItem, overlayX, overlayY, showOverlay)
     updateHomeCursor()
     updateHomeChevrons()
 end sub
@@ -2827,6 +2986,10 @@ end sub
 sub updateHomeCursor()
     showCursor = m.homeRailsGroup.visible and m.focusArea = "content" and m.selectedSection = "home" and m.homeRails.Count() > 0
     if showCursor <> true
+        m.homeCursor.visible = false
+        return
+    end if
+    if m.homeFocusOverlay <> invalid and m.homeFocusOverlay.visible
         m.homeCursor.visible = false
         return
     end if
@@ -3546,6 +3709,7 @@ sub clearSearchGrid()
     m.searchCardNodes = []
     m.searchCardBgNodes = []
     m.searchCardIndexes = []
+    m.searchFocusOverlay = invalid
 end sub
 
 sub renderSearchGrid()
@@ -3564,6 +3728,8 @@ sub renderSearchGrid()
         m.searchCardBgNodes.Push(cardInfo.focusBg)
         m.searchCardIndexes.Push(index)
     end for
+
+    m.searchFocusOverlay = ensureFocusedMediaCardOverlay(m.searchResultGridHost, m.searchFocusOverlay)
 
     updateSearchCardFocus()
     updateSearchScrollChevrons()
@@ -3594,6 +3760,13 @@ sub updateSearchCardFocus()
             focusBg.color = cardVisualStateColor(false, false)
         end if
     end for
+    selectedSlot = m.selectedSearchIndex MOD (m.searchColumns * 2)
+    selectedColumn = selectedSlot MOD m.searchColumns
+    selectedRow = Int(selectedSlot / m.searchColumns)
+    showOverlay = m.searchResultsGroup.visible and m.focusArea = "content" and m.selectedSection = "search" and m.searchFocusArea = "results" and m.searchItems.Count() > 0
+    overlayItem = invalid
+    if showOverlay then overlayItem = m.searchItems[m.selectedSearchIndex]
+    refreshFocusedMediaCardOverlay(m.searchFocusOverlay, overlayItem, selectedColumn * 180, selectedRow * 226, showOverlay, true)
     updateSearchCursor()
     updateSearchScrollChevrons()
 end sub
@@ -3601,6 +3774,10 @@ end sub
 sub updateSearchCursor()
     showCursor = m.searchResultsGroup.visible and m.focusArea = "content" and m.selectedSection = "search" and m.searchFocusArea = "results" and m.searchItems.Count() > 0
     if showCursor <> true
+        m.searchResultCursor.visible = false
+        return
+    end if
+    if m.searchFocusOverlay <> invalid and m.searchFocusOverlay.visible
         m.searchResultCursor.visible = false
         return
     end if

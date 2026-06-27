@@ -195,10 +195,16 @@ grep -q "subtitle.visible = false" components/screens/HomeScreen.brs
 grep -q "function cardYearText" components/screens/HomeScreen.brs
 grep -q "layout.showYear" components/screens/HomeScreen.brs
 grep -q "layout.showYear = true" components/screens/HomeScreen.brs
-grep -q "year.translation = \\[layout.textX, 190\\]" components/screens/HomeScreen.brs
+grep -q "yearY = 190" components/screens/HomeScreen.brs
+grep -q "year.translation = \\[layout.textX, yearY\\]" components/screens/HomeScreen.brs
 grep -q "year.width = layout.textWidth" components/screens/HomeScreen.brs
 grep -q "year.font.size = 24" components/screens/HomeScreen.brs
 grep -q "cardVisualStateColor" components/screens/HomeScreen.brs
+grep -q "function expandedPosterCardLayout" components/screens/HomeScreen.brs
+grep -q "sub refreshFocusedMediaCardOverlay" components/screens/HomeScreen.brs
+grep -q "title.height = layout.titleHeight" components/screens/HomeScreen.brs
+grep -q "title.wrap = true" components/screens/HomeScreen.brs
+grep -q "layout.focusOverlay = true" components/screens/HomeScreen.brs
 grep -q "renderSearchFilters" components/screens/HomeScreen.brs
 grep -q "m.homeMaxVisibleRails = 2" components/screens/HomeScreen.brs
 grep -q "m.homeVisibleCards = 5" components/screens/HomeScreen.brs
@@ -206,6 +212,12 @@ grep -q "m.historyColumns = 5" components/screens/HomeScreen.brs
 grep -q "m.searchColumns = 5" components/screens/HomeScreen.brs
 grep -q "cardHeight: 220" components/screens/HomeScreen.brs
 grep -q "posterHeight: 150" components/screens/HomeScreen.brs
+grep -q "cardWidth: 220" components/screens/HomeScreen.brs
+grep -q "cardHeight: 286" components/screens/HomeScreen.brs
+grep -q "posterWidth: 144" components/screens/HomeScreen.brs
+grep -q "posterHeight: 192" components/screens/HomeScreen.brs
+grep -q "textWidth: 204" components/screens/HomeScreen.brs
+grep -q "titleHeight: 58" components/screens/HomeScreen.brs
 grep -q "collapsedActiveIndicator" components/screens/HomeScreen.xml
 grep -q "m.collapsedActiveIndicator.translation" components/screens/HomeScreen.brs
 grep -q "function SearchHistoryStore" source/services/SearchHistoryStore.brs
