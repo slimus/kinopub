@@ -13,7 +13,7 @@
     <Group id="collapsedMenu" translation="[0,0]">
       <Rectangle width="84" height="720" color="#0F131A" />
       <Rectangle id="collapsedActiveIndicator" translation="[0,112]" width="4" height="44" color="#60A5FA" />
-      <Label id="collapsedWatchAgain" text="WA" translation="[0,118]" width="84" horizAlign="center" color="#F5F5F5" />
+      <Label id="collapsedContinue" text="CO" translation="[0,118]" width="84" horizAlign="center" color="#F5F5F5" />
       <Label id="collapsedHome" text="HO" translation="[0,178]" width="84" horizAlign="center" color="#9CA3AF" />
       <Label id="collapsedLive" text="LI" translation="[0,238]" width="84" horizAlign="center" color="#9CA3AF" visible="false" />
       <Label id="collapsedBrowse" text="BR" translation="[0,238]" width="84" horizAlign="center" color="#9CA3AF" />
@@ -26,7 +26,7 @@
       <Rectangle width="284" height="720" color="#0F131A" />
       <Label text="KinoPub" translation="[28,42]" color="#F5F5F5" />
       <Rectangle id="navFocusBg" translation="[12,112]" width="260" height="44" color="#2563EB" />
-      <Label id="watchAgainNav" text="W  Watch Again" translation="[32,124]" color="#F8FAFC" />
+      <Label id="continueNav" text="C  Continue" translation="[32,124]" color="#F8FAFC" />
       <Label id="homeNav" text="H  Home" translation="[32,184]" color="#D1D5DB" />
       <Label id="liveNav" text="L  Live" translation="[32,244]" color="#D1D5DB" visible="false" />
       <Label id="browseNav" text="B  Browse" translation="[32,244]" color="#D1D5DB" />
@@ -38,27 +38,52 @@
     </Group>
 
     <Group id="contentHost" translation="[116,44]">
-      <Group id="watchAgainContent">
-        <Label text="Watch Again" translation="[0,0]" color="#F5F5F5" />
-        <Label id="historyCountLabel" text="" translation="[0,38]" color="#9CA3AF" />
+      <Group id="continueContent">
+        <Label text="Continue Watching" translation="[0,0]" color="#F5F5F5" />
+        <Label id="continueSubtitleLabel" text="" translation="[0,38]" color="#9CA3AF" />
 
-        <Group id="historyLoadingGroup" translation="[0,96]">
-          <Label text="Loading Watch Again..." translation="[0,0]" color="#D1D5DB" />
+        <Group id="continueLoadingGroup" translation="[0,96]">
+          <Label text="Loading Continue..." translation="[0,0]" color="#D1D5DB" />
         </Group>
 
-        <Group id="historyEmptyGroup" translation="[0,96]" visible="false">
-          <Label text="No Watch Again history yet" translation="[0,0]" color="#D1D5DB" />
+        <Group id="continueEmptyGroup" translation="[0,96]" visible="false">
+          <Label text="Nothing to continue yet" translation="[0,0]" color="#D1D5DB" />
         </Group>
 
-        <Group id="historyErrorGroup" translation="[0,96]" visible="false">
-          <Label id="historyErrorLabel" text="Unable to load Watch Again" translation="[0,0]" color="#FCA5A5" />
-          <Group id="historyRetryGroup" translation="[0,54]">
-            <Rectangle id="historyRetryFocus" width="196" height="44" color="#374151" />
+        <Group id="continueErrorGroup" translation="[0,96]" visible="false">
+          <Label id="continueErrorLabel" text="Unable to load Continue" translation="[0,0]" color="#FCA5A5" />
+          <Group id="continueRetryGroup" translation="[0,54]">
+            <Rectangle id="continueRetryFocus" width="196" height="44" color="#374151" />
             <Label text="Retry" translation="[52,12]" color="#F5F5F5" />
           </Group>
         </Group>
 
-        <Group id="historyGridGroup" visible="false">
+        <Group id="continueSummaryGroup" visible="false">
+          <Group id="continueSummaryRailsHost" translation="[0,58]" />
+          <Group id="continueSummaryCursor" translation="[0,96]" visible="false">
+            <Rectangle width="160" height="6" color="#60A5FA" />
+            <Rectangle translation="[0,214]" width="160" height="6" color="#60A5FA" />
+            <Rectangle width="6" height="220" color="#60A5FA" />
+            <Rectangle translation="[154,0]" width="6" height="220" color="#60A5FA" />
+          </Group>
+        </Group>
+
+        <Group id="continueFullListGroup" visible="false">
+          <Label id="historyCountLabel" text="" translation="[0,38]" color="#9CA3AF" />
+          <Group id="historyLoadingGroup" translation="[0,96]" visible="false">
+            <Label text="Loading..." translation="[0,0]" color="#D1D5DB" />
+          </Group>
+          <Group id="historyEmptyGroup" translation="[0,96]" visible="false">
+            <Label text="No items available" translation="[0,0]" color="#D1D5DB" />
+          </Group>
+          <Group id="historyErrorGroup" translation="[0,96]" visible="false">
+            <Label id="historyErrorLabel" text="Unable to load" translation="[0,0]" color="#FCA5A5" />
+            <Group id="historyRetryGroup" translation="[0,54]">
+              <Rectangle id="historyRetryFocus" width="196" height="44" color="#374151" />
+              <Label text="Retry" translation="[52,12]" color="#F5F5F5" />
+            </Group>
+          </Group>
+          <Group id="historyGridGroup" visible="false">
           <Group id="historyGridHost" translation="[0,82]" />
           <Group id="historyCursor" translation="[0,82]" visible="false">
             <Rectangle id="historyCursorTop" width="160" height="6" color="#60A5FA" />
@@ -69,6 +94,7 @@
           <Label id="historyScrollUpChevron" text="^" translation="[938,82]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="historyScrollDownChevron" text="v" translation="[938,460]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
           <Label id="historyNextPageStatus" text="" translation="[0,520]" color="#9CA3AF" />
+          </Group>
         </Group>
       </Group>
 

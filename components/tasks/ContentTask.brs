@@ -22,6 +22,12 @@ sub runContentTask()
 
     if command = "loadHistoryPage"
         m.top.response = contentTaskLoadHistoryPage(tokenStore, authService, historyService, typeService, request)
+    else if command = "loadContinueSummary"
+        m.top.response = contentTaskLoadContinueSummary(tokenStore, authService, historyService, watchingService, typeService, request)
+    else if command = "loadContinueHistoryPage"
+        m.top.response = contentTaskLoadContinueHistoryPage(tokenStore, authService, historyService, typeService, request)
+    else if command = "loadContinueNewEpisodesPage"
+        m.top.response = contentTaskLoadContinueNewEpisodesPage(tokenStore, authService, watchingService, typeService, request)
     else if command = "loadHome"
         m.top.response = contentTaskLoadHome(tokenStore, authService, homeService, typeService, request)
     else if command = "loadItemDetail"
@@ -115,19 +121,19 @@ function contentTaskLoadHistoryPage(tokenStore as Object, authService as Object,
 
     if tokenResult.ok <> true
         if tokenResult.error = "auth_required"
-            return { command: "loadHistoryPage", ok: false, page: page, perpage: perpage, error: "auth_required", message: "Sign in again to load Watch Again." }
+            return { command: "loadHistoryPage", ok: false, page: page, perpage: perpage, error: "auth_required", message: "Sign in again to load History." }
         end if
         return { command: "loadHistoryPage", ok: false, page: page, perpage: perpage, error: tokenResult.error, message: tokenResult.message, status: tokenResult.status }
     end if
 
     tokens = tokenResult.tokens
     if tokens = invalid
-        return { command: "loadHistoryPage", ok: false, page: page, perpage: perpage, error: "auth_required", message: "Sign in again to load Watch Again." }
+        return { command: "loadHistoryPage", ok: false, page: page, perpage: perpage, error: "auth_required", message: "Sign in again to load History." }
     end if
 
     accessToken = contentTaskTokenString(tokens, "accesstoken")
     if accessToken = "" then accessToken = contentTaskTokenString(tokens, "accessToken")
-    if accessToken = "" then return { command: "loadHistoryPage", ok: false, page: page, perpage: perpage, error: "auth_required", message: "Sign in again to load Watch Again." }
+    if accessToken = "" then return { command: "loadHistoryPage", ok: false, page: page, perpage: perpage, error: "auth_required", message: "Sign in again to load History." }
 
     typeMap = contentTaskTypeMap(typeService, accessToken)
     result = historyService.list(accessToken, page, perpage, typeMap)
@@ -135,6 +141,75 @@ function contentTaskLoadHistoryPage(tokenStore as Object, authService as Object,
     result.page = page
     result.perpage = perpage
     return result
+end function
+
+function contentTaskContinuePageRequest(request as Dynamic) as Object
+    page = contentTaskIntegerField(request, "page", 1)
+    perpage = contentTaskIntegerField(request, "perpage", 20)
+    if page < 1 then page = 1
+    if perpage < 1 then perpage = 20
+    if perpage > 50 then perpage = 50
+    return { page: page, perpage: perpage }
+end function
+
+function contentTaskLoadContinueHistoryPage(tokenStore as Object, authService as Object, historyService as Object, typeService as Object, request as Dynamic) as Object
+    result = contentTaskLoadHistoryPage(tokenStore, authService, historyService, typeService, request)
+    result.command = "loadContinueHistoryPage"
+    result.kind = "history"
+    return result
+end function
+
+function contentTaskLoadContinueNewEpisodesPage(tokenStore as Object, authService as Object, watchingService as Object, typeService as Object, request as Dynamic) as Object
+    pageRequest = contentTaskContinuePageRequest(request)
+    page = pageRequest.page
+    perpage = pageRequest.perpage
+
+    tokenResult = contentTaskUsableTokens(tokenStore, authService)
+
+    if tokenResult.ok <> true
+        if tokenResult.error = "auth_required"
+            return { command: "loadContinueNewEpisodesPage", kind: "newEpisodes", ok: false, page: page, perpage: perpage, error: "auth_required", message: "Sign in again to load new episodes." }
+        end if
+        return { command: "loadContinueNewEpisodesPage", kind: "newEpisodes", ok: false, page: page, perpage: perpage, error: tokenResult.error, message: tokenResult.message, status: tokenResult.status }
+    end if
+
+    tokens = tokenResult.tokens
+    if tokens = invalid
+        return { command: "loadContinueNewEpisodesPage", kind: "newEpisodes", ok: false, page: page, perpage: perpage, error: "auth_required", message: "Sign in again to load new episodes." }
+    end if
+
+    accessToken = contentTaskTokenString(tokens, "accesstoken")
+    if accessToken = "" then accessToken = contentTaskTokenString(tokens, "accessToken")
+    if accessToken = "" then return { command: "loadContinueNewEpisodesPage", kind: "newEpisodes", ok: false, page: page, perpage: perpage, error: "auth_required", message: "Sign in again to load new episodes." }
+
+    typeMap = contentTaskTypeMap(typeService, accessToken)
+    result = watchingService.listSerials(accessToken, page, perpage, typeMap)
+    result.command = "loadContinueNewEpisodesPage"
+    result.kind = "newEpisodes"
+    result.page = page
+    result.perpage = perpage
+    return result
+end function
+
+function contentTaskLoadContinueSummary(tokenStore as Object, authService as Object, historyService as Object, watchingService as Object, typeService as Object, request as Dynamic) as Object
+    perpage = contentTaskIntegerField(request, "perpage", 10)
+    if perpage < 1 then perpage = 10
+    if perpage > 20 then perpage = 20
+    pageRequest = { page: 1, perpage: perpage }
+
+    history = contentTaskLoadContinueHistoryPage(tokenStore, authService, historyService, typeService, pageRequest)
+    if history.error = "auth_required"
+        return { command: "loadContinueSummary", ok: false, error: "auth_required", message: history.message, history: history }
+    end if
+
+    newEpisodes = contentTaskLoadContinueNewEpisodesPage(tokenStore, authService, watchingService, typeService, pageRequest)
+    if newEpisodes.error = "auth_required"
+        return { command: "loadContinueSummary", ok: false, error: "auth_required", message: newEpisodes.message, history: history, newEpisodes: newEpisodes }
+    end if
+
+    ok = false
+    if history.ok = true or newEpisodes.ok = true then ok = true
+    return { command: "loadContinueSummary", ok: ok, rails: [history, newEpisodes], history: history, newEpisodes: newEpisodes }
 end function
 
 function contentTaskLoadItemDetail(tokenStore as Object, authService as Object, itemService as Object, request as Dynamic) as Object
@@ -181,6 +256,10 @@ function contentTaskLoadItemDetail(tokenStore as Object, authService as Object, 
     result.command = "loadItemDetail"
     result.itemId = itemId
     result.mediaId = mediaId
+    result.targetSeasonNumber = contentTaskIntegerField(request, "targetSeasonNumber", 0)
+    result.targetEpisodeNumber = contentTaskIntegerField(request, "targetEpisodeNumber", 0)
+    result.seasonNumber = contentTaskIntegerField(request, "seasonNumber", 0)
+    result.episodeNumber = contentTaskIntegerField(request, "episodeNumber", 0)
     return result
 end function
 
@@ -477,7 +556,7 @@ function contentTaskUsableTokens(tokenStore as Object, authService as Object) as
         if result.ok = true
             refreshedTokens = tokenStore.load()
             if tokenStore.hasUsableAccessToken(refreshedTokens) then return { ok: true, tokens: refreshedTokens }
-            return { ok: false, error: "auth_required", message: "Sign in again to load Watch Again.", status: 0 }
+            return { ok: false, error: "auth_required", message: "Sign in again.", status: 0 }
         end if
         if contentTaskAuthFailure(result)
             tokenStore.clear()
@@ -486,7 +565,7 @@ function contentTaskUsableTokens(tokenStore as Object, authService as Object) as
         return { ok: false, error: result.error, message: result.message, status: result.status }
     end if
 
-    return { ok: false, error: "auth_required", message: "Sign in again to load Watch Again.", status: 0 }
+    return { ok: false, error: "auth_required", message: "Sign in again.", status: 0 }
 end function
 
 function contentTaskAuthFailure(result as Dynamic) as Boolean

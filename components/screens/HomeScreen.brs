@@ -3,7 +3,7 @@ sub init()
     m.expandedMenu = m.top.findNode("expandedMenu")
     m.navFocusBg = m.top.findNode("navFocusBg")
     m.signOutFocusBg = m.top.findNode("signOutFocusBg")
-    m.watchAgainNav = m.top.findNode("watchAgainNav")
+    m.continueNav = m.top.findNode("continueNav")
     m.homeNav = m.top.findNode("homeNav")
     m.liveNav = m.top.findNode("liveNav")
     m.searchNav = m.top.findNode("searchNav")
@@ -11,7 +11,7 @@ sub init()
     m.accountNav = m.top.findNode("accountNav")
     m.signOutNav = m.top.findNode("signOutNav")
     m.contentHost = m.top.findNode("contentHost")
-    m.watchAgainContent = m.top.findNode("watchAgainContent")
+    m.continueContent = m.top.findNode("continueContent")
     m.homeContent = m.top.findNode("homeContent")
     m.homeLoadingGroup = m.top.findNode("homeLoadingGroup")
     m.homeEmptyGroup = m.top.findNode("homeEmptyGroup")
@@ -134,6 +134,16 @@ sub init()
     m.accountSubscriptionEndLabel = m.top.findNode("accountSubscriptionEndLabel")
     m.accountRegisteredLabel = m.top.findNode("accountRegisteredLabel")
     m.accountVersionLabel = m.top.findNode("accountVersionLabel")
+    m.continueSubtitleLabel = m.top.findNode("continueSubtitleLabel")
+    m.continueLoadingGroup = m.top.findNode("continueLoadingGroup")
+    m.continueEmptyGroup = m.top.findNode("continueEmptyGroup")
+    m.continueErrorGroup = m.top.findNode("continueErrorGroup")
+    m.continueErrorLabel = m.top.findNode("continueErrorLabel")
+    m.continueRetryGroup = m.top.findNode("continueRetryGroup")
+    m.continueSummaryGroup = m.top.findNode("continueSummaryGroup")
+    m.continueSummaryRailsHost = m.top.findNode("continueSummaryRailsHost")
+    m.continueSummaryCursor = m.top.findNode("continueSummaryCursor")
+    m.continueFullListGroup = m.top.findNode("continueFullListGroup")
     m.historyLoadingGroup = m.top.findNode("historyLoadingGroup")
     m.historyEmptyGroup = m.top.findNode("historyEmptyGroup")
     m.historyErrorGroup = m.top.findNode("historyErrorGroup")
@@ -147,7 +157,7 @@ sub init()
     m.historyScrollDownChevron = m.top.findNode("historyScrollDownChevron")
     m.historyNextPageStatus = m.top.findNode("historyNextPageStatus")
     m.collapsedActiveIndicator = m.top.findNode("collapsedActiveIndicator")
-    m.collapsedWatchAgain = m.top.findNode("collapsedWatchAgain")
+    m.collapsedContinue = m.top.findNode("collapsedContinue")
     m.collapsedHome = m.top.findNode("collapsedHome")
     m.collapsedLive = m.top.findNode("collapsedLive")
     m.collapsedSearch = m.top.findNode("collapsedSearch")
@@ -159,7 +169,7 @@ sub init()
     m.exitYesLabel = m.top.findNode("exitYesLabel")
     m.exitNoLabel = m.top.findNode("exitNoLabel")
 
-    m.selectedSection = "watchAgain"
+    m.selectedSection = "continue"
     m.menuIndex = 0
     m.menuExpanded = false
     m.exitDialogVisible = false
@@ -180,6 +190,24 @@ sub init()
     m.visualSelectedHistoryIndex = -1
     m.historyColumns = 5
     m.historyVisiblePagePair = 0
+    m.continueLoaded = false
+    m.isLoadingContinue = false
+    m.continueMode = "summary"
+    m.continueRails = []
+    m.continueRailNodes = []
+    m.continueCardNodes = []
+    m.continueCardBgNodes = []
+    m.continueCardPositions = []
+    m.selectedContinueRailIndex = 0
+    m.selectedContinueCardIndex = 0
+    m.visualSelectedContinueRailIndex = -1
+    m.visualSelectedContinueCardIndex = -1
+    m.continueVisibleCards = 5
+    m.continueCardWidth = 160
+    m.continueCardSpacing = 180
+    m.continueRailHeight = 266
+    m.continueSummaryPerPage = 10
+    m.continueFullListKind = "history"
     m.homeLoaded = false
     m.isLoadingHome = false
     m.homeRails = []
@@ -325,9 +353,8 @@ sub init()
     buildInfo = BuildInfo()
     m.accountVersionLabel.text = "Version: " + buildInfo.displayVersion
 
-    showSection("watchAgain")
+    showSection("continue")
     setMenuExpanded(false)
-    loadInitialHistory()
     probeLiveTv()
     m.top.setFocus(true)
 end sub
@@ -1779,7 +1806,7 @@ function createMediaCard(item as Object, layout as Object) as Object
         progressBg.width = layout.posterWidth
         progressBg.height = 5
         progressBg.color = palette.progressTrack
-        progressBg.visible = item.durationSeconds > 0 and item.progressSeconds > 0
+        progressBg.visible = mediaProgressVisible(item)
         card.appendChild(progressBg)
 
         progressFill = CreateObject("roSGNode", "Rectangle")
@@ -1823,6 +1850,16 @@ function posterBrowseCardLayout(x as Integer, y as Integer) as Object
         textX: 8
         textWidth: 144
     }
+end function
+
+function mediaItemIntegerField(item as Dynamic, key as String, fallback as Integer) as Integer
+    if item = invalid or type(item) <> "roAssociativeArray" then return fallback
+    if item.DoesExist(key) <> true or item[key] = invalid then return fallback
+    value = item[key]
+    valueType = type(value)
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value
+    if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble" then return Int(value)
+    return fallback
 end function
 
 function createBookmarkCard(item as Object, index as Integer) as Object
@@ -1976,8 +2013,106 @@ sub loadInitialHistory()
     clearHistoryGrid()
     renderHistoryCount()
     showHistoryState("loading")
+    if m.selectedSection = "continue" then showContinueState("fullList")
     requestHistoryPage(1, false)
 end sub
+
+sub loadContinueIfNeeded(force as Boolean)
+    if m.continueLoaded = true and force <> true then return
+    if m.isLoadingContinue = true then return
+    m.isLoadingContinue = true
+    m.continueMode = "summary"
+    showContinueState("loading")
+
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadContinueSummary"
+    task.request = { perpage: m.continueSummaryPerPage }
+    task.observeField("response", "onContinueSummaryResponse")
+    task.control = "RUN"
+    m.continueTask = task
+end sub
+
+sub retryContinue()
+    m.continueLoaded = false
+    loadContinueIfNeeded(true)
+end sub
+
+sub onContinueSummaryResponse(event as Object)
+    response = event.getData()
+    m.isLoadingContinue = false
+
+    if responseRequiresSignIn(response)
+        requestSignInAgain(response)
+        return
+    end if
+
+    if response = invalid or response.ok <> true
+        message = "Unable to load Continue"
+        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
+        m.continueErrorLabel.text = message
+        showContinueState("error")
+        return
+    end if
+
+    m.continueRails = continueRailsFromResponse(response)
+    m.continueLoaded = true
+    m.selectedContinueRailIndex = 0
+    m.selectedContinueCardIndex = 0
+    m.visualSelectedContinueRailIndex = -1
+    m.visualSelectedContinueCardIndex = -1
+    renderContinueSummary()
+
+    if m.continueRails.Count() = 0
+        showContinueState("empty")
+    else
+        showContinueState("summary")
+    end if
+end sub
+
+function continueRailsFromResponse(response as Object) as Object
+    rails = []
+    historyRail = continueRailFromPage("history", "History", response.history)
+    if historyRail <> invalid then rails.Push(historyRail)
+    newEpisodesRail = continueRailFromPage("newEpisodes", "New Episodes", response.newEpisodes)
+    if newEpisodesRail <> invalid then rails.Push(newEpisodesRail)
+    return rails
+end function
+
+function continueRailFromPage(id as String, title as String, pageResponse as Dynamic) as Dynamic
+    if pageResponse = invalid then return invalid
+
+    items = []
+    if pageResponse.ok = true and pageResponse.items <> invalid
+        hasMoreItems = continuePageHasMore(pageResponse) or pageResponse.items.Count() > m.continueVisibleCards
+        visibleItemLimit = m.continueVisibleCards
+        if hasMoreItems then visibleItemLimit = m.continueVisibleCards - 1
+        for index = 0 to pageResponse.items.Count() - 1
+            if index >= visibleItemLimit then exit for
+            item = pageResponse.items[index]
+            items.Push(item)
+        end for
+        if hasMoreItems
+            items.Push({ isViewAll: true, itemId: -1, mediaId: 0, title: "View all", subtitle: title, posterUrl: "", type: "", typeBadge: "" })
+        end if
+    else
+        items.Push({ isError: true, itemId: -1, mediaId: 0, title: "Unable to load", subtitle: title, posterUrl: "", type: "", typeBadge: "" })
+    end if
+
+    if items.Count() = 0 then return invalid
+    return { id: id, title: title, items: items, response: pageResponse }
+end function
+
+function continuePageHasMore(pageResponse as Dynamic) as Boolean
+    if pageResponse = invalid or pageResponse.pagination = invalid then return false
+    pagination = pageResponse.pagination
+    if pagination.total <> invalid and pagination.current <> invalid and pagination.total > 0
+        return pagination.current < pagination.total
+    end if
+    if pagination.total_items <> invalid and pagination.total_items > 0 and pageResponse.items <> invalid
+        return pageResponse.items.Count() < pagination.total_items
+    end if
+    return false
+end function
 
 sub requestHistoryPage(page as Integer, append as Boolean)
     if m.isLoadingHistory = true or m.isLoadingNextPage = true then return
@@ -1990,12 +2125,22 @@ sub requestHistoryPage(page as Integer, append as Boolean)
         m.isLoadingHistory = true
     end if
 
+    command = "loadContinueHistoryPage"
+    if m.continueFullListKind = "newEpisodes" then command = "loadContinueNewEpisodesPage"
+
     task = CreateObject("roSGNode", "ContentTask")
-    task.command = "loadHistoryPage"
+    task.command = command
     task.request = { page: page, perpage: 20 }
     task.observeField("response", "onHistoryPageResponse")
     task.control = "RUN"
     m.historyTask = task
+end sub
+
+sub openContinueFullList(kind as String)
+    m.continueMode = "fullList"
+    m.continueFullListKind = kind
+    m.continueSubtitleLabel.text = ""
+    loadInitialHistory()
 end sub
 
 sub onHistoryPageResponse(event as Object)
@@ -2026,7 +2171,8 @@ sub handleHistoryError(response as Dynamic, wasNextPage as Boolean)
         return
     end if
 
-    message = "Unable to load Watch Again"
+    message = "Unable to load History"
+    if m.continueFullListKind = "newEpisodes" then message = "Unable to load New Episodes"
     if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
 
     if wasNextPage
@@ -2068,7 +2214,14 @@ end sub
 
 sub renderHistoryCount()
     if m.historyCountLabel = invalid then return
-    m.historyCountLabel.text = listCountText(m.historyTotalItems, m.historyItems.Count(), hasMoreHistoryPages())
+    title = "History"
+    if m.continueFullListKind = "newEpisodes" then title = "New Episodes"
+    countText = listCountText(m.historyTotalItems, m.historyItems.Count(), hasMoreHistoryPages())
+    if countText = ""
+        m.historyCountLabel.text = title
+    else
+        m.historyCountLabel.text = title + "  |  " + countText
+    end if
 end sub
 
 sub showHistoryState(state as String)
@@ -2078,6 +2231,177 @@ sub showHistoryState(state as String)
     m.historyGridGroup.visible = state = "grid"
     updateHistoryCursor()
     updateHistoryScrollChevrons()
+end sub
+
+sub showContinueState(state as String)
+    if state <> "fullList" then m.continueSubtitleLabel.text = ""
+    m.continueLoadingGroup.visible = state = "loading"
+    m.continueEmptyGroup.visible = state = "empty"
+    m.continueErrorGroup.visible = state = "error"
+    m.continueSummaryGroup.visible = state = "summary"
+    m.continueFullListGroup.visible = state = "fullList"
+    updateContinueCursor()
+    updateHistoryCursor()
+    updateHistoryScrollChevrons()
+end sub
+
+sub clearContinueSummary()
+    childCount = m.continueSummaryRailsHost.getChildCount()
+    if childCount > 0 then m.continueSummaryRailsHost.removeChildrenIndex(childCount, 0)
+    m.continueRailNodes = []
+    m.continueCardNodes = []
+    m.continueCardBgNodes = []
+    m.continueCardPositions = []
+end sub
+
+sub renderContinueSummary()
+    clearContinueSummary()
+    for railIndex = 0 to m.continueRails.Count() - 1
+        rail = m.continueRails[railIndex]
+        y = railIndex * m.continueRailHeight
+
+        title = CreateObject("roSGNode", "Label")
+        title.text = rail.title
+        title.translation = [0, y]
+        title.color = "#D1D5DB"
+        m.continueSummaryRailsHost.appendChild(title)
+        m.continueRailNodes.Push(title)
+
+        maxCards = rail.items.Count()
+        if maxCards > m.continueVisibleCards then maxCards = m.continueVisibleCards
+        for cardIndex = 0 to maxCards - 1
+            item = rail.items[cardIndex]
+            layout = posterBrowseCardLayout(cardIndex * m.continueCardSpacing, y + 38)
+            layout.showProgress = rail.id = "history"
+            cardInfo = createContinueCard(item, layout)
+            m.continueSummaryRailsHost.appendChild(cardInfo.node)
+            m.continueCardNodes.Push(cardInfo.node)
+            m.continueCardBgNodes.Push(cardInfo.focusBg)
+            m.continueCardPositions.Push({ railIndex: railIndex, cardIndex: cardIndex })
+        end for
+    end for
+    updateContinueCardFocus()
+end sub
+
+function createContinueCard(item as Object, layout as Object) as Object
+    if item.DoesExist("isViewAll") and item.isViewAll = true
+        return createContinueViewAllCard(item, layout)
+    end if
+    if item.DoesExist("isError") and item.isError = true
+        return createContinueMessageCard(item, layout)
+    end if
+    return createMediaCard(item, layout)
+end function
+
+function createContinueViewAllCard(item as Object, layout as Object) as Object
+    item.posterUrl = ""
+    item.subtitle = "Open full list"
+    return createMediaCard(item, layout)
+end function
+
+function createContinueMessageCard(item as Object, layout as Object) as Object
+    item.posterUrl = ""
+    return createMediaCard(item, layout)
+end function
+
+sub updateContinueCardFocus()
+    for nodeIndex = 0 to m.continueCardBgNodes.Count() - 1
+        focusBg = m.continueCardBgNodes[nodeIndex]
+        position = m.continueCardPositions[nodeIndex]
+        if position.railIndex = m.selectedContinueRailIndex and position.cardIndex = m.selectedContinueCardIndex
+            focusBg.color = cardVisualStateColor(true, false)
+        else if position.railIndex = m.visualSelectedContinueRailIndex and position.cardIndex = m.visualSelectedContinueCardIndex
+            focusBg.color = cardVisualStateColor(false, true)
+        else
+            focusBg.color = cardVisualStateColor(false, false)
+        end if
+    end for
+    updateContinueCursor()
+end sub
+
+sub updateContinueCursor()
+    if m.continueSummaryCursor = invalid then return
+    showCursor = m.continueSummaryGroup.visible and m.focusArea = "content" and m.selectedSection = "continue" and m.continueMode = "summary" and m.continueRails.Count() > 0
+    if showCursor <> true
+        m.continueSummaryCursor.visible = false
+        return
+    end if
+    m.continueSummaryCursor.translation = [m.selectedContinueCardIndex * m.continueCardSpacing, 96 + (m.selectedContinueRailIndex * m.continueRailHeight)]
+    m.continueSummaryCursor.visible = true
+end sub
+
+sub moveContinueHorizontal(delta as Integer)
+    if m.continueRails.Count() = 0 then return
+    rail = m.continueRails[m.selectedContinueRailIndex]
+    maxIndex = rail.items.Count() - 1
+    if maxIndex >= m.continueVisibleCards then maxIndex = m.continueVisibleCards - 1
+    nextIndex = m.selectedContinueCardIndex + delta
+    if nextIndex < 0 then nextIndex = 0
+    if nextIndex > maxIndex then nextIndex = maxIndex
+    m.selectedContinueCardIndex = nextIndex
+    updateContinueCardFocus()
+end sub
+
+sub moveContinueVertical(delta as Integer)
+    if m.continueRails.Count() = 0 then return
+    nextRail = m.selectedContinueRailIndex + delta
+    if nextRail < 0 then nextRail = 0
+    if nextRail >= m.continueRails.Count() then nextRail = m.continueRails.Count() - 1
+    m.selectedContinueRailIndex = nextRail
+    rail = m.continueRails[m.selectedContinueRailIndex]
+    maxIndex = rail.items.Count() - 1
+    if maxIndex >= m.continueVisibleCards then maxIndex = m.continueVisibleCards - 1
+    if m.selectedContinueCardIndex > maxIndex then m.selectedContinueCardIndex = maxIndex
+    updateContinueCardFocus()
+end sub
+
+sub selectContinueCard()
+    if m.continueMode = "fullList"
+        selectHistoryCard()
+        return
+    end if
+    if m.continueRails.Count() = 0 then return
+
+    rail = m.continueRails[m.selectedContinueRailIndex]
+    if m.selectedContinueCardIndex < 0 or m.selectedContinueCardIndex >= rail.items.Count() then return
+    item = rail.items[m.selectedContinueCardIndex]
+
+    if item.DoesExist("isError") and item.isError = true
+        loadContinueIfNeeded(true)
+        return
+    end if
+
+    if item.DoesExist("isViewAll") and item.isViewAll = true
+        openContinueFullList(rail.id)
+        return
+    end if
+
+    m.visualSelectedContinueRailIndex = m.selectedContinueRailIndex
+    m.visualSelectedContinueCardIndex = m.selectedContinueCardIndex
+    updateContinueCardFocus()
+    openContinueDetail(rail.id, item)
+end sub
+
+sub openContinueDetail(kind as String, item as Object)
+    if item = invalid or item.itemId <= 0
+        m.continueSubtitleLabel.text = "Unable to open this video."
+        return
+    end if
+
+    source = "continueHistory"
+    if kind = "newEpisodes" then source = "continueNewEpisodes"
+
+    selection = {
+        itemId: item.itemId
+        mediaId: item.mediaId
+        source: source
+    }
+    if item.DoesExist("targetSeasonNumber") then selection.targetSeasonNumber = item.targetSeasonNumber
+    if item.DoesExist("targetEpisodeNumber") then selection.targetEpisodeNumber = item.targetEpisodeNumber
+    if item.DoesExist("seasonNumber") then selection.seasonNumber = item.seasonNumber
+    if item.DoesExist("episodeNumber") then selection.episodeNumber = item.episodeNumber
+
+    m.top.videoSelected = selection
 end sub
 
 sub clearHistoryGrid()
@@ -2126,9 +2450,15 @@ function historyProgressWidth(item as Object) as Integer
     return mediaProgressWidth(item, 112)
 end function
 
+function mediaProgressVisible(item as Dynamic) as Boolean
+    return mediaItemIntegerField(item, "durationSeconds", 0) > 0 and mediaItemIntegerField(item, "progressSeconds", 0) > 0
+end function
+
 function mediaProgressWidth(item as Object, maxWidth as Integer) as Integer
-    if item.durationSeconds <= 0 or item.progressSeconds <= 0 then return 0
-    width = Int((item.progressSeconds * maxWidth) / item.durationSeconds)
+    durationSeconds = mediaItemIntegerField(item, "durationSeconds", 0)
+    progressSeconds = mediaItemIntegerField(item, "progressSeconds", 0)
+    if durationSeconds <= 0 or progressSeconds <= 0 then return 0
+    width = Int((progressSeconds * maxWidth) / durationSeconds)
     if width < 1 then width = 1
     if width > maxWidth then width = maxWidth
     return width
@@ -2218,7 +2548,7 @@ end sub
 sub updateHistoryCursor()
     if m.historyCursor = invalid then return
 
-    showCursor = m.historyGridGroup.visible and m.focusArea = "content" and m.selectedSection = "watchAgain" and m.historyItems.Count() > 0
+    showCursor = m.continueFullListGroup.visible and m.focusArea = "content" and m.selectedSection = "continue" and m.continueMode = "fullList" and m.historyItems.Count() > 0
     if showCursor <> true
         m.historyCursor.visible = false
         return
@@ -2286,14 +2616,21 @@ sub selectHistoryCard()
         m.historyNextPageStatus.text = "Unable to open this video."
         return
     end if
-    m.top.videoSelected = {
+    source = "continueHistory"
+    if m.continueFullListKind = "newEpisodes" then source = "continueNewEpisodes"
+    selection = {
         itemId: selectedItem.itemId
         mediaId: selectedItem.mediaId
         watchCount: selectedItem.watchCount
         firstSeenSeconds: selectedItem.firstSeenSeconds
         lastSeenSeconds: selectedItem.lastSeenSeconds
-        source: "watchAgain"
+        source: source
     }
+    if selectedItem.DoesExist("targetSeasonNumber") then selection.targetSeasonNumber = selectedItem.targetSeasonNumber
+    if selectedItem.DoesExist("targetEpisodeNumber") then selection.targetEpisodeNumber = selectedItem.targetEpisodeNumber
+    if selectedItem.DoesExist("seasonNumber") then selection.seasonNumber = selectedItem.seasonNumber
+    if selectedItem.DoesExist("episodeNumber") then selection.episodeNumber = selectedItem.episodeNumber
+    m.top.videoSelected = selection
 end sub
 
 sub retryInitialHistory()
@@ -3351,7 +3688,7 @@ end sub
 
 sub showSection(section as String)
     m.selectedSection = section
-    m.watchAgainContent.visible = section = "watchAgain"
+    m.continueContent.visible = section = "continue"
     m.homeContent.visible = section = "home"
     m.liveContent.visible = section = "live"
     m.browseContent.visible = section = "browse"
@@ -3361,7 +3698,9 @@ sub showSection(section as String)
 
     m.menuIndex = menuIndexForSection(section)
 
-    if section = "home"
+    if section = "continue"
+        loadContinueIfNeeded(false)
+    else if section = "home"
         loadHomeIfNeeded(false)
     else if section = "live"
         loadLiveTv()
@@ -3395,6 +3734,7 @@ sub setMenuExpanded(expanded as Boolean)
     end if
 
     updateMenuVisuals()
+    updateContinueCursor()
     updateHistoryCursor()
     updateSearchFocusVisuals()
     updateHistoryScrollChevrons()
@@ -3408,7 +3748,7 @@ end sub
 
 function menuEntries() as Object
     entries = [
-        { section: "watchAgain", nav: m.watchAgainNav, collapsed: m.collapsedWatchAgain }
+        { section: "continue", nav: m.continueNav, collapsed: m.collapsedContinue }
         { section: "home", nav: m.homeNav, collapsed: m.collapsedHome }
     ]
     if m.liveAvailable then entries.Push({ section: "live", nav: m.liveNav, collapsed: m.collapsedLive })
@@ -3556,33 +3896,65 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
 
     if m.focusArea = "content"
-        if m.selectedSection = "watchAgain"
-            if key = "left"
-                if m.selectedHistoryIndex MOD m.historyColumns = 0
+        if m.selectedSection = "continue"
+            if m.continueMode = "summary"
+                if key = "left"
+                    if m.selectedContinueCardIndex = 0
+                        setMenuExpanded(true)
+                    else
+                        moveContinueHorizontal(-1)
+                    end if
+                    return true
+                else if key = "right"
+                    moveContinueHorizontal(1)
+                    return true
+                else if key = "down"
+                    moveContinueVertical(1)
+                    return true
+                else if key = "up"
+                    moveContinueVertical(-1)
+                    return true
+                else if key = "OK"
+                    if m.continueErrorGroup.visible
+                        retryContinue()
+                    else
+                        selectContinueCard()
+                    end if
+                    return true
+                else if key = "back"
                     setMenuExpanded(true)
-                else
-                    moveHistoryFocus(-1)
+                    return true
                 end if
-                return true
-            else if key = "right"
-                moveHistoryFocus(1)
-                return true
-            else if key = "down"
-                moveHistoryFocus(m.historyColumns)
-                return true
-            else if key = "up"
-                moveHistoryFocus(-m.historyColumns)
-                return true
-            else if key = "OK"
-                if m.historyErrorGroup.visible
-                    retryInitialHistory()
-                else
-                    selectHistoryCard()
+            else
+                if key = "left"
+                    if m.selectedHistoryIndex MOD m.historyColumns = 0
+                        setMenuExpanded(true)
+                    else
+                        moveHistoryFocus(-1)
+                    end if
+                    return true
+                else if key = "right"
+                    moveHistoryFocus(1)
+                    return true
+                else if key = "down"
+                    moveHistoryFocus(m.historyColumns)
+                    return true
+                else if key = "up"
+                    moveHistoryFocus(-m.historyColumns)
+                    return true
+                else if key = "OK"
+                    if m.historyErrorGroup.visible
+                        retryInitialHistory()
+                    else
+                        selectHistoryCard()
+                    end if
+                    return true
+                else if key = "back"
+                    m.continueMode = "summary"
+                    showContinueState("summary")
+                    renderContinueSummary()
+                    return true
                 end if
-                return true
-            else if key = "back"
-                setMenuExpanded(true)
-                return true
             end if
         else if m.selectedSection = "home"
             if key = "left"

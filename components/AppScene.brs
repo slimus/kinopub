@@ -93,7 +93,20 @@ end sub
 sub onVideoSelected(event as Object)
     selection = event.getData()
     if selection = invalid or selection.itemId = invalid or selection.itemId <= 0 then return
-    showVideoDetailScreen(selection)
+    detailSelection = {
+        itemId: selection.itemId
+        mediaId: 0
+    }
+    if selection.mediaId <> invalid then detailSelection.mediaId = selection.mediaId
+    if selection.DoesExist("source") then detailSelection.source = selection.source
+    if selection.DoesExist("watchCount") then detailSelection.watchCount = selection.watchCount
+    if selection.DoesExist("firstSeenSeconds") then detailSelection.firstSeenSeconds = selection.firstSeenSeconds
+    if selection.DoesExist("lastSeenSeconds") then detailSelection.lastSeenSeconds = selection.lastSeenSeconds
+    if selection.DoesExist("targetSeasonNumber") then detailSelection.targetSeasonNumber = selection.targetSeasonNumber
+    if selection.DoesExist("targetEpisodeNumber") then detailSelection.targetEpisodeNumber = selection.targetEpisodeNumber
+    if selection.DoesExist("seasonNumber") then detailSelection.seasonNumber = selection.seasonNumber
+    if selection.DoesExist("episodeNumber") then detailSelection.episodeNumber = selection.episodeNumber
+    showVideoDetailScreen(detailSelection)
 end sub
 
 sub onVideoDetailBackRequested(event as Object)
