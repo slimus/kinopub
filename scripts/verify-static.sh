@@ -200,11 +200,25 @@ grep -q "year.translation = \\[layout.textX, yearY\\]" components/screens/HomeSc
 grep -q "year.width = layout.textWidth" components/screens/HomeScreen.brs
 grep -q "year.font.size = 24" components/screens/HomeScreen.brs
 grep -q "cardVisualStateColor" components/screens/HomeScreen.brs
+grep -q "function baseCardFocusColor" components/screens/HomeScreen.brs
+grep -q "baseCardFocusColor(showOverlay)" components/screens/HomeScreen.brs
+grep -q "sub updateContinueFocusVisuals" components/screens/HomeScreen.brs
+grep -q "sub updateSelectedContentFocusVisuals" components/screens/HomeScreen.brs
+grep -q "updateContinueFocusVisuals()" components/screens/HomeScreen.brs
+grep -q "updateHomeCardFocus()" components/screens/HomeScreen.brs
+grep -q "updateSelectedContentFocusVisuals()" components/screens/HomeScreen.brs
 grep -q "function expandedPosterCardLayout" components/screens/HomeScreen.brs
+grep -q "function focusedMediaCardOverlayY" components/screens/HomeScreen.brs
+grep -q "return y" components/screens/HomeScreen.brs
+if grep -q "if y > 180" components/screens/HomeScreen.brs; then
+  echo "Focused media cards must use consistent top-edge expansion across rows." >&2
+  exit 1
+fi
 grep -q "sub refreshFocusedMediaCardOverlay" components/screens/HomeScreen.brs
 grep -q "title.height = layout.titleHeight" components/screens/HomeScreen.brs
 grep -q "title.wrap = true" components/screens/HomeScreen.brs
 grep -q "layout.focusOverlay = true" components/screens/HomeScreen.brs
+grep -q "focusFrame: true" components/screens/HomeScreen.brs
 grep -q "renderSearchFilters" components/screens/HomeScreen.brs
 grep -q "m.homeMaxVisibleRails = 2" components/screens/HomeScreen.brs
 grep -q "m.homeVisibleCards = 5" components/screens/HomeScreen.brs
@@ -212,12 +226,13 @@ grep -q "m.historyColumns = 5" components/screens/HomeScreen.brs
 grep -q "m.searchColumns = 5" components/screens/HomeScreen.brs
 grep -q "cardHeight: 220" components/screens/HomeScreen.brs
 grep -q "posterHeight: 150" components/screens/HomeScreen.brs
-grep -q "cardWidth: 220" components/screens/HomeScreen.brs
-grep -q "cardHeight: 286" components/screens/HomeScreen.brs
+grep -q "cardWidth: 190" components/screens/HomeScreen.brs
+grep -q "cardHeight: 258" components/screens/HomeScreen.brs
 grep -q "posterWidth: 144" components/screens/HomeScreen.brs
 grep -q "posterHeight: 192" components/screens/HomeScreen.brs
-grep -q "textWidth: 204" components/screens/HomeScreen.brs
-grep -q "titleHeight: 58" components/screens/HomeScreen.brs
+grep -q "textWidth: 166" components/screens/HomeScreen.brs
+grep -q "titleHeight: 42" components/screens/HomeScreen.brs
+grep -q "progressY: 202" components/screens/HomeScreen.brs
 grep -q "collapsedActiveIndicator" components/screens/HomeScreen.xml
 grep -q "m.collapsedActiveIndicator.translation" components/screens/HomeScreen.brs
 grep -q "sub previewMenuItem" components/screens/HomeScreen.brs
@@ -237,6 +252,9 @@ grep -q "recentSearchesHost" components/screens/HomeScreen.xml
 grep -q "m.searchHistoryStore = SearchHistoryStore()" components/screens/HomeScreen.brs
 grep -q "m.recentSearches = m.searchHistoryStore.load()" components/screens/HomeScreen.brs
 grep -q "renderRecentSearches" components/screens/HomeScreen.brs
+grep -q "sub prepareSearchForDisplay" components/screens/HomeScreen.brs
+grep -q "prepareSearchForDisplay()" components/screens/HomeScreen.brs
+grep -q 'if m.searchQuery.Trim() = "" and m.searchSubmittedQuery.Trim() = "" and m.searchItems.Count() = 0' components/screens/HomeScreen.brs
 grep -q "selectRecentSearch" components/screens/HomeScreen.brs
 grep -q "saveSubmittedSearchQuery" components/screens/HomeScreen.brs
 grep -q '\["a", "b", "c", "d", "e", "f"\]' components/screens/HomeScreen.brs
