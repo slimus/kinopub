@@ -3818,7 +3818,22 @@ sub moveMenu(delta as Integer)
     m.menuIndex = m.menuIndex + delta
     if m.menuIndex < 0 then m.menuIndex = 0
     if m.menuIndex >= entries.Count() then m.menuIndex = entries.Count() - 1
+    previewMenuItem()
     updateMenuVisuals()
+end sub
+
+sub previewMenuItem()
+    entries = menuEntries()
+    if m.menuIndex < 0 or m.menuIndex >= entries.Count() then return
+    section = entries[m.menuIndex].section
+    if section = "signOut" then return
+    if section = m.selectedSection then return
+    showSection(section)
+end sub
+
+sub collapseMenuToContent()
+    m.menuIndex = menuIndexForSection(m.selectedSection)
+    setMenuExpanded(false)
 end sub
 
 sub activateMenuItem()
@@ -3828,7 +3843,8 @@ sub activateMenuItem()
     if section = "signOut"
         m.top.signOutRequested = true
     else
-        showSection(section)
+        previewMenuItem()
+        collapseMenuToContent()
     end if
     if section = "search"
         resetSearchState()
@@ -4308,7 +4324,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
         activateMenuItem()
         return true
     else if key = "right"
-        setMenuExpanded(false)
+        collapseMenuToContent()
         return true
     else if key = "back"
         showExitConfirmation()
