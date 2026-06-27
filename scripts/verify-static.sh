@@ -220,6 +220,11 @@ grep -q "textWidth: 204" components/screens/HomeScreen.brs
 grep -q "titleHeight: 58" components/screens/HomeScreen.brs
 grep -q "collapsedActiveIndicator" components/screens/HomeScreen.xml
 grep -q "m.collapsedActiveIndicator.translation" components/screens/HomeScreen.brs
+grep -q "sub previewMenuItem" components/screens/HomeScreen.brs
+grep -q 'if section = "signOut" then return' components/screens/HomeScreen.brs
+grep -q "previewMenuItem()" components/screens/HomeScreen.brs
+grep -q "sub collapseMenuToContent" components/screens/HomeScreen.brs
+grep -q "collapseMenuToContent()" components/screens/HomeScreen.brs
 grep -q "function SearchHistoryStore" source/services/SearchHistoryStore.brs
 grep -q 'sectionName: "searchhistory"' source/services/SearchHistoryStore.brs
 grep -q 'historyKey: "queriesJson"' source/services/SearchHistoryStore.brs
