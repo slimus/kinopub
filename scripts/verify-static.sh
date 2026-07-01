@@ -751,6 +751,15 @@ grep -q 'CreateObject("roHttpAgent")' components/screens/PlayerScreen.brs
 grep -q 'AddHeader("User-Agent", "Roku/DVP-12.0 (12.0.0.0)")' components/screens/PlayerScreen.brs
 grep -q "m.videoNode.setHttpAgent(m.videoHttpAgent)" components/screens/PlayerScreen.brs
 grep -q 'content.HttpHeaders = \["User-Agent: Roku/DVP-12.0 (12.0.0.0)"\]' components/screens/PlayerScreen.brs
+grep -q 'id="streamLoaderGroup"' components/screens/PlayerScreen.xml
+grep -q 'id="streamLoaderPercentLabel"' components/screens/PlayerScreen.xml
+grep -q 'id="streamLoaderFill"' components/screens/PlayerScreen.xml
+grep -q 'm.streamLoaderGroup = m.top.findNode("streamLoaderGroup")' components/screens/PlayerScreen.brs
+grep -q 'm.videoNode.observeField("bufferingStatus", "onVideoBufferingStatusChanged")' components/screens/PlayerScreen.brs
+grep -q 'showStreamLoader("Loading stream")' components/screens/PlayerScreen.brs
+grep -q 'showStreamLoader("Buffering")' components/screens/PlayerScreen.brs
+grep -q 'hideStreamLoader()' components/screens/PlayerScreen.brs
+grep -q 'function streamLoaderPercent' components/screens/PlayerScreen.brs
 if grep -A 8 'else if state = "error"' components/screens/PlayerScreen.brs | grep -q 'sendProgressUpdate("error")'; then
   echo "Playback errors must not save progress while probing fallback streams." >&2
   exit 1
@@ -972,6 +981,7 @@ unzip -p dist/kinopub.zip components/screens/HomeScreen.xml | grep -q "searchKey
 unzip -p dist/kinopub.zip components/screens/VideoDetailScreen.brs | grep -q "Preparing video..."
 
 bash scripts/tests/player-track-dedupe.sh
+bash scripts/tests/player-audio-selection.sh
 bash scripts/tests/player-subtitle-selection.sh
 bash scripts/tests/player-quality-selection.sh
 bash scripts/tests/player-menu-back.sh

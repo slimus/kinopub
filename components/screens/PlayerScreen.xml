@@ -10,6 +10,15 @@
   <children>
     <Video id="videoNode" width="1280" height="720" enableUI="false" />
 
+    <Group id="streamLoaderGroup" translation="[0,0]" visible="false">
+      <Rectangle width="1280" height="720" color="#000000" opacity="0.34" />
+      <Rectangle translation="[440,286]" width="400" height="148" color="#111827" opacity="0.94" />
+      <Label id="streamLoaderTitleLabel" translation="[480,314]" width="320" horizAlign="center" text="Loading stream" color="#F5F5F5" />
+      <Label id="streamLoaderPercentLabel" translation="[480,358]" width="320" horizAlign="center" text="Please wait..." color="#D1D5DB" />
+      <Rectangle id="streamLoaderTrack" translation="[500,396]" width="280" height="6" color="#374151" />
+      <Rectangle id="streamLoaderFill" translation="[500,396]" width="0" height="6" color="#EF4444" />
+    </Group>
+
     <Group id="resumePromptGroup" translation="[390,214]" visible="false">
       <Rectangle width="500" height="292" color="#111827" opacity="0.96" />
       <Label id="resumePromptTitleLabel" translation="[30,28]" width="440" text="Continue watching?" color="#F5F5F5" />
