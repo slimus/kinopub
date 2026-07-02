@@ -2,6 +2,10 @@ sub init()
     m.videoNode = m.top.findNode("videoNode")
     m.videoNode.enableUI = false
     configureVideoHttpAgent()
+    m.streamLoaderGroup = m.top.findNode("streamLoaderGroup")
+    m.streamLoaderTitleLabel = m.top.findNode("streamLoaderTitleLabel")
+    m.streamLoaderPercentLabel = m.top.findNode("streamLoaderPercentLabel")
+    m.streamLoaderFill = m.top.findNode("streamLoaderFill")
     m.resumePromptGroup = m.top.findNode("resumePromptGroup")
     m.resumePromptMessageLabel = m.top.findNode("resumePromptMessageLabel")
     m.resumePromptOptionsHost = m.top.findNode("resumePromptOptionsHost")
@@ -88,6 +92,7 @@ sub init()
     m.top.observeField("nextPlayback", "onNextPlaybackChanged")
     m.videoNode.observeField("state", "onVideoStateChanged")
     m.videoNode.observeField("position", "onVideoPositionChanged")
+    m.videoNode.observeField("bufferingStatus", "onVideoBufferingStatusChanged")
     m.videoNode.observeField("availableAudioTracks", "onAvailableAudioTracksChanged")
     m.videoNode.observeField("availableSubtitleTracks", "onAvailableSubtitleTracksChanged")
     m.railHideTimer.observeField("fire", "onRailHideTimer")
@@ -346,7 +351,9 @@ sub startPlaybackAtPosition(startPosition as Integer)
     m.playbackStarted = false
     if startPosition > 0 then m.videoNode.seek = startPosition
     m.top.setFocus(true)
+    showStreamLoader("Loading stream")
     m.videoNode.control = "play"
+    applySavedAudioPreference()
     m.isPlaying = true
     if isLivePlayback() <> true
         m.progressTimer.control = "start"
@@ -1021,18 +1028,27 @@ sub onVideoStateChanged(event as Object)
     state = event.getData()
     print "PlayerScreen: video state="; state
     if state = "playing"
+        hideStreamLoader()
         m.isPlaying = true
         m.playbackStarted = true
         if isLivePlayback() <> true then m.progressTimer.control = "start"
         updatePlayPauseControlLabel()
         showRail()
-    else if state = "paused" or state = "buffering"
+    else if state = "paused"
+        hideStreamLoader()
         m.isPlaying = false
         m.railHideTimer.control = "stop"
-        if state = "paused" then sendProgressUpdate("pause")
+        sendProgressUpdate("pause")
+        updatePlayPauseControlLabel()
+        showRail()
+    else if state = "buffering"
+        showStreamLoader("Buffering")
+        m.isPlaying = false
+        m.railHideTimer.control = "stop"
         updatePlayPauseControlLabel()
         showRail()
     else if state = "finished"
+        hideStreamLoader()
         if m.playbackStarted <> true
             print "PlayerScreen: stream finished before playback started"
             if tryNextPlaybackStream() then return
@@ -1052,14 +1068,85 @@ sub onVideoStateChanged(event as Object)
         markCompletedIfSafe()
         exitPlayer()
     else if state = "error"
+        hideStreamLoader()
         printVideoErrorDiagnostics()
         if tryNextPlaybackStream() then return
         details = videoErrorDetails()
         print "PlayerScreen: video error "; details
         m.top.playbackError = details
         exitPlayer()
+    else if state = "stopped"
+        hideStreamLoader()
     end if
 end sub
+
+sub onVideoBufferingStatusChanged()
+    if m.streamLoaderGroup = invalid or m.streamLoaderGroup.visible <> true then return
+    showStreamLoader("Buffering")
+end sub
+
+sub showStreamLoader(title as String)
+    if m.streamLoaderGroup = invalid then return
+
+    m.streamLoaderGroup.visible = true
+    if m.streamLoaderTitleLabel <> invalid then m.streamLoaderTitleLabel.text = title
+
+    percent = streamLoaderPercent()
+    if percent >= 0
+        if m.streamLoaderPercentLabel <> invalid then m.streamLoaderPercentLabel.text = title + " " + StrI(percent).Trim() + "%"
+        if m.streamLoaderFill <> invalid then m.streamLoaderFill.width = Int((280 * percent) / 100)
+    else
+        if title = "Buffering"
+            if m.streamLoaderPercentLabel <> invalid then m.streamLoaderPercentLabel.text = "Buffering..."
+        else
+            if m.streamLoaderPercentLabel <> invalid then m.streamLoaderPercentLabel.text = "Please wait..."
+        end if
+        if m.streamLoaderFill <> invalid then m.streamLoaderFill.width = 0
+    end if
+end sub
+
+sub hideStreamLoader()
+    if m.streamLoaderGroup <> invalid then m.streamLoaderGroup.visible = false
+    if m.streamLoaderFill <> invalid then m.streamLoaderFill.width = 0
+end sub
+
+function streamLoaderPercent() as Integer
+    if m.videoNode = invalid then return -1
+
+    percent = streamLoaderPercentFromValue(m.videoNode.bufferingStatus)
+    if percent >= 0 then return percent
+
+    percent = streamLoaderPercentFromValue(m.videoNode.bufferedPercentage)
+    if percent >= 0 then return percent
+
+    return streamLoaderPercentFromValue(m.videoNode.downloadProgress)
+end function
+
+function streamLoaderPercentFromValue(value as Dynamic) as Integer
+    if value = invalid then return -1
+
+    valueType = type(value)
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger"
+        return clampStreamLoaderPercent(value)
+    else if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble"
+        return clampStreamLoaderPercent(Int(value))
+    else if valueType = "roAssociativeArray"
+        for each key in ["percentage", "percent", "bufferPercent", "bufferingPercent"]
+            if value.DoesExist(key)
+                percent = streamLoaderPercentFromValue(value[key])
+                if percent >= 0 then return percent
+            end if
+        end for
+    end if
+
+    return -1
+end function
+
+function clampStreamLoaderPercent(percent as Integer) as Integer
+    if percent < 0 then return 0
+    if percent > 100 then return 100
+    return percent
+end function
 
 function tryNextPlaybackStream() as Boolean
     if m.playbackOptions = invalid then return false
@@ -1073,6 +1160,7 @@ function tryNextPlaybackStream() as Boolean
     m.videoNode.control = "stop"
     m.playbackStarted = false
     m.videoNode.content = playbackContentNode(savedPreferredSubtitleTrackName())
+    showStreamLoader("Loading stream")
     m.videoNode.control = "play"
     return true
 end function
@@ -1866,8 +1954,10 @@ sub applyAudioSelection(track as Object)
     if trackId = "" then return
 
     if m.preferences = invalid then m.preferences = {}
+    audioSelectionApplied = false
     if hasAvailableAudioTracks()
         m.videoNode.audioTrack = trackId
+        audioSelectionApplied = true
     end if
     currentTrack = m.videoNode.currentAudioTrack
     if currentTrack = invalid or currentTrack = "" then currentTrack = trackId
@@ -1877,7 +1967,7 @@ sub applyAudioSelection(track as Object)
     m.preferences["audioTrackLanguage"] = trackLanguage(track)
     m.preferences["audioCurrentTrack"] = currentTrack
     m.preferenceStore.save(m.playback, m.preferences)
-    m.savedAudioPreferenceApplied = true
+    m.savedAudioPreferenceApplied = audioSelectionApplied
 
     updateControlLabels()
     setStatusMessage("Audio: " + selectedAudioLabel(), true)
