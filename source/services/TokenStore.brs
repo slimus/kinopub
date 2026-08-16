@@ -36,28 +36,45 @@ end function
 function tokenStoreNormalize(tokens as Dynamic) as Dynamic
     if tokens = invalid then return invalid
     if type(tokens) <> "roAssociativeArray" then return invalid
-    tokens = tokenStoreTokenPayload(tokens)
+    source = tokenStoreTokenPayload(tokens)
+    normalized = {}
 
-    if (not tokens.DoesExist("accesstoken")) and tokens.DoesExist("access_token") then tokens.accesstoken = tokens.access_token
-    if (not tokens.DoesExist("refreshtoken")) and tokens.DoesExist("refresh_token") then tokens.refreshtoken = tokens.refresh_token
-    if (not tokens.DoesExist("tokentype")) and tokens.DoesExist("token_type") then tokens.tokentype = tokens.token_type
+    accessToken = tokenStoreFirstField(source, ["accesstoken", "access_token", "accessToken"])
+    refreshToken = tokenStoreFirstField(source, ["refreshtoken", "refresh_token", "refreshToken"])
+    tokenType = tokenStoreFirstField(source, ["tokentype", "token_type", "tokenType"])
+    accessExpiresAt = tokenStoreFirstField(source, ["accessexpiresat", "access_expires_at", "accessExpiresAt"])
+    refreshExpiresAt = tokenStoreFirstField(source, ["refreshexpiresat", "refresh_expires_at", "refreshExpiresAt"])
+
+    if accessToken <> invalid then normalized.accesstoken = accessToken
+    if refreshToken <> invalid then normalized.refreshtoken = refreshToken
+    if tokenType <> invalid then normalized.tokentype = tokenType
+    if accessExpiresAt <> invalid then normalized.accessexpiresat = accessExpiresAt
+    if refreshExpiresAt <> invalid then normalized.refreshexpiresat = refreshExpiresAt
 
     now = tokenStoreNowSeconds()
-    if tokens.DoesExist("accesstoken") and tokens.accesstoken <> "" and not tokens.DoesExist("accessexpiresat")
-        if tokens.DoesExist("expires_in")
-            tokens.accessexpiresat = now + tokens.expires_in
+    if normalized.DoesExist("accesstoken") and normalized.accesstoken <> "" and not normalized.DoesExist("accessexpiresat")
+        expiresIn = tokenStoreFirstField(source, ["expires_in", "expiresin", "expiresIn"])
+        if expiresIn <> invalid
+            normalized.accessexpiresat = now + expiresIn
         else
-            tokens.accessexpiresat = now + 3600
+            normalized.accessexpiresat = now + 3600
         end if
     end if
 
-    if tokens.DoesExist("refreshtoken") and tokens.refreshtoken <> ""
-        if (not tokens.DoesExist("refreshexpiresat")) or tokens.refreshexpiresat <= now
-            tokens.refreshexpiresat = now + (30 * 24 * 60 * 60)
+    if normalized.DoesExist("refreshtoken") and normalized.refreshtoken <> ""
+        if (not normalized.DoesExist("refreshexpiresat")) or normalized.refreshexpiresat <= now
+            normalized.refreshexpiresat = now + (30 * 24 * 60 * 60)
         end if
     end if
 
-    return tokens
+    return normalized
+end function
+
+function tokenStoreFirstField(values as Object, keys as Object) as Dynamic
+    for each key in keys
+        if values.DoesExist(key) then return values[key]
+    end for
+    return invalid
 end function
 
 function tokenStoreTokenPayload(tokens as Object) as Object
@@ -74,8 +91,8 @@ function tokenStoreTokenPayload(tokens as Object) as Object
 end function
 
 function tokenStoreHasAnyTokenField(tokens as Object) as Boolean
-    if tokens.DoesExist("access_token") or tokens.DoesExist("accesstoken") then return true
-    if tokens.DoesExist("refresh_token") or tokens.DoesExist("refreshtoken") then return true
+    if tokenStoreFirstField(tokens, ["accesstoken", "access_token", "accessToken"]) <> invalid then return true
+    if tokenStoreFirstField(tokens, ["refreshtoken", "refresh_token", "refreshToken"]) <> invalid then return true
     return false
 end function
 

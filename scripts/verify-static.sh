@@ -90,8 +90,16 @@ fi
 grep -q "m.progressFill.width = 640 \* percent" components/screens/AuthScreen.brs
 grep -q "onRequestTimer" components/screens/AuthScreen.brs
 grep -q "authorization_pending" source/services/KinoApiClient.brs
+grep -q "incorrect_client_credentials" source/services/KinoApiClient.brs
 grep -q "kinoApiRawJsonValue" source/services/KinoApiClient.brs
+grep -q 'errorCode = "server_unavailable"' source/services/KinoApiClient.brs
+grep -q 'errorCode = "server_error"' source/services/KinoApiClient.brs
+if grep -q "message = rawBody" source/services/KinoApiClient.brs; then
+  echo "Raw HTTP response bodies must not become user-facing error messages." >&2
+  exit 1
+fi
 grep -q "status=" components/screens/AuthScreen.brs
+grep -q 'result.error = "invalid_client" or result.error = "incorrect_client_credentials"' components/screens/AuthScreen.brs
 grep -q '"/v1/device/notify"' source/services/KinoAuthService.brs
 grep -q "postFormBody(\"/v1/device/notify\"" source/services/KinoAuthService.brs
 grep -q "queryParams = { access_token: accessToken }" source/services/KinoAuthService.brs
@@ -115,6 +123,8 @@ fi
 grep -q "normalize: tokenStoreNormalize" source/services/TokenStore.brs
 grep -q "tokenStoreTokenPayload" source/services/TokenStore.brs
 grep -q "tokenStoreHasAnyTokenField" source/services/TokenStore.brs
+grep -q 'tokenStoreFirstField(source, \["accesstoken", "access_token", "accessToken"\])' source/services/TokenStore.brs
+grep -q 'tokenStoreFirstField(source, \["refreshtoken", "refresh_token", "refreshToken"\])' source/services/TokenStore.brs
 grep -q '"tokens", "body", "data", "auth"' source/services/TokenStore.brs
 grep -q "access_token" source/services/TokenStore.brs
 grep -q "accesstoken" source/services/TokenStore.brs
@@ -122,10 +132,11 @@ grep -q "refreshtoken" source/services/TokenStore.brs
 grep -q "accessexpiresat" source/services/TokenStore.brs
 grep -q "refreshexpiresat" source/services/TokenStore.brs
 grep -q "accessexpiresat = now + 3600" source/services/TokenStore.brs
-grep -q "tokens.refreshexpiresat <= now" source/services/TokenStore.brs
+grep -q "normalized.refreshexpiresat <= now" source/services/TokenStore.brs
 grep -q "AuthTask: token fields access=" components/tasks/AuthTask.brs
 grep -q "authTaskNotifyAllowsHome(tokens.accesstoken" components/tasks/AuthTask.brs
-grep -q "notifyDevice(result.tokens.accessToken)" components/tasks/AuthTask.brs
+grep -q "notifyDevice(result.tokens.accesstoken)" components/tasks/AuthTask.brs
+grep -q "authTaskNotifyAllowsHome(result.tokens.accesstoken" components/tasks/AuthTask.brs
 grep -q "authTaskNotifyAllowsHome" components/tasks/AuthTask.brs
 grep -q 'notifyResult.status = 401' components/tasks/AuthTask.brs
 grep -q 'notifyResult.error = "unauthorized"' components/tasks/AuthTask.brs
