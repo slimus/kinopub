@@ -52,7 +52,7 @@ function kinoApiGet(path as String, queryParams as Object, timeoutMs = invalid a
     if looksJson then json = ParseJson(body)
     print "KinoApiClient: response path="; path; " status="; status; " body="; kinoApiBodySnippet(body)
 
-    if looksJson and json = invalid
+    if status >= 200 and status < 300 and looksJson and json = invalid
         return { ok: false, status: status, error: "invalid_response", message: "KinoAPI returned malformed JSON.", rawBody: body }
     end if
 
@@ -101,7 +101,7 @@ function kinoApiPost(path as String, queryParams as Object, bodyParams as Object
     if looksJson then json = ParseJson(body)
     print "KinoApiClient: response path="; path; " status="; status; " body="; kinoApiBodySnippet(body)
 
-    if looksJson and json = invalid
+    if status >= 200 and status < 300 and looksJson and json = invalid
         return { ok: false, status: status, error: "invalid_response", message: "KinoAPI returned malformed JSON.", rawBody: body }
     end if
 
@@ -117,22 +117,33 @@ end function
 function kinoApiNormalizeError(status as Integer, body as Dynamic, rawBody = "" as String) as Object
     errorCode = "network"
     message = "KinoAPI request failed."
+    isServerError = status >= 500 and status <= 599
 
     if status = 401
         errorCode = "unauthorized"
         message = "Device authorization was removed. Sign in again."
+    else if status = 502 or status = 503 or status = 504
+        errorCode = "server_unavailable"
+        message = "KinoPub is temporarily unavailable. Please try again later."
+    else if isServerError
+        errorCode = "server_error"
+        message = "KinoPub encountered a server error. Please try again later."
     end if
 
     if body <> invalid and type(body) = "roAssociativeArray"
-        if body.DoesExist("error") then errorCode = body.error
-        if body.DoesExist("error_description") then message = body.error_description
-        if body.DoesExist("message") then message = body.message
+        if not isServerError
+            if body.DoesExist("error") then errorCode = body.error
+            if body.DoesExist("error_description") then message = body.error_description
+            if body.DoesExist("message") then message = body.message
+        end if
     else if rawBody <> invalid and rawBody <> ""
-        rawError = kinoApiErrorFromRawBody(rawBody)
-        if rawError <> "" then errorCode = rawError
-        rawMessage = kinoApiRawJsonValue(rawBody, "error_description")
-        if rawMessage = "" then rawMessage = kinoApiRawJsonValue(rawBody, "message")
-        if rawMessage <> "" then message = rawMessage else message = rawBody
+        if not isServerError
+            rawError = kinoApiErrorFromRawBody(rawBody)
+            if rawError <> "" then errorCode = rawError
+            rawMessage = kinoApiRawJsonValue(rawBody, "error_description")
+            if rawMessage = "" then rawMessage = kinoApiRawJsonValue(rawBody, "message")
+            if rawMessage <> "" then message = rawMessage
+        end if
     end if
 
     return { ok: false, status: status, error: errorCode, message: message }
@@ -156,6 +167,7 @@ function kinoApiErrorFromRawBody(rawBody as String) as String
     parsedError = kinoApiRawJsonValue(rawBody, "error")
     if parsedError <> "" then return parsedError
     if Instr(1, rawBody, "authorization_pending") > 0 then return "authorization_pending"
+    if Instr(1, rawBody, "incorrect_client_credentials") > 0 then return "incorrect_client_credentials"
     if Instr(1, rawBody, "invalid_client") > 0 then return "invalid_client"
     if Instr(1, rawBody, "invalid_grant") > 0 then return "invalid_grant"
     if Instr(1, rawBody, "expired") > 0 then return "expired"

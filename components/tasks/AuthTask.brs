@@ -20,7 +20,7 @@ sub runAuthTask()
         m.top.response = result
     else if command = "pollDeviceToken"
         result = authService.pollDeviceToken(request.code)
-        if result.ok = true then authService.notifyDevice(result.tokens.accessToken)
+        if result.ok = true then authService.notifyDevice(result.tokens.accesstoken)
         result.command = command
         m.top.response = result
     else
@@ -47,7 +47,7 @@ function authTaskRouteFromStoredTokens(tokenStore as Object, authService as Obje
         print "AuthTask: refreshing stored token"
         result = authService.refreshToken(tokens.refreshtoken)
         if result.ok = true
-            if authTaskNotifyAllowsHome(result.tokens.accessToken, tokenStore, authService)
+            if authTaskNotifyAllowsHome(result.tokens.accesstoken, tokenStore, authService)
                 return { command: "routeFromStoredTokens", ok: true, screen: "home" }
             end if
             return { command: "routeFromStoredTokens", ok: true, screen: "auth", error: "unauthorized", message: "Device authorization was removed. Sign in again." }
