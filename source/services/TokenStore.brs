@@ -62,7 +62,7 @@ function tokenStoreNormalize(tokens as Dynamic) as Dynamic
     end if
 
     if normalized.DoesExist("refreshtoken") and normalized.refreshtoken <> ""
-        if (not normalized.DoesExist("refreshexpiresat")) or normalized.refreshexpiresat <= now
+        if not normalized.DoesExist("refreshexpiresat")
             normalized.refreshexpiresat = now + (30 * 24 * 60 * 60)
         end if
     end if

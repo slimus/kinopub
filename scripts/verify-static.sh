@@ -132,7 +132,10 @@ grep -q "refreshtoken" source/services/TokenStore.brs
 grep -q "accessexpiresat" source/services/TokenStore.brs
 grep -q "refreshexpiresat" source/services/TokenStore.brs
 grep -q "accessexpiresat = now + 3600" source/services/TokenStore.brs
-grep -q "normalized.refreshexpiresat <= now" source/services/TokenStore.brs
+if grep -q "normalized.refreshexpiresat <= now" source/services/TokenStore.brs; then
+  echo "An expired refresh token must not receive a new expiry during normalization." >&2
+  exit 1
+fi
 grep -q "AuthTask: token fields access=" components/tasks/AuthTask.brs
 grep -q "authTaskNotifyAllowsHome(tokens.accesstoken" components/tasks/AuthTask.brs
 grep -q "notifyDevice(result.tokens.accesstoken)" components/tasks/AuthTask.brs
@@ -236,14 +239,14 @@ grep -q "m.homeVisibleCards = 5" components/screens/HomeScreen.brs
 grep -q "m.historyColumns = 5" components/screens/HomeScreen.brs
 grep -q "m.searchColumns = 5" components/screens/HomeScreen.brs
 grep -q "cardHeight: 220" components/screens/HomeScreen.brs
-grep -q "posterHeight: 150" components/screens/HomeScreen.brs
-grep -q "cardWidth: 190" components/screens/HomeScreen.brs
-grep -q "cardHeight: 258" components/screens/HomeScreen.brs
-grep -q "posterWidth: 144" components/screens/HomeScreen.brs
-grep -q "posterHeight: 192" components/screens/HomeScreen.brs
-grep -q "textWidth: 166" components/screens/HomeScreen.brs
-grep -q "titleHeight: 42" components/screens/HomeScreen.brs
-grep -q "progressY: 202" components/screens/HomeScreen.brs
+grep -q "posterHeight: 184" components/screens/HomeScreen.brs
+grep -q "cardWidth: 172" components/screens/HomeScreen.brs
+grep -q "cardHeight: 232" components/screens/HomeScreen.brs
+grep -q "posterWidth: 140" components/screens/HomeScreen.brs
+grep -q "posterHeight: 190" components/screens/HomeScreen.brs
+grep -q "textWidth: 156" components/screens/HomeScreen.brs
+grep -q "titleHeight: 26" components/screens/HomeScreen.brs
+grep -q "progressY: 192" components/screens/HomeScreen.brs
 grep -q "collapsedActiveIndicator" components/screens/HomeScreen.xml
 grep -q "m.collapsedActiveIndicator.translation" components/screens/HomeScreen.brs
 grep -q "sub previewMenuItem" components/screens/HomeScreen.brs
@@ -764,7 +767,7 @@ grep -q "m.videoNode.setHttpAgent(m.videoHttpAgent)" components/screens/PlayerSc
 grep -q 'content.HttpHeaders = \["User-Agent: Roku/DVP-12.0 (12.0.0.0)"\]' components/screens/PlayerScreen.brs
 grep -q 'id="streamLoaderGroup"' components/screens/PlayerScreen.xml
 grep -q 'id="streamLoaderPercentLabel"' components/screens/PlayerScreen.xml
-grep -q 'id="streamLoaderFill"' components/screens/PlayerScreen.xml
+grep -q 'id="streamLoaderRing"' components/screens/PlayerScreen.xml
 grep -q '<Timer id="bufferingDebounceTimer" repeat="false" duration="1.2"' components/screens/PlayerScreen.xml
 grep -q 'm.streamLoaderGroup = m.top.findNode("streamLoaderGroup")' components/screens/PlayerScreen.brs
 grep -q 'm.bufferingDebounceTimer = m.top.findNode("bufferingDebounceTimer")' components/screens/PlayerScreen.brs
@@ -1011,5 +1014,6 @@ bash scripts/tests/player-quality-selection.sh
 bash scripts/tests/player-menu-back.sh
 bash scripts/tests/next-episode-flow.sh
 bash scripts/tests/player-season-carousel.sh
+bash scripts/tests/player-buffering-indicator.sh
 
 echo "Static verification passed."

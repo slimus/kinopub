@@ -51,6 +51,8 @@ sub init()
     m.currentEpisodeIndex = 0
     m.focusArea = "episodes"
     m.episodeRows = []
+    m.episodeRowNodes = []
+    m.episodeRowShadows = []
     m.episodeRowIndexes = []
     m.seasonTabBgs = []
     m.visibleEpisodeStart = 0
@@ -68,6 +70,7 @@ sub init()
     m.descriptionOverlayMaxLines = 11
     m.descriptionOverlayLineLength = 76
     m.selectedSimilarIndex = 0
+    m.similarFocusOverlay = invalid
     m.similarCardWidth = 118
     m.similarCardSpacing = 130
     m.maxVisibleSimilarItems = 3
@@ -94,9 +97,9 @@ end sub
 function detailUiPalette() as Object
     return {
         background: "#090B0F"
-        surface: "#172033"
-        surfaceRaised: "#1E293B"
-        surfaceFocus: "#1D4ED8"
+        surface: "#202B3A"
+        surfaceRaised: "#2B3A4E"
+        surfaceFocus: "#2563EB"
         primary: "#2563EB"
         primaryFocus: "#60A5FA"
         primaryText: "#F8FAFC"
@@ -311,8 +314,10 @@ sub renderDetail()
     renderHistoryMetadata()
     renderDetailFacts()
     closeDescriptionOverlay()
-    m.heroArtworkPoster.uri = backdropUrl
-    m.heroArtworkPoster.visible = backdropUrl <> ""
+    heroImage = backdropUrl
+    if heroImage = "" then heroImage = posterUrl
+    m.heroArtworkPoster.uri = heroImage
+    m.heroArtworkPoster.visible = heroImage <> ""
     m.poster.uri = posterUrl
     m.poster.visible = posterUrl <> ""
     m.posterFallback.visible = true
@@ -495,6 +500,7 @@ sub renderSimilarItems()
 
     childCount = m.similarHost.getChildCount()
     if childCount > 0 then m.similarHost.removeChildrenIndex(childCount, 0)
+    m.similarFocusOverlay = invalid
 
     if hasSimilarItems() <> true
         m.similarGroup.visible = false
@@ -512,19 +518,47 @@ sub renderSimilarItems()
         m.similarHost.appendChild(createSimilarCard(m.similarItems[index], index))
     end for
 
+    m.similarFocusOverlay = CreateObject("roSGNode", "Group")
+    m.similarHost.appendChild(m.similarFocusOverlay)
+
     m.similarGroup.visible = true
+    updateDetailExtrasFocusVisuals()
 end sub
 
-function createSimilarCard(item as Object, index as Integer) as Object
+function createSimilarCard(item as Object, index as Integer, focused = false as Boolean) as Object
     palette = detailUiPalette()
     card = CreateObject("roSGNode", "Group")
     card.translation = [index * m.similarCardSpacing, 0]
+    if focused
+        card.translation = [index * m.similarCardSpacing, -8]
+        card.scaleRotateCenter = [59, 46]
+        card.scale = [1.08, 1.08]
+        shadow = CreateObject("roSGNode", "Rectangle")
+        shadow.translation = [4, 10]
+        shadow.width = 118
+        shadow.height = 92
+        shadow.color = "#000000"
+        shadow.opacity = 0.45
+        card.appendChild(shadow)
+    end if
 
     bg = CreateObject("roSGNode", "Rectangle")
     bg.width = 118
     bg.height = 92
     bg.color = palette.surface
+    if focused then bg.opacity = 1 else bg.opacity = 0.78
+    if focused then bg.color = "#60A5FA"
     card.appendChild(bg)
+
+    if focused
+        innerBg = CreateObject("roSGNode", "Rectangle")
+        innerBg.translation = [4, 4]
+        innerBg.width = 110
+        innerBg.height = 84
+        innerBg.color = "#273142"
+        innerBg.opacity = 0.94
+        card.appendChild(innerBg)
+    end if
 
     poster = CreateObject("roSGNode", "Poster")
     poster.translation = [6, 6]
@@ -540,13 +574,18 @@ function createSimilarCard(item as Object, index as Integer) as Object
     title.width = 56
     title.height = 38
     title.wrap = true
+    title.font.size = 16
     title.color = palette.text
     card.appendChild(title)
 
     subtitle = CreateObject("roSGNode", "Label")
     subtitle.text = item.subtitle
+    if item.year > 0 then subtitle.text = StrI(item.year).Trim()
     subtitle.translation = [56, 56]
     subtitle.width = 56
+    subtitle.height = 22
+    subtitle.wrap = false
+    subtitle.font.size = 16
     subtitle.color = palette.muted
     card.appendChild(subtitle)
 
@@ -567,13 +606,15 @@ sub updateDetailExtrasFocusVisuals()
 
     if m.similarCursor <> invalid
         showCursor = m.focusArea = "similar" and m.similarGroup.visible = true and hasSimilarItems()
-        if showCursor
-            visibleIndex = m.selectedSimilarIndex
-            if visibleIndex >= m.maxVisibleSimilarItems then visibleIndex = m.maxVisibleSimilarItems - 1
-            m.similarCursor.translation = [visibleIndex * m.similarCardSpacing, 34]
-            m.similarCursor.visible = true
-        else
-            m.similarCursor.visible = false
+        m.similarCursor.visible = false
+        if m.similarFocusOverlay <> invalid
+            childCount = m.similarFocusOverlay.getChildCount()
+            if childCount > 0 then m.similarFocusOverlay.removeChildrenIndex(childCount, 0)
+            if showCursor
+                visibleIndex = m.selectedSimilarIndex
+                if visibleIndex >= m.maxVisibleSimilarItems then visibleIndex = m.maxVisibleSimilarItems - 1
+                m.similarFocusOverlay.appendChild(createSimilarCard(m.similarItems[visibleIndex], visibleIndex, true))
+            end if
         end if
     end if
 end sub
@@ -677,9 +718,11 @@ sub updateBookmarkActionFocus()
     palette = detailUiPalette()
     if m.focusArea = "bookmark"
         m.bookmarkFocusBg.color = detailButtonColor(true, false)
+        m.bookmarkFocusBg.opacity = 1
         m.bookmarkLabel.color = palette.primaryText
     else
         m.bookmarkFocusBg.color = detailButtonColor(false, false)
+        m.bookmarkFocusBg.opacity = 0.88
         m.bookmarkLabel.color = "#D1D5DB"
     end if
 end sub
@@ -1030,6 +1073,8 @@ sub renderEpisodeList()
     childCount = m.episodeListHost.getChildCount()
     if childCount > 0 then m.episodeListHost.removeChildrenIndex(childCount, 0)
     m.episodeRows = []
+    m.episodeRowNodes = []
+    m.episodeRowShadows = []
     m.episodeRowIndexes = []
 
     if m.seasons.Count() = 0
@@ -1070,6 +1115,8 @@ sub renderEpisodeList()
         rowInfo = createEpisodeRow(episode, visibleIndex)
         m.episodeListHost.appendChild(rowInfo.node)
         m.episodeRows.Push(rowInfo.bg)
+        m.episodeRowNodes.Push(rowInfo.node)
+        m.episodeRowShadows.Push(rowInfo.shadow)
         m.episodeRowIndexes.Push(index)
     end for
     updateEpisodeScrollChevrons()
@@ -1079,11 +1126,22 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
     palette = detailUiPalette()
     row = CreateObject("roSGNode", "Group")
     row.translation = [0, visibleIndex * 84]
+    row.scaleRotateCenter = [190, 37]
+
+    shadow = CreateObject("roSGNode", "Rectangle")
+    shadow.translation = [4, 8]
+    shadow.width = 380
+    shadow.height = 74
+    shadow.color = "#000000"
+    shadow.opacity = 0.45
+    shadow.visible = false
+    row.appendChild(shadow)
 
     bg = CreateObject("roSGNode", "Rectangle")
     bg.width = 380
     bg.height = 74
     bg.color = palette.surface
+    bg.opacity = 0.82
     row.appendChild(bg)
 
     accent = CreateObject("roSGNode", "Rectangle")
@@ -1115,7 +1173,7 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
 
     if episodeWatchStatus(episode) = 1 then appendWatchedCheck(row)
 
-    return { node: row, bg: bg }
+    return { node: row, bg: bg, shadow: shadow }
 end function
 
 sub updateVisibleEpisodeWindow()
@@ -1289,18 +1347,24 @@ sub updateSelectedMediaVisuals()
     for index = 0 to m.seasonTabBgs.Count() - 1
         if index = m.currentSeasonIndex
             m.seasonTabBgs[index].color = palette.primary
+            m.seasonTabBgs[index].opacity = 1
         else
             m.seasonTabBgs[index].color = palette.surface
+            m.seasonTabBgs[index].opacity = 0.84
         end if
     end for
 
     for index = 0 to m.episodeRows.Count() - 1
         rowIndex = m.episodeRowIndexes[index]
+        isFocused = rowIndex = m.currentEpisodeIndex and m.focusArea = "episodes"
+        m.episodeRowShadows[index].visible = isFocused
+        if isFocused then m.episodeRowNodes[index].scale = [1.03, 1.03] else m.episodeRowNodes[index].scale = [1.0, 1.0]
         if rowIndex = m.currentEpisodeIndex
-            m.episodeRows[index].color = palette.surfaceRaised
+            if isFocused then m.episodeRows[index].color = "#31435C" else m.episodeRows[index].color = palette.surfaceRaised
         else
             m.episodeRows[index].color = palette.surface
         end if
+        if isFocused then m.episodeRows[index].opacity = 0.96 else m.episodeRows[index].opacity = 0.82
     end for
 
     if media = invalid

@@ -26,39 +26,41 @@
     </Group>
 
     <Group id="detailGroup" visible="false">
-      <Rectangle width="1280" height="410" color="#0B1018" opacity="0.94" />
-      <Poster id="heroArtworkPoster" width="1280" height="410" opacity="0.34" loadDisplayMode="scaleToFill" />
-      <Rectangle id="heroGradientOverlay" width="1280" height="720" color="#090B0F" opacity="0.68" />
+      <Poster id="heroArtworkPoster" width="1280" height="720" loadDisplayMode="scaleToZoom" />
+      <Rectangle id="heroGradientOverlay" width="1280" height="720" color="#090B0F" opacity="0.76" />
       <Rectangle id="detailAccentBar" translation="[80,38]" width="72" height="4" color="#60A5FA" />
 
       <Group id="leftPanel" translation="[80,58]">
+        <Rectangle translation="[7,9]" width="190" height="286" color="#000000" opacity="0.45" />
+        <Rectangle translation="[-3,-3]" width="196" height="292" color="#E5E7EB" opacity="0.22" />
         <Rectangle id="posterFallback" width="190" height="286" color="#253142" visible="true" />
         <Poster id="poster" width="190" height="286" loadDisplayMode="scaleToFit" />
         <Group id="detailFactsGroup" translation="[220,2]" visible="false">
-          <Label text="Details" color="#F5F5F5" />
+          <Label text="Details" color="#F8FAFC" font="font:MediumBoldSystemFont" />
           <Group id="detailFactsHost" translation="[0,34]" />
         </Group>
-        <Label id="titleLabel" translation="[0,318]" width="680" color="#F5F5F5" />
+        <Label id="titleLabel" translation="[0,312]" width="680" height="48" color="#FFFFFF" font="font:LargeBoldSystemFont" />
         <Label id="metadataLabel" translation="[0,364]" width="680" color="#D1D5DB" />
         <Group id="historyMetaGroup" translation="[0,394]" visible="false">
           <Label id="historyMetaLabel" width="680" color="#9CA3AF" />
         </Group>
-        <Rectangle id="descriptionFocusBg" translation="[-10,402]" width="700" height="134" color="#1E3A8A" opacity="0" />
+        <Rectangle id="descriptionFocusBg" translation="[-10,402]" width="700" height="134" color="#2563EB" opacity="0" />
         <Label id="descriptionLabel" translation="[0,412]" width="680" height="112" wrap="true" color="#D1D5DB" />
-        <Label text="OK opens full description" translation="[0,526]" width="680" color="#9CA3AF" />
+        <Label text="OK opens full description" translation="[0,526]" width="680" color="#AAB5C4" />
         <Group id="playButton" translation="[0,560]">
           <Rectangle id="playFocusBg" width="252" height="56" color="#2563EB" />
-          <Label id="playButtonLabel" text="Play" translation="[88,18]" color="#F8FAFC" />
+          <Label id="playButtonLabel" text="Play" translation="[88,18]" color="#F8FAFC" font="font:MediumBoldSystemFont" />
         </Group>
         <Group id="bookmarkActionGroup" translation="[272,560]">
-          <Rectangle id="bookmarkFocusBg" width="232" height="56" color="#172033" />
+          <Rectangle id="bookmarkFocusBg" width="232" height="56" color="#172033" opacity="0.88" />
           <Label id="bookmarkLabel" text="Bookmarks" translation="[52,18]" color="#D1D5DB" />
         </Group>
         <Label id="playbackErrorLabel" translation="[0,626]" width="680" color="#FCA5A5" />
       </Group>
 
       <Group id="rightPanel" translation="[780,76]">
-        <Label id="panelTitleLabel" text="Video" color="#F5F5F5" />
+        <Rectangle translation="[-20,-20]" width="440" height="620" color="#090B0F" opacity="0.4" />
+        <Label id="panelTitleLabel" text="Video" color="#F8FAFC" font="font:MediumBoldSystemFont" />
         <Group id="seasonTabsHost" translation="[0,48]" />
         <Group id="episodeListHost" translation="[0,104]" />
         <Group id="episodeCursor" translation="[0,104]" visible="false">

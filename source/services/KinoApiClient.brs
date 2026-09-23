@@ -7,6 +7,7 @@ function KinoApiClient(config as Object) as Object
         postForm: kinoApiPostForm
         postFormBody: kinoApiPostFormBody
         post: kinoApiPost
+        request: kinoApiRequest
         normalizeError: kinoApiNormalizeError
     }
 end function
@@ -20,52 +21,14 @@ function kinoApiPostFormBody(path as String, queryParams as Object, bodyParams a
 end function
 
 function kinoApiGet(path as String, queryParams as Object, timeoutMs = invalid as Dynamic) as Object
-    requestTimeoutMs = timeoutMs
-    if requestTimeoutMs = invalid then requestTimeoutMs = m.defaultTimeoutMs
-
-    transfer = CreateObject("roUrlTransfer")
-    port = CreateObject("roMessagePort")
-    transfer.SetMessagePort(port)
-    transfer.SetCertificatesFile("common:/certs/ca-bundle.crt")
-    transfer.InitClientCertificates()
-    transfer.RetainBodyOnError(true)
-
-    query = kinoApiEncodeParams(queryParams)
-    url = m.config.apiBaseUrl + path
-    if query <> "" then url = url + "?" + query
-    transfer.SetUrl(url)
-
-    if transfer.AsyncGetToString() <> true
-        return { ok: false, status: 0, error: "network", message: "Unable to start request." }
-    end if
-
-    msg = wait(requestTimeoutMs, port)
-    if msg = invalid
-        transfer.AsyncCancel()
-        return { ok: false, status: 0, error: "timeout", message: "Request timed out." }
-    end if
-
-    status = msg.GetResponseCode()
-    body = msg.GetString()
-    json = invalid
-    looksJson = kinoApiLooksLikeJson(body)
-    if looksJson then json = ParseJson(body)
-    print "KinoApiClient: response path="; path; " status="; status; " body="; kinoApiBodySnippet(body)
-
-    if status >= 200 and status < 300 and looksJson and json = invalid
-        return { ok: false, status: status, error: "invalid_response", message: "KinoAPI returned malformed JSON.", rawBody: body }
-    end if
-
-    if status >= 200 and status < 300
-        return { ok: true, status: status, body: json, rawBody: body }
-    end if
-
-    normalized = m.normalizeError(status, json, body)
-    normalized.rawBody = body
-    return normalized
+    return m.request("GET", path, queryParams, {}, timeoutMs)
 end function
 
 function kinoApiPost(path as String, queryParams as Object, bodyParams as Object, timeoutMs = invalid as Dynamic) as Object
+    return m.request("POST", path, queryParams, bodyParams, timeoutMs)
+end function
+
+function kinoApiRequest(method as String, path as String, queryParams as Object, bodyParams as Object, timeoutMs = invalid as Dynamic) as Object
     requestTimeoutMs = timeoutMs
     if requestTimeoutMs = invalid then requestTimeoutMs = m.defaultTimeoutMs
 
@@ -81,10 +44,15 @@ function kinoApiPost(path as String, queryParams as Object, bodyParams as Object
     if query <> "" then url = url + "?" + query
     transfer.SetUrl(url)
 
-    body = kinoApiEncodeParams(bodyParams)
-    if body <> "" then transfer.AddHeader("Content-Type", "application/x-www-form-urlencoded")
-
-    if transfer.AsyncPostFromString(body) <> true
+    started = false
+    if method = "GET"
+        started = transfer.AsyncGetToString()
+    else
+        requestBody = kinoApiEncodeParams(bodyParams)
+        if requestBody <> "" then transfer.AddHeader("Content-Type", "application/x-www-form-urlencoded")
+        started = transfer.AsyncPostFromString(requestBody)
+    end if
+    if started <> true
         return { ok: false, status: 0, error: "network", message: "Unable to start request." }
     end if
 
@@ -99,7 +67,7 @@ function kinoApiPost(path as String, queryParams as Object, bodyParams as Object
     json = invalid
     looksJson = kinoApiLooksLikeJson(body)
     if looksJson then json = ParseJson(body)
-    print "KinoApiClient: response path="; path; " status="; status; " body="; kinoApiBodySnippet(body)
+    print "KinoApiClient: response path="; path; " status="; status
 
     if status >= 200 and status < 300 and looksJson and json = invalid
         return { ok: false, status: status, error: "invalid_response", message: "KinoAPI returned malformed JSON.", rawBody: body }
@@ -155,12 +123,6 @@ function kinoApiLooksLikeJson(body as Dynamic) as Boolean
     if trimmed = "" then return false
     firstChar = Left(trimmed, 1)
     return firstChar = "{" or firstChar = "["
-end function
-
-function kinoApiBodySnippet(body as Dynamic) as String
-    if body = invalid then return ""
-    compact = body.Replace(Chr(10), " ").Replace(Chr(13), " ")
-    return Left(compact, 180)
 end function
 
 function kinoApiErrorFromRawBody(rawBody as String) as String

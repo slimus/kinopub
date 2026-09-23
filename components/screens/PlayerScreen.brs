@@ -3,9 +3,11 @@ sub init()
     m.videoNode.enableUI = false
     configureVideoHttpAgent()
     m.streamLoaderGroup = m.top.findNode("streamLoaderGroup")
-    m.streamLoaderTitleLabel = m.top.findNode("streamLoaderTitleLabel")
     m.streamLoaderPercentLabel = m.top.findNode("streamLoaderPercentLabel")
-    m.streamLoaderFill = m.top.findNode("streamLoaderFill")
+    m.streamLoaderRing = m.top.findNode("streamLoaderRing")
+    m.streamLoaderAnimationTimer = m.top.findNode("streamLoaderAnimationTimer")
+    m.streamLoaderAnimationActive = false
+    m.streamLoaderSpinnerFrame = 0
     m.resumePromptGroup = m.top.findNode("resumePromptGroup")
     m.resumePromptMessageLabel = m.top.findNode("resumePromptMessageLabel")
     m.resumePromptOptionsHost = m.top.findNode("resumePromptOptionsHost")
@@ -104,6 +106,7 @@ sub init()
     m.resumePromptTimer.observeField("fire", "onResumePromptTimer")
     m.nextEpisodeCountdownTimer.observeField("fire", "onNextEpisodeCountdownTimer")
     m.bufferingDebounceTimer.observeField("fire", "onBufferingDebounceTimer")
+    m.streamLoaderAnimationTimer.observeField("fire", "onStreamLoaderAnimationTimer")
     m.seekDebounceTimer.observeField("fire", "onSeekDebounceTimer")
     m.seekSettleTimer.observeField("fire", "onSeekSettleTimer")
     m.top.setFocus(true)
@@ -216,6 +219,7 @@ sub startPlayback()
     applySavedQualityPreference()
     m.savedAudioPreferenceApplied = false
     logPlaybackStart()
+    configureSavedAudioSelection()
     content = playbackContentNode(savedPreferredSubtitleTrackNameForPlayback())
     m.videoNode.content = content
     startPosition = resumeStartSeconds()
@@ -233,6 +237,19 @@ end function
 function autoApplySavedAudioPreferenceEnabled() as Boolean
     return true
 end function
+
+sub configureSavedAudioSelection()
+    if m.videoNode = invalid then return
+
+    ' A selected track from the previous episode must not carry into this one.
+    m.videoNode.audioTrack = ""
+    if m.videoNode.hasField("audioSelectionPreferences") <> true then return
+
+    language = m.preferenceStore.stringField(m.preferences, "audioTrackLanguage", "")
+    values = []
+    if language <> "" then values.Push({ language: [language] })
+    m.videoNode.audioSelectionPreferences = { values: values, overrideSystem: language <> "" }
+end sub
 
 function savedPreferredSubtitleTrackNameForPlayback() as String
     if autoApplySavedPlaybackPreferencesEnabled() <> true then return ""
@@ -735,11 +752,24 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
     isFocused = m.focusArea = "seasonCarousel" and index = m.seasonCarouselFocusIndex
     isCurrent = seasonCarouselEpisodeIsCurrent(episode)
 
+    if isFocused
+        card.scaleRotateCenter = [84, 43]
+        card.scale = [1.08, 1.08]
+        shadow = CreateObject("roSGNode", "Rectangle")
+        shadow.translation = [4, 9]
+        shadow.width = 168
+        shadow.height = 86
+        shadow.color = "#000000"
+        shadow.opacity = 0.45
+        card.appendChild(shadow)
+    end if
+
     bg = CreateObject("roSGNode", "Rectangle")
     bg.width = 168
     bg.height = 86
     bg.color = "#1F2937"
     if isCurrent then bg.color = "#1D4ED8"
+    if isFocused then bg.color = "#273142"
     card.appendChild(bg)
 
     poster = CreateObject("roSGNode", "Poster")
@@ -754,8 +784,9 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
     title.text = seasonCarouselEpisodeTitle(episode)
     title.translation = [86, 8]
     title.width = 74
-    title.height = 32
+    title.height = 38
     title.wrap = true
+    title.font.size = 16
     title.color = "#F5F5F5"
     card.appendChild(title)
 
@@ -789,14 +820,25 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
         focus = CreateObject("roSGNode", "Rectangle")
         focus.width = 168
         focus.height = 4
-        focus.color = "#F5F5F5"
+        focus.color = "#60A5FA"
         card.appendChild(focus)
         focusBottom = CreateObject("roSGNode", "Rectangle")
         focusBottom.translation = [0, 82]
         focusBottom.width = 168
         focusBottom.height = 4
-        focusBottom.color = "#F5F5F5"
+        focusBottom.color = "#60A5FA"
         card.appendChild(focusBottom)
+        focusLeft = CreateObject("roSGNode", "Rectangle")
+        focusLeft.width = 4
+        focusLeft.height = 86
+        focusLeft.color = "#60A5FA"
+        card.appendChild(focusLeft)
+        focusRight = CreateObject("roSGNode", "Rectangle")
+        focusRight.translation = [164, 0]
+        focusRight.width = 4
+        focusRight.height = 86
+        focusRight.color = "#60A5FA"
+        card.appendChild(focusRight)
     end if
 
     return card
@@ -1204,27 +1246,55 @@ sub showStreamLoader(title as String)
     if title <> "Buffering" and m.bufferingDebounceTimer <> invalid then m.bufferingDebounceTimer.control = "stop"
 
     m.streamLoaderGroup.visible = true
-    if m.streamLoaderTitleLabel <> invalid then m.streamLoaderTitleLabel.text = title
 
     percent = streamLoaderPercent()
     if percent >= 0
-        if m.streamLoaderPercentLabel <> invalid then m.streamLoaderPercentLabel.text = title + " " + StrI(percent).Trim() + "%"
-        if m.streamLoaderFill <> invalid then m.streamLoaderFill.width = Int((280 * percent) / 100)
+        m.streamLoaderAnimationTimer.control = "stop"
+        m.streamLoaderAnimationActive = false
+        m.streamLoaderPercentLabel.text = StrI(percent).Trim() + "%"
+        m.streamLoaderRing.uri = streamLoaderRingUri(percent)
     else
         if title = "Buffering"
-            if m.streamLoaderPercentLabel <> invalid then m.streamLoaderPercentLabel.text = "Buffering..."
+            m.streamLoaderPercentLabel.text = "Buffering"
         else
-            if m.streamLoaderPercentLabel <> invalid then m.streamLoaderPercentLabel.text = "Please wait..."
+            m.streamLoaderPercentLabel.text = "Loading"
         end if
-        if m.streamLoaderFill <> invalid then m.streamLoaderFill.width = 0
+        if m.streamLoaderAnimationActive <> true
+            m.streamLoaderSpinnerFrame = 0
+            m.streamLoaderRing.uri = streamLoaderSpinnerUri(m.streamLoaderSpinnerFrame)
+            m.streamLoaderAnimationTimer.control = "start"
+            m.streamLoaderAnimationActive = true
+        end if
     end if
 end sub
 
 sub hideStreamLoader()
     if m.bufferingDebounceTimer <> invalid then m.bufferingDebounceTimer.control = "stop"
     if m.streamLoaderGroup <> invalid then m.streamLoaderGroup.visible = false
-    if m.streamLoaderFill <> invalid then m.streamLoaderFill.width = 0
+    if m.streamLoaderAnimationTimer <> invalid then m.streamLoaderAnimationTimer.control = "stop"
+    m.streamLoaderAnimationActive = false
 end sub
+
+sub onStreamLoaderAnimationTimer()
+    if m.streamLoaderGroup.visible <> true or m.streamLoaderAnimationActive <> true then return
+    m.streamLoaderSpinnerFrame = (m.streamLoaderSpinnerFrame + 1) mod 12
+    m.streamLoaderRing.uri = streamLoaderSpinnerUri(m.streamLoaderSpinnerFrame)
+end sub
+
+function streamLoaderRingUri(percent as Integer) as String
+    frame = Int((percent + 2) / 5) * 5
+    if frame > 100 then frame = 100
+    suffix = StrI(frame).Trim()
+    if frame < 10 then suffix = "0" + suffix
+    if frame < 100 then suffix = "0" + suffix
+    return "pkg:/images/buffering/progress-" + suffix + ".png"
+end function
+
+function streamLoaderSpinnerUri(frame as Integer) as String
+    suffix = StrI(frame).Trim()
+    if frame < 10 then suffix = "0" + suffix
+    return "pkg:/images/buffering/spinner-" + suffix + ".png"
+end function
 
 function streamLoaderPercent() as Integer
     if m.videoNode = invalid then return -1
@@ -1275,6 +1345,8 @@ function tryNextPlaybackStream() as Boolean
 
     m.videoNode.control = "stop"
     m.playbackStarted = false
+    m.savedAudioPreferenceApplied = false
+    configureSavedAudioSelection()
     m.videoNode.content = playbackContentNode(savedPreferredSubtitleTrackNameForPlayback())
     showStreamLoader("Loading stream")
     m.videoNode.control = "play"
@@ -1315,7 +1387,7 @@ sub onVideoPositionChanged()
 end sub
 
 sub onAvailableAudioTracksChanged()
-    if m.playbackStarted = true then applySavedAudioPreference()
+    applySavedAudioPreference()
     updateControlLabels()
 end sub
 
@@ -1500,6 +1572,8 @@ end sub
 
 sub restartPlaybackFromBeginning()
     m.videoNode.control = "stop"
+    m.savedAudioPreferenceApplied = false
+    configureSavedAudioSelection()
     m.videoNode.content = playbackContentNode(savedPreferredSubtitleTrackNameForPlayback())
     m.videoNode.seek = 0
     startPlaybackAtPosition(0)
@@ -2145,6 +2219,8 @@ sub reloadPlaybackWithSubtitle(trackName as String)
     position = currentPositionSeconds()
     wasPlaying = m.isPlaying
     m.videoNode.control = "stop"
+    m.savedAudioPreferenceApplied = false
+    configureSavedAudioSelection()
     m.videoNode.content = playbackContentNode(trackName)
     if position > 0 then m.videoNode.seek = position
     if wasPlaying
@@ -2202,6 +2278,8 @@ sub reloadPlaybackWithQuality(option as Object)
     wasPlaying = m.isPlaying
     clearPendingSeek()
     m.videoNode.control = "stop"
+    m.savedAudioPreferenceApplied = false
+    configureSavedAudioSelection()
     m.videoNode.content = playbackContentNode(savedPreferredSubtitleTrackNameForPlayback())
     if position > 0 then m.videoNode.seek = position
     if wasPlaying
@@ -2304,7 +2382,6 @@ sub applySavedSubtitlePreference()
 end sub
 
 sub applySavedQualityPreference()
-    if autoApplySavedPlaybackPreferencesEnabled() <> true then return
     if m.preferences = invalid or m.playbackOptions = invalid then return
 
     savedId = m.preferenceStore.stringField(m.preferences, "qualityId", "")
@@ -2317,6 +2394,10 @@ sub applySavedQualityPreference()
             m.playbackOptionIndex = index
             return
         end if
+    end for
+
+    for index = 0 to m.playbackOptions.Count() - 1
+        stream = m.playbackOptions[index]
         if savedId <> "" and stream.id <> invalid and stream.id = savedId
             m.playbackOptionIndex = index
             return

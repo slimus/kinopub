@@ -49,7 +49,7 @@ end sub
 
 sub handleDeviceCodeResult(result as Object)
     m.requestTimer.control = "stop"
-    print "AuthScreen: requestDeviceCode response ok="; result.ok; " status="; result.status; " error="; result.error; " message="; result.message; " raw="; authScreenRawSnippet(result)
+    print "AuthScreen: requestDeviceCode response ok="; result.ok; " status="; result.status; " error="; result.error
     if result.ok = true
         m.deviceCode = result.device.code
         m.userCode = result.device.user_code
@@ -88,7 +88,7 @@ end sub
 
 sub handlePollResult(result as Object)
     m.pollInFlight = false
-    print "AuthScreen: pollDeviceToken response ok="; result.ok; " pending="; result.pending; " status="; result.status; " error="; result.error; " message="; result.message; " raw="; authScreenRawSnippet(result)
+    print "AuthScreen: pollDeviceToken response ok="; result.ok; " pending="; result.pending; " status="; result.status; " error="; result.error
     if result.ok = true
         m.pollTimer.control = "stop"
         m.expiryTimer.control = "stop"
@@ -149,11 +149,4 @@ end function
 function authScreenNowSeconds() as Integer
     dt = CreateObject("roDateTime")
     return dt.AsSeconds()
-end function
-
-function authScreenRawSnippet(result as Object) as String
-    if result = invalid then return ""
-    if not result.DoesExist("rawBody") then return ""
-    if result.rawBody = invalid then return ""
-    return Left(result.rawBody, 180)
 end function
