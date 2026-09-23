@@ -767,7 +767,7 @@ grep -q "m.videoNode.setHttpAgent(m.videoHttpAgent)" components/screens/PlayerSc
 grep -q 'content.HttpHeaders = \["User-Agent: Roku/DVP-12.0 (12.0.0.0)"\]' components/screens/PlayerScreen.brs
 grep -q 'id="streamLoaderGroup"' components/screens/PlayerScreen.xml
 grep -q 'id="streamLoaderPercentLabel"' components/screens/PlayerScreen.xml
-grep -q 'id="streamLoaderFill"' components/screens/PlayerScreen.xml
+grep -q 'id="streamLoaderRing"' components/screens/PlayerScreen.xml
 grep -q '<Timer id="bufferingDebounceTimer" repeat="false" duration="1.2"' components/screens/PlayerScreen.xml
 grep -q 'm.streamLoaderGroup = m.top.findNode("streamLoaderGroup")' components/screens/PlayerScreen.brs
 grep -q 'm.bufferingDebounceTimer = m.top.findNode("bufferingDebounceTimer")' components/screens/PlayerScreen.brs
@@ -1014,5 +1014,6 @@ bash scripts/tests/player-quality-selection.sh
 bash scripts/tests/player-menu-back.sh
 bash scripts/tests/next-episode-flow.sh
 bash scripts/tests/player-season-carousel.sh
+bash scripts/tests/player-buffering-indicator.sh
 
 echo "Static verification passed."

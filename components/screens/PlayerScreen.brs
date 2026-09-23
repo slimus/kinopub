@@ -3,9 +3,11 @@ sub init()
     m.videoNode.enableUI = false
     configureVideoHttpAgent()
     m.streamLoaderGroup = m.top.findNode("streamLoaderGroup")
-    m.streamLoaderTitleLabel = m.top.findNode("streamLoaderTitleLabel")
     m.streamLoaderPercentLabel = m.top.findNode("streamLoaderPercentLabel")
-    m.streamLoaderFill = m.top.findNode("streamLoaderFill")
+    m.streamLoaderRing = m.top.findNode("streamLoaderRing")
+    m.streamLoaderAnimationTimer = m.top.findNode("streamLoaderAnimationTimer")
+    m.streamLoaderAnimationActive = false
+    m.streamLoaderSpinnerFrame = 0
     m.resumePromptGroup = m.top.findNode("resumePromptGroup")
     m.resumePromptMessageLabel = m.top.findNode("resumePromptMessageLabel")
     m.resumePromptOptionsHost = m.top.findNode("resumePromptOptionsHost")
@@ -104,6 +106,7 @@ sub init()
     m.resumePromptTimer.observeField("fire", "onResumePromptTimer")
     m.nextEpisodeCountdownTimer.observeField("fire", "onNextEpisodeCountdownTimer")
     m.bufferingDebounceTimer.observeField("fire", "onBufferingDebounceTimer")
+    m.streamLoaderAnimationTimer.observeField("fire", "onStreamLoaderAnimationTimer")
     m.seekDebounceTimer.observeField("fire", "onSeekDebounceTimer")
     m.seekSettleTimer.observeField("fire", "onSeekSettleTimer")
     m.top.setFocus(true)
@@ -1243,27 +1246,55 @@ sub showStreamLoader(title as String)
     if title <> "Buffering" and m.bufferingDebounceTimer <> invalid then m.bufferingDebounceTimer.control = "stop"
 
     m.streamLoaderGroup.visible = true
-    if m.streamLoaderTitleLabel <> invalid then m.streamLoaderTitleLabel.text = title
 
     percent = streamLoaderPercent()
     if percent >= 0
-        if m.streamLoaderPercentLabel <> invalid then m.streamLoaderPercentLabel.text = title + " " + StrI(percent).Trim() + "%"
-        if m.streamLoaderFill <> invalid then m.streamLoaderFill.width = Int((280 * percent) / 100)
+        m.streamLoaderAnimationTimer.control = "stop"
+        m.streamLoaderAnimationActive = false
+        m.streamLoaderPercentLabel.text = StrI(percent).Trim() + "%"
+        m.streamLoaderRing.uri = streamLoaderRingUri(percent)
     else
         if title = "Buffering"
-            if m.streamLoaderPercentLabel <> invalid then m.streamLoaderPercentLabel.text = "Buffering..."
+            m.streamLoaderPercentLabel.text = "Buffering"
         else
-            if m.streamLoaderPercentLabel <> invalid then m.streamLoaderPercentLabel.text = "Please wait..."
+            m.streamLoaderPercentLabel.text = "Loading"
         end if
-        if m.streamLoaderFill <> invalid then m.streamLoaderFill.width = 0
+        if m.streamLoaderAnimationActive <> true
+            m.streamLoaderSpinnerFrame = 0
+            m.streamLoaderRing.uri = streamLoaderSpinnerUri(m.streamLoaderSpinnerFrame)
+            m.streamLoaderAnimationTimer.control = "start"
+            m.streamLoaderAnimationActive = true
+        end if
     end if
 end sub
 
 sub hideStreamLoader()
     if m.bufferingDebounceTimer <> invalid then m.bufferingDebounceTimer.control = "stop"
     if m.streamLoaderGroup <> invalid then m.streamLoaderGroup.visible = false
-    if m.streamLoaderFill <> invalid then m.streamLoaderFill.width = 0
+    if m.streamLoaderAnimationTimer <> invalid then m.streamLoaderAnimationTimer.control = "stop"
+    m.streamLoaderAnimationActive = false
 end sub
+
+sub onStreamLoaderAnimationTimer()
+    if m.streamLoaderGroup.visible <> true or m.streamLoaderAnimationActive <> true then return
+    m.streamLoaderSpinnerFrame = (m.streamLoaderSpinnerFrame + 1) mod 12
+    m.streamLoaderRing.uri = streamLoaderSpinnerUri(m.streamLoaderSpinnerFrame)
+end sub
+
+function streamLoaderRingUri(percent as Integer) as String
+    frame = Int((percent + 2) / 5) * 5
+    if frame > 100 then frame = 100
+    suffix = StrI(frame).Trim()
+    if frame < 10 then suffix = "0" + suffix
+    if frame < 100 then suffix = "0" + suffix
+    return "pkg:/images/buffering/progress-" + suffix + ".png"
+end function
+
+function streamLoaderSpinnerUri(frame as Integer) as String
+    suffix = StrI(frame).Trim()
+    if frame < 10 then suffix = "0" + suffix
+    return "pkg:/images/buffering/spinner-" + suffix + ".png"
+end function
 
 function streamLoaderPercent() as Integer
     if m.videoNode = invalid then return -1
