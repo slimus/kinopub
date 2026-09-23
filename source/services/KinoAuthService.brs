@@ -42,13 +42,19 @@ function kinoAuthRefreshToken(refreshToken as String) as Object
     params.refresh_token = refreshToken
     response = m.client.postForm("/oauth2/token", params, m.client.defaultTimeoutMs)
     if response.ok <> true
-        m.tokenStore.clear()
+        if kinoAuthRefreshTokenRejected(response) then m.tokenStore.clear()
         return m.failure(response)
     end if
 
     tokens = m.tokensFromResponse(response.body)
     m.tokenStore.save(tokens)
     return { ok: true, tokens: tokens }
+end function
+
+function kinoAuthRefreshTokenRejected(response as Dynamic) as Boolean
+    if response = invalid or type(response) <> "roAssociativeArray" then return false
+    if response.status = 401 then return true
+    return response.error = "invalid_grant" or response.error = "unauthorized"
 end function
 
 function kinoAuthNotifyDevice(accessToken as String) as Object

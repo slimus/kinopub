@@ -299,6 +299,7 @@ sub init()
     m.searchPerPage = 20
     m.isLoadingSearch = false
     m.isLoadingSearchNextPage = false
+    m.searchPendingRefresh = false
     m.searchReachedEnd = false
     m.searchFailedNextPage = false
     m.selectedSearchIndex = 0
@@ -383,6 +384,7 @@ sub resetSearchState()
     m.searchTotalItems = 0
     m.isLoadingSearch = false
     m.isLoadingSearchNextPage = false
+    m.searchPendingRefresh = false
     m.searchReachedEnd = false
     m.searchFailedNextPage = false
     m.selectedSearchIndex = 0
@@ -3655,7 +3657,13 @@ sub refreshSubmittedSearchAfterFilterChange()
 end sub
 
 sub requestSearchPage(page as Integer, append as Boolean)
-    if m.isLoadingSearch = true or m.isLoadingSearchNextPage = true then return
+    if m.isLoadingSearch = true or m.isLoadingSearchNextPage = true
+        if append <> true
+            m.searchPendingRefresh = true
+            showSearchState("loading")
+        end if
+        return
+    end if
     if m.searchSubmittedQuery.Trim() = "" then return
 
     if append
@@ -3688,6 +3696,13 @@ end sub
 
 sub onSearchPageResponse(event as Object)
     response = event.getData()
+    if m.searchPendingRefresh
+        m.searchPendingRefresh = false
+        m.isLoadingSearch = false
+        m.isLoadingSearchNextPage = false
+        requestSearchPage(1, false)
+        return
+    end if
     if m.searchSubmittedQuery = "" then return
     if response <> invalid and response.q <> invalid and response.q <> m.searchSubmittedQuery
         return

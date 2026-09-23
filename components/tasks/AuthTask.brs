@@ -52,6 +52,9 @@ function authTaskRouteFromStoredTokens(tokenStore as Object, authService as Obje
             end if
             return { command: "routeFromStoredTokens", ok: true, screen: "auth", error: "unauthorized", message: "Device authorization was removed. Sign in again." }
         end if
+        if not kinoAuthRefreshTokenRejected(result)
+            return { command: "routeFromStoredTokens", ok: false, screen: "auth", error: result.error, message: result.message }
+        end if
     end if
 
     print "AuthTask: no usable stored token; showing auth"

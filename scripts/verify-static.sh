@@ -132,7 +132,10 @@ grep -q "refreshtoken" source/services/TokenStore.brs
 grep -q "accessexpiresat" source/services/TokenStore.brs
 grep -q "refreshexpiresat" source/services/TokenStore.brs
 grep -q "accessexpiresat = now + 3600" source/services/TokenStore.brs
-grep -q "normalized.refreshexpiresat <= now" source/services/TokenStore.brs
+if grep -q "normalized.refreshexpiresat <= now" source/services/TokenStore.brs; then
+  echo "An expired refresh token must not receive a new expiry during normalization." >&2
+  exit 1
+fi
 grep -q "AuthTask: token fields access=" components/tasks/AuthTask.brs
 grep -q "authTaskNotifyAllowsHome(tokens.accesstoken" components/tasks/AuthTask.brs
 grep -q "notifyDevice(result.tokens.accesstoken)" components/tasks/AuthTask.brs
