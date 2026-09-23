@@ -216,6 +216,7 @@ sub startPlayback()
     applySavedQualityPreference()
     m.savedAudioPreferenceApplied = false
     logPlaybackStart()
+    configureSavedAudioSelection()
     content = playbackContentNode(savedPreferredSubtitleTrackNameForPlayback())
     m.videoNode.content = content
     startPosition = resumeStartSeconds()
@@ -233,6 +234,19 @@ end function
 function autoApplySavedAudioPreferenceEnabled() as Boolean
     return true
 end function
+
+sub configureSavedAudioSelection()
+    if m.videoNode = invalid then return
+
+    ' A selected track from the previous episode must not carry into this one.
+    m.videoNode.audioTrack = ""
+    if m.videoNode.hasField("audioSelectionPreferences") <> true then return
+
+    language = m.preferenceStore.stringField(m.preferences, "audioTrackLanguage", "")
+    values = []
+    if language <> "" then values.Push({ language: [language] })
+    m.videoNode.audioSelectionPreferences = { values: values, overrideSystem: language <> "" }
+end sub
 
 function savedPreferredSubtitleTrackNameForPlayback() as String
     if autoApplySavedPlaybackPreferencesEnabled() <> true then return ""
@@ -1275,6 +1289,8 @@ function tryNextPlaybackStream() as Boolean
 
     m.videoNode.control = "stop"
     m.playbackStarted = false
+    m.savedAudioPreferenceApplied = false
+    configureSavedAudioSelection()
     m.videoNode.content = playbackContentNode(savedPreferredSubtitleTrackNameForPlayback())
     showStreamLoader("Loading stream")
     m.videoNode.control = "play"
@@ -1315,7 +1331,7 @@ sub onVideoPositionChanged()
 end sub
 
 sub onAvailableAudioTracksChanged()
-    if m.playbackStarted = true then applySavedAudioPreference()
+    applySavedAudioPreference()
     updateControlLabels()
 end sub
 
@@ -1500,6 +1516,8 @@ end sub
 
 sub restartPlaybackFromBeginning()
     m.videoNode.control = "stop"
+    m.savedAudioPreferenceApplied = false
+    configureSavedAudioSelection()
     m.videoNode.content = playbackContentNode(savedPreferredSubtitleTrackNameForPlayback())
     m.videoNode.seek = 0
     startPlaybackAtPosition(0)
@@ -2145,6 +2163,8 @@ sub reloadPlaybackWithSubtitle(trackName as String)
     position = currentPositionSeconds()
     wasPlaying = m.isPlaying
     m.videoNode.control = "stop"
+    m.savedAudioPreferenceApplied = false
+    configureSavedAudioSelection()
     m.videoNode.content = playbackContentNode(trackName)
     if position > 0 then m.videoNode.seek = position
     if wasPlaying
@@ -2202,6 +2222,8 @@ sub reloadPlaybackWithQuality(option as Object)
     wasPlaying = m.isPlaying
     clearPendingSeek()
     m.videoNode.control = "stop"
+    m.savedAudioPreferenceApplied = false
+    configureSavedAudioSelection()
     m.videoNode.content = playbackContentNode(savedPreferredSubtitleTrackNameForPlayback())
     if position > 0 then m.videoNode.seek = position
     if wasPlaying
@@ -2304,7 +2326,6 @@ sub applySavedSubtitlePreference()
 end sub
 
 sub applySavedQualityPreference()
-    if autoApplySavedPlaybackPreferencesEnabled() <> true then return
     if m.preferences = invalid or m.playbackOptions = invalid then return
 
     savedId = m.preferenceStore.stringField(m.preferences, "qualityId", "")
@@ -2317,6 +2338,10 @@ sub applySavedQualityPreference()
             m.playbackOptionIndex = index
             return
         end if
+    end for
+
+    for index = 0 to m.playbackOptions.Count() - 1
+        stream = m.playbackOptions[index]
         if savedId <> "" and stream.id <> invalid and stream.id = savedId
             m.playbackOptionIndex = index
             return
