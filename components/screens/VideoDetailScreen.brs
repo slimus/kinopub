@@ -97,9 +97,9 @@ end sub
 function detailUiPalette() as Object
     return {
         background: "#090B0F"
-        surface: "#172033"
-        surfaceRaised: "#1E293B"
-        surfaceFocus: "#1D4ED8"
+        surface: "#202B3A"
+        surfaceRaised: "#2B3A4E"
+        surfaceFocus: "#2563EB"
         primary: "#2563EB"
         primaryFocus: "#60A5FA"
         primaryText: "#F8FAFC"
@@ -314,8 +314,10 @@ sub renderDetail()
     renderHistoryMetadata()
     renderDetailFacts()
     closeDescriptionOverlay()
-    m.heroArtworkPoster.uri = backdropUrl
-    m.heroArtworkPoster.visible = backdropUrl <> ""
+    heroImage = backdropUrl
+    if heroImage = "" then heroImage = posterUrl
+    m.heroArtworkPoster.uri = heroImage
+    m.heroArtworkPoster.visible = heroImage <> ""
     m.poster.uri = posterUrl
     m.poster.visible = posterUrl <> ""
     m.posterFallback.visible = true
@@ -544,6 +546,7 @@ function createSimilarCard(item as Object, index as Integer, focused = false as 
     bg.width = 118
     bg.height = 92
     bg.color = palette.surface
+    if focused then bg.opacity = 1 else bg.opacity = 0.78
     if focused then bg.color = "#60A5FA"
     card.appendChild(bg)
 
@@ -553,6 +556,7 @@ function createSimilarCard(item as Object, index as Integer, focused = false as 
         innerBg.width = 110
         innerBg.height = 84
         innerBg.color = "#273142"
+        innerBg.opacity = 0.94
         card.appendChild(innerBg)
     end if
 
@@ -714,9 +718,11 @@ sub updateBookmarkActionFocus()
     palette = detailUiPalette()
     if m.focusArea = "bookmark"
         m.bookmarkFocusBg.color = detailButtonColor(true, false)
+        m.bookmarkFocusBg.opacity = 1
         m.bookmarkLabel.color = palette.primaryText
     else
         m.bookmarkFocusBg.color = detailButtonColor(false, false)
+        m.bookmarkFocusBg.opacity = 0.88
         m.bookmarkLabel.color = "#D1D5DB"
     end if
 end sub
@@ -1135,6 +1141,7 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
     bg.width = 380
     bg.height = 74
     bg.color = palette.surface
+    bg.opacity = 0.82
     row.appendChild(bg)
 
     accent = CreateObject("roSGNode", "Rectangle")
@@ -1340,8 +1347,10 @@ sub updateSelectedMediaVisuals()
     for index = 0 to m.seasonTabBgs.Count() - 1
         if index = m.currentSeasonIndex
             m.seasonTabBgs[index].color = palette.primary
+            m.seasonTabBgs[index].opacity = 1
         else
             m.seasonTabBgs[index].color = palette.surface
+            m.seasonTabBgs[index].opacity = 0.84
         end if
     end for
 
@@ -1351,10 +1360,11 @@ sub updateSelectedMediaVisuals()
         m.episodeRowShadows[index].visible = isFocused
         if isFocused then m.episodeRowNodes[index].scale = [1.03, 1.03] else m.episodeRowNodes[index].scale = [1.0, 1.0]
         if rowIndex = m.currentEpisodeIndex
-            if isFocused then m.episodeRows[index].color = "#273142" else m.episodeRows[index].color = palette.surfaceRaised
+            if isFocused then m.episodeRows[index].color = "#31435C" else m.episodeRows[index].color = palette.surfaceRaised
         else
             m.episodeRows[index].color = palette.surface
         end if
+        if isFocused then m.episodeRows[index].opacity = 0.96 else m.episodeRows[index].opacity = 0.82
     end for
 
     if media = invalid
