@@ -226,7 +226,7 @@ sub init()
     m.homeMaxVisibleRails = 2
     m.homeCardWidth = 160
     m.homeCardSpacing = 180
-    m.homeRailHeight = 266
+    m.homeRailHeight = 310
     m.homeVisibleCards = 5
     m.homePerPage = 12
     m.liveAvailable = false
@@ -236,6 +236,7 @@ sub init()
     m.liveCardNodes = []
     m.liveCardBgNodes = []
     m.liveCardIndexes = []
+    m.liveFocusOverlay = invalid
     m.liveColumns = 5
     m.liveVisiblePagePair = 0
     m.selectedLiveIndex = 0
@@ -1789,6 +1790,19 @@ function createMediaCard(item as Object, layout as Object) as Object
     card = CreateObject("roSGNode", "Group")
     card.translation = [layout.x, layout.y]
 
+    if layout.DoesExist("focusPop") and layout.focusPop
+        card.scaleRotateCenter = [Int(layout.cardWidth / 2), Int(layout.cardHeight / 2)]
+        card.scale = [1.08, 1.08]
+
+        shadow = CreateObject("roSGNode", "Rectangle")
+        shadow.translation = [4, 10]
+        shadow.width = layout.cardWidth
+        shadow.height = layout.cardHeight
+        shadow.color = "#000000"
+        shadow.opacity = 0.45
+        card.appendChild(shadow)
+    end if
+
     focusBg = CreateObject("roSGNode", "Rectangle")
     focusBg.width = layout.cardWidth
     focusBg.height = layout.cardHeight
@@ -1820,7 +1834,7 @@ function createMediaCard(item as Object, layout as Object) as Object
     poster.uri = item.posterUrl
     poster.loadDisplayMode = "scaleToFit"
     card.appendChild(poster)
-    appendTypeBadge(card, item)
+    if layout.DoesExist("hideTypeBadge") <> true or layout.hideTypeBadge <> true then appendTypeBadge(card, item)
 
     title = CreateObject("roSGNode", "Label")
     title.text = item.title
@@ -1828,12 +1842,28 @@ function createMediaCard(item as Object, layout as Object) as Object
     title.width = layout.textWidth
     title.height = layout.titleHeight
     title.wrap = true
+    if layout.DoesExist("singleLineTitle") and layout.singleLineTitle
+        title.wrap = false
+        title.font.size = 22
+    end if
     title.color = palette.text
     card.appendChild(title)
 
+    yearText = ""
     if layout.DoesExist("showYear") and layout.showYear
         yearText = cardYearText(item)
         if yearText <> ""
+            if layout.DoesExist("yearChip") and layout.yearChip
+                chipX = layout.cardWidth - 54
+                chipY = layout.posterHeight - 24
+                yearBg = CreateObject("roSGNode", "Rectangle")
+                yearBg.translation = [chipX, chipY]
+                yearBg.width = 46
+                yearBg.height = 22
+                yearBg.color = "#111827"
+                yearBg.opacity = 0.88
+                card.appendChild(yearBg)
+            end if
             year = CreateObject("roSGNode", "Label")
             year.text = yearText
             yearY = 190
@@ -1844,6 +1874,13 @@ function createMediaCard(item as Object, layout as Object) as Object
             year.font.size = 24
             year.horizAlign = "right"
             year.color = palette.muted
+            if layout.DoesExist("yearChip") and layout.yearChip
+                year.translation = [chipX + 2, chipY + 1]
+                year.width = 42
+                year.height = 20
+                year.font.size = 16
+                year.color = palette.text
+            end if
             card.appendChild(year)
         end if
     end if
@@ -1857,7 +1894,8 @@ function createMediaCard(item as Object, layout as Object) as Object
     subtitle.color = palette.muted
     subtitle.visible = false
     if layout.DoesExist("focusOverlay") and layout.focusOverlay and subtitle.text <> "" then subtitle.visible = true
-    if layout.DoesExist("showYear") and layout.showYear then subtitle.visible = false
+    if yearText <> "" then subtitle.visible = false
+    if layout.DoesExist("singleLineTitle") and layout.singleLineTitle then subtitle.visible = false
     card.appendChild(subtitle)
 
     if layout.DoesExist("showProgress") and layout.showProgress
@@ -1937,15 +1975,42 @@ function posterBrowseCardLayout(x as Integer, y as Integer) as Object
         y: y
         cardWidth: 160
         cardHeight: 220
-        posterX: 24
-        posterWidth: 112
-        posterHeight: 150
+        posterX: 14
+        posterWidth: 132
+        posterHeight: 184
         textX: 8
         textWidth: 144
-        titleY: 164
-        titleHeight: 28
-        subtitleY: 188
+        titleY: 195
+        titleHeight: 24
+        subtitleY: 219
         subtitleHeight: 0
+        progressY: 186
+        hideTypeBadge: true
+        singleLineTitle: true
+        showYear: true
+        yearChip: true
+    }
+end function
+
+function posterHomeCardLayout(x as Integer, y as Integer) as Object
+    return {
+        x: x
+        y: y
+        cardWidth: 160
+        cardHeight: 246
+        posterX: 12
+        posterWidth: 136
+        posterHeight: 204
+        textX: 8
+        textWidth: 144
+        titleY: 216
+        titleHeight: 26
+        subtitleY: 242
+        subtitleHeight: 0
+        hideTypeBadge: true
+        singleLineTitle: true
+        showYear: true
+        yearChip: true
     }
 end function
 
@@ -1953,22 +2018,26 @@ function expandedPosterCardLayout(x as Integer, y as Integer) as Object
     return {
         x: x
         y: focusedMediaCardOverlayY(y)
-        cardWidth: 190
-        cardHeight: 258
-        posterX: 23
-        posterWidth: 144
-        posterHeight: 192
-        textX: 12
-        textWidth: 166
-        titleY: 210
-        titleHeight: 42
-        subtitleY: 235
-        subtitleHeight: 20
-        yearY: 234
-        progressY: 202
+        cardWidth: 172
+        cardHeight: 232
+        posterX: 16
+        posterWidth: 140
+        posterHeight: 190
+        textX: 8
+        textWidth: 156
+        titleY: 202
+        titleHeight: 26
+        subtitleY: 228
+        subtitleHeight: 0
+        progressY: 192
         focusOverlay: true
         focusFrame: true
-        focusSurface: "#182231"
+        focusSurface: "#273142"
+        focusPop: true
+        hideTypeBadge: true
+        singleLineTitle: true
+        showYear: true
+        yearChip: true
     }
 end function
 
@@ -1985,7 +2054,7 @@ function ensureFocusedMediaCardOverlay(host as Object, overlay as Dynamic) as Ob
     return overlayGroup
 end function
 
-sub refreshFocusedMediaCardOverlay(overlay as Object, item as Dynamic, x as Integer, y as Integer, showOverlay as Boolean, showYear = false as Boolean, showProgress = false as Boolean)
+sub refreshFocusedMediaCardOverlay(overlay as Object, item as Dynamic, x as Integer, y as Integer, showOverlay as Boolean, showYear = true as Boolean, showProgress = false as Boolean)
     if overlay = invalid then return
 
     childCount = overlay.getChildCount()
@@ -2508,7 +2577,7 @@ sub updateContinueCardFocus()
             showOverlay = false
         end if
     end if
-    refreshFocusedMediaCardOverlay(m.continueFocusOverlay, overlayItem, overlayX, overlayY, showOverlay, false, overlayShowProgress)
+    refreshFocusedMediaCardOverlay(m.continueFocusOverlay, overlayItem, overlayX, overlayY, showOverlay, true, overlayShowProgress)
     updateContinueCursor()
 end sub
 
@@ -2746,7 +2815,7 @@ sub updateHistoryCardFocus()
     selectedRow = Int(selectedSlot / m.historyColumns)
     overlayItem = invalid
     if showOverlay then overlayItem = m.historyItems[m.selectedHistoryIndex]
-    refreshFocusedMediaCardOverlay(m.historyFocusOverlay, overlayItem, selectedColumn * 180, selectedRow * 226, showOverlay, false, true)
+    refreshFocusedMediaCardOverlay(m.historyFocusOverlay, overlayItem, selectedColumn * 180, selectedRow * 226, showOverlay, true, true)
     updateHistoryCursor()
     updateHistoryScrollChevrons()
 end sub
@@ -3018,8 +3087,27 @@ function homeRailWindowStart(railIndex as Integer) as Integer
 end function
 
 function createHomeCard(item as Object, visibleCardSlot as Integer) as Object
-    return createMediaCard(item, posterBrowseCardLayout(visibleCardSlot * m.homeCardSpacing, 38))
+    return createMediaCard(item, posterHomeCardLayout(visibleCardSlot * m.homeCardSpacing, 38))
 end function
+
+sub refreshHomeFocusOverlay(overlay as Object, item as Dynamic, x as Integer, y as Integer, showOverlay as Boolean)
+    if overlay = invalid then return
+
+    childCount = overlay.getChildCount()
+    if childCount > 0 then overlay.removeChildrenIndex(childCount, 0)
+    overlay.visible = false
+
+    if showOverlay <> true or item = invalid or type(item) <> "roAssociativeArray" then return
+
+    layout = posterHomeCardLayout(x, y)
+    layout.focusOverlay = true
+    layout.focusFrame = true
+    layout.focusSurface = "#273142"
+    layout.focusPop = true
+    cardInfo = createMediaCard(item, layout)
+    overlay.appendChild(cardInfo.node)
+    overlay.visible = true
+end sub
 
 sub updateHomeCardFocus()
     showOverlay = m.homeRailsGroup.visible and m.focusArea = "content" and m.selectedSection = "home" and m.homeRails.Count() > 0
@@ -3050,7 +3138,7 @@ sub updateHomeCardFocus()
             showOverlay = false
         end if
     end if
-    refreshFocusedMediaCardOverlay(m.homeFocusOverlay, overlayItem, overlayX, overlayY, showOverlay)
+    refreshHomeFocusOverlay(m.homeFocusOverlay, overlayItem, overlayX, overlayY, showOverlay)
     updateHomeCursor()
     updateHomeChevrons()
 end sub
@@ -3251,6 +3339,7 @@ sub clearLiveGrid()
     m.liveCardNodes = []
     m.liveCardBgNodes = []
     m.liveCardIndexes = []
+    m.liveFocusOverlay = invalid
 end sub
 
 sub renderLiveGrid()
@@ -3273,21 +3362,36 @@ sub renderLiveGrid()
         m.liveCardIndexes.Push(index)
     end for
 
+    m.liveFocusOverlay = ensureFocusedMediaCardOverlay(m.liveGridHost, m.liveFocusOverlay)
+
     countLabel = StrI(m.liveItems.Count()).Trim() + " live event"
     if m.liveItems.Count() <> 1 then countLabel = countLabel + "s"
     m.liveCountLabel.text = countLabel
     updateLiveFocusVisuals()
 end sub
 
-function createLiveCard(item as Object, x as Integer, y as Integer) as Object
+function createLiveCard(item as Object, x as Integer, y as Integer, focused = false as Boolean) as Object
     palette = homeUiPalette()
     card = CreateObject("roSGNode", "Group")
     card.translation = [x, y]
+
+    if focused
+        card.scaleRotateCenter = [80, 110]
+        card.scale = [1.08, 1.08]
+        shadow = CreateObject("roSGNode", "Rectangle")
+        shadow.translation = [4, 10]
+        shadow.width = 160
+        shadow.height = 220
+        shadow.color = "#000000"
+        shadow.opacity = 0.45
+        card.appendChild(shadow)
+    end if
 
     focusBg = CreateObject("roSGNode", "Rectangle")
     focusBg.width = 160
     focusBg.height = 220
     focusBg.color = palette.surface
+    if focused then focusBg.color = "#273142"
     card.appendChild(focusBg)
 
     logoBg = CreateObject("roSGNode", "Rectangle")
@@ -3321,27 +3425,53 @@ function createLiveCard(item as Object, x as Integer, y as Integer) as Object
     subtitle.color = palette.muted
     card.appendChild(subtitle)
 
+    if focused then appendFocusFrame(card, { cardWidth: 160, cardHeight: 220 }, palette.focusBorder)
+
     return { node: card, focusBg: focusBg }
 end function
 
 sub updateLiveFocusVisuals()
+    showOverlay = m.liveResultsGroup.visible and m.selectedSection = "live" and m.focusArea = "content" and m.liveItems.Count() > 0
     for index = 0 to m.liveCardBgNodes.Count() - 1
         itemIndex = m.liveCardIndexes[index]
         if itemIndex = m.selectedLiveIndex and m.selectedSection = "live" and m.focusArea = "content"
-            m.liveCardBgNodes[index].color = cardVisualStateColor(true, false)
+            m.liveCardBgNodes[index].color = baseCardFocusColor(showOverlay)
         else if itemIndex = m.visualSelectedLiveIndex
             m.liveCardBgNodes[index].color = cardVisualStateColor(false, true)
         else
             m.liveCardBgNodes[index].color = cardVisualStateColor(false, false)
         end if
     end for
+
+    overlayItem = invalid
+    if showOverlay then overlayItem = m.liveItems[m.selectedLiveIndex]
+    visibleSlot = m.selectedLiveIndex MOD (m.liveColumns * 2)
+    column = visibleSlot MOD m.liveColumns
+    row = Int(visibleSlot / m.liveColumns)
+    refreshLiveFocusOverlay(m.liveFocusOverlay, overlayItem, column * 180, row * 226, showOverlay)
     updateLiveCursor()
     updateLiveChevrons()
+end sub
+
+sub refreshLiveFocusOverlay(overlay as Object, item as Dynamic, x as Integer, y as Integer, showOverlay as Boolean)
+    if overlay = invalid then return
+    childCount = overlay.getChildCount()
+    if childCount > 0 then overlay.removeChildrenIndex(childCount, 0)
+    overlay.visible = false
+    if showOverlay <> true or item = invalid or type(item) <> "roAssociativeArray" then return
+
+    cardInfo = createLiveCard(item, x, y, true)
+    overlay.appendChild(cardInfo.node)
+    overlay.visible = true
 end sub
 
 sub updateLiveCursor()
     showCursor = m.liveResultsGroup.visible and m.selectedSection = "live" and m.focusArea = "content" and m.liveItems.Count() > 0
     if showCursor <> true
+        m.liveCursor.visible = false
+        return
+    end if
+    if m.liveFocusOverlay <> invalid and m.liveFocusOverlay.visible
         m.liveCursor.visible = false
         return
     end if

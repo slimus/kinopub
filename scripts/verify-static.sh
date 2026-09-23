@@ -239,14 +239,14 @@ grep -q "m.homeVisibleCards = 5" components/screens/HomeScreen.brs
 grep -q "m.historyColumns = 5" components/screens/HomeScreen.brs
 grep -q "m.searchColumns = 5" components/screens/HomeScreen.brs
 grep -q "cardHeight: 220" components/screens/HomeScreen.brs
-grep -q "posterHeight: 150" components/screens/HomeScreen.brs
-grep -q "cardWidth: 190" components/screens/HomeScreen.brs
-grep -q "cardHeight: 258" components/screens/HomeScreen.brs
-grep -q "posterWidth: 144" components/screens/HomeScreen.brs
-grep -q "posterHeight: 192" components/screens/HomeScreen.brs
-grep -q "textWidth: 166" components/screens/HomeScreen.brs
-grep -q "titleHeight: 42" components/screens/HomeScreen.brs
-grep -q "progressY: 202" components/screens/HomeScreen.brs
+grep -q "posterHeight: 184" components/screens/HomeScreen.brs
+grep -q "cardWidth: 172" components/screens/HomeScreen.brs
+grep -q "cardHeight: 232" components/screens/HomeScreen.brs
+grep -q "posterWidth: 140" components/screens/HomeScreen.brs
+grep -q "posterHeight: 190" components/screens/HomeScreen.brs
+grep -q "textWidth: 156" components/screens/HomeScreen.brs
+grep -q "titleHeight: 26" components/screens/HomeScreen.brs
+grep -q "progressY: 192" components/screens/HomeScreen.brs
 grep -q "collapsedActiveIndicator" components/screens/HomeScreen.xml
 grep -q "m.collapsedActiveIndicator.translation" components/screens/HomeScreen.brs
 grep -q "sub previewMenuItem" components/screens/HomeScreen.brs

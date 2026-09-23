@@ -76,6 +76,9 @@ function kinoHistoryNormalizeEntry(entry as Dynamic, typeMap = invalid as Dynami
     progressSeconds = 0
     if entry <> invalid and type(entry) = "roAssociativeArray" then progressSeconds = m.integerField(entry, "time", 0)
 
+    year = m.integerField(item, "year", 0)
+    if year = 0 then year = m.integerField(entry, "year", 0)
+
     normalized = {
         title: title
         subtitle: subtitle
@@ -88,6 +91,7 @@ function kinoHistoryNormalizeEntry(entry as Dynamic, typeMap = invalid as Dynami
         itemId: m.integerField(item, "id", 0)
         mediaId: m.integerField(media, "id", 0)
         type: m.stringField(item, "type", "")
+        year: year
         selected: false
     }
 

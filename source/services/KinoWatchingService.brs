@@ -142,6 +142,9 @@ function kinoWatchingNormalizeSerialEntry(entry as Dynamic, typeMap = invalid as
     if mediaId = 0 then mediaId = m.integerField(entry, "video_id", 0)
     if mediaId = 0 then mediaId = m.integerField(entry, "episode_id", 0)
 
+    year = m.integerField(item, "year", 0)
+    if year = 0 then year = m.integerField(entry, "year", 0)
+
     return {
         itemId: itemId
         mediaId: mediaId
@@ -149,6 +152,7 @@ function kinoWatchingNormalizeSerialEntry(entry as Dynamic, typeMap = invalid as
         subtitle: subtitle
         posterUrl: m.posterUrl(item, media, entry)
         type: contentType
+        year: year
         typeTitle: typeTitle
         typeBadge: typeBadge
         seasonNumber: seasonNumber

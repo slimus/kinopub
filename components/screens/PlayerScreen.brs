@@ -749,11 +749,24 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
     isFocused = m.focusArea = "seasonCarousel" and index = m.seasonCarouselFocusIndex
     isCurrent = seasonCarouselEpisodeIsCurrent(episode)
 
+    if isFocused
+        card.scaleRotateCenter = [84, 43]
+        card.scale = [1.08, 1.08]
+        shadow = CreateObject("roSGNode", "Rectangle")
+        shadow.translation = [4, 9]
+        shadow.width = 168
+        shadow.height = 86
+        shadow.color = "#000000"
+        shadow.opacity = 0.45
+        card.appendChild(shadow)
+    end if
+
     bg = CreateObject("roSGNode", "Rectangle")
     bg.width = 168
     bg.height = 86
     bg.color = "#1F2937"
     if isCurrent then bg.color = "#1D4ED8"
+    if isFocused then bg.color = "#273142"
     card.appendChild(bg)
 
     poster = CreateObject("roSGNode", "Poster")
@@ -768,8 +781,9 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
     title.text = seasonCarouselEpisodeTitle(episode)
     title.translation = [86, 8]
     title.width = 74
-    title.height = 32
+    title.height = 38
     title.wrap = true
+    title.font.size = 16
     title.color = "#F5F5F5"
     card.appendChild(title)
 
@@ -803,14 +817,25 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
         focus = CreateObject("roSGNode", "Rectangle")
         focus.width = 168
         focus.height = 4
-        focus.color = "#F5F5F5"
+        focus.color = "#60A5FA"
         card.appendChild(focus)
         focusBottom = CreateObject("roSGNode", "Rectangle")
         focusBottom.translation = [0, 82]
         focusBottom.width = 168
         focusBottom.height = 4
-        focusBottom.color = "#F5F5F5"
+        focusBottom.color = "#60A5FA"
         card.appendChild(focusBottom)
+        focusLeft = CreateObject("roSGNode", "Rectangle")
+        focusLeft.width = 4
+        focusLeft.height = 86
+        focusLeft.color = "#60A5FA"
+        card.appendChild(focusLeft)
+        focusRight = CreateObject("roSGNode", "Rectangle")
+        focusRight.translation = [164, 0]
+        focusRight.width = 4
+        focusRight.height = 86
+        focusRight.color = "#60A5FA"
+        card.appendChild(focusRight)
     end if
 
     return card

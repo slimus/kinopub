@@ -182,6 +182,7 @@ function kinoItemNormalizeSimilarItem(item as Dynamic) as Object
         mediaId: 0
         title: title
         subtitle: subtitleParts.Join("  |  ")
+        year: year
         posterUrl: m.posterUrl(item)
         type: contentType
     }
