@@ -1015,5 +1015,6 @@ bash scripts/tests/player-menu-back.sh
 bash scripts/tests/next-episode-flow.sh
 bash scripts/tests/player-season-carousel.sh
 bash scripts/tests/player-buffering-indicator.sh
+bash scripts/tests/video-detail-tabs.sh
 
 echo "Static verification passed."
