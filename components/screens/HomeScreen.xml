@@ -261,6 +261,9 @@
         <Group id="recentSearchesGroup" translation="[0,198]" visible="false">
           <Label text="Recent searches" translation="[0,0]" color="#D1D5DB" />
           <Group id="recentSearchesHost" translation="[0,42]" />
+          <Label id="recentSearchScrollUpChevron" text="^" translation="[774,42]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="recentSearchScrollDownChevron" text="v" translation="[774,354]" width="32" horizAlign="center" color="#D1D5DB" visible="false" />
+          <Label id="recentSearchActionsHint" text="* — Actions" translation="[0,414]" width="760" height="28" color="#9CA3AF" />
         </Group>
 
         <Group id="searchKeyboardGroup" translation="[0,198]" visible="false">
