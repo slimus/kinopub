@@ -5,9 +5,30 @@ function SearchHistoryStore() as Object
         maxEntries: 10
         load: searchHistoryStoreLoad
         saveQuery: searchHistoryStoreSaveQuery
+        removeQuery: searchHistoryStoreRemoveQuery
+        clear: searchHistoryStoreClear
         normalizeQuery: searchHistoryStoreNormalizeQuery
         containsQuery: searchHistoryStoreContainsQuery
     }
+end function
+
+function searchHistoryStoreRemoveQuery(query as String) as Object
+    normalized = m.normalizeQuery(query)
+    updated = []
+    for each savedQuery in m.load()
+        if LCase(savedQuery) <> LCase(normalized) then updated.Push(savedQuery)
+    end for
+    section = CreateObject("roRegistrySection", m.sectionName)
+    section.Write(m.historyKey, FormatJson(updated))
+    section.Flush()
+    return updated
+end function
+
+function searchHistoryStoreClear() as Object
+    section = CreateObject("roRegistrySection", m.sectionName)
+    section.Delete(m.historyKey)
+    section.Flush()
+    return []
 end function
 
 function searchHistoryStoreLoad() as Object

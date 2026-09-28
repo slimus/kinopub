@@ -105,6 +105,8 @@ sub init()
     m.searchMessageLabel = m.top.findNode("searchMessageLabel")
     m.recentSearchesGroup = m.top.findNode("recentSearchesGroup")
     m.recentSearchesHost = m.top.findNode("recentSearchesHost")
+    m.recentSearchScrollUpChevron = m.top.findNode("recentSearchScrollUpChevron")
+    m.recentSearchScrollDownChevron = m.top.findNode("recentSearchScrollDownChevron")
     m.searchKeyboardGroup = m.top.findNode("searchKeyboardGroup")
     m.searchKeyboardHost = m.top.findNode("searchKeyboardHost")
     m.searchKeyboardCursor = m.top.findNode("searchKeyboardCursor")
@@ -323,6 +325,8 @@ sub init()
     m.searchKeyboardIndex = 0
     m.searchKeyboardKeys = []
     m.searchHistoryStore = SearchHistoryStore()
+    m.recentSearchMaxVisible = 7
+    m.recentSearchVisibleStart = 0
     m.recentSearches = m.searchHistoryStore.load()
     m.recentSearchNodes = []
     m.recentSearchBgNodes = []
@@ -352,7 +356,7 @@ sub init()
     m.bookmarkColumns = 4
     m.bookmarkVisiblePagePair = 0
     m.bookmarkFolderVisibleStart = 0
-    m.bookmarkMaxVisibleFolders = 8
+    m.bookmarkMaxVisibleFolders = 6
     m.bookmarksFocusArea = "folders"
     m.accountLoaded = false
     m.isLoadingAccount = false
@@ -484,9 +488,20 @@ sub renderRecentSearches()
     if m.selectedRecentSearchIndex >= m.recentSearches.Count() then m.selectedRecentSearchIndex = m.recentSearches.Count() - 1
     if m.selectedRecentSearchIndex < 0 then m.selectedRecentSearchIndex = 0
 
-    for index = 0 to m.recentSearches.Count() - 1
+    if m.selectedRecentSearchIndex < m.recentSearchVisibleStart
+        m.recentSearchVisibleStart = m.selectedRecentSearchIndex
+    else if m.selectedRecentSearchIndex >= m.recentSearchVisibleStart + m.recentSearchMaxVisible
+        m.recentSearchVisibleStart = m.selectedRecentSearchIndex - m.recentSearchMaxVisible + 1
+    end if
+    maxStart = m.recentSearches.Count() - m.recentSearchMaxVisible
+    if maxStart < 0 then maxStart = 0
+    if m.recentSearchVisibleStart > maxStart then m.recentSearchVisibleStart = maxStart
+    lastIndex = m.recentSearchVisibleStart + m.recentSearchMaxVisible - 1
+    if lastIndex >= m.recentSearches.Count() then lastIndex = m.recentSearches.Count() - 1
+
+    for index = m.recentSearchVisibleStart to lastIndex
         row = CreateObject("roSGNode", "Group")
-        row.translation = [0, index * 52]
+        row.translation = [0, (index - m.recentSearchVisibleStart) * 52]
 
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = 760
@@ -506,13 +521,15 @@ sub renderRecentSearches()
         m.recentSearchBgNodes.Push(bg)
     end for
 
+    m.recentSearchScrollUpChevron.visible = m.recentSearchVisibleStart > 0
+    m.recentSearchScrollDownChevron.visible = lastIndex < m.recentSearches.Count() - 1
     updateRecentSearchFocus()
 end sub
 
 sub updateRecentSearchFocus()
     for index = 0 to m.recentSearchBgNodes.Count() - 1
         bg = m.recentSearchBgNodes[index]
-        if index = m.selectedRecentSearchIndex and m.searchFocusArea = "recent"
+        if index + m.recentSearchVisibleStart = m.selectedRecentSearchIndex and m.searchFocusArea = "recent" and m.focusArea = "content" and m.searchPickerVisible <> true
             bg.color = "#3B82F6"
         else
             bg.color = "#2A2A2A"
@@ -526,7 +543,47 @@ sub moveRecentSearchFocus(delta as Integer)
     if nextIndex < 0 then nextIndex = 0
     if nextIndex >= m.recentSearches.Count() then nextIndex = m.recentSearches.Count() - 1
     m.selectedRecentSearchIndex = nextIndex
-    updateRecentSearchFocus()
+    renderRecentSearches()
+end sub
+
+sub openRecentSearchActions(confirmClear = false as Boolean)
+    if m.recentSearches.Count() = 0 then return
+    m.searchPickerFilterId = "recentActions"
+    m.searchPickerTitleLabel.text = "Search history"
+    m.searchPickerItems = [
+        { id: "delete", title: "Delete query" }
+        { id: "clear", title: "Clear history" }
+        { id: "cancel", title: "Cancel" }
+    ]
+    if confirmClear
+        m.searchPickerFilterId = "recentClear"
+        m.searchPickerTitleLabel.text = "Clear all search history?"
+        m.searchPickerItems = [
+            { id: "cancel", title: "Cancel" }
+            { id: "confirm", title: "Clear history" }
+        ]
+    end if
+    m.selectedSearchPickerIndex = 0
+    m.searchPickerVisible = true
+    m.searchPickerGroup.visible = true
+    renderSearchPickerRows()
+    updateSearchFocusVisuals()
+end sub
+
+sub selectRecentSearchAction(actionId as String)
+    if m.searchPickerFilterId = "recentActions" and actionId = "clear"
+        openRecentSearchActions(true)
+        return
+    end if
+    if m.searchPickerFilterId = "recentActions" and actionId = "delete"
+        m.recentSearches = m.searchHistoryStore.removeQuery(m.recentSearches[m.selectedRecentSearchIndex])
+    else if m.searchPickerFilterId = "recentClear" and actionId = "confirm"
+        m.recentSearches = m.searchHistoryStore.clear()
+    end if
+    closeSearchPicker()
+    if m.recentSearches.Count() = 0 then m.searchFocusArea = "box"
+    renderRecentSearches()
+    showSearchState("empty")
 end sub
 
 sub selectRecentSearch()
@@ -654,6 +711,10 @@ end sub
 sub selectSearchPickerItem()
     if m.searchPickerItems.Count() = 0 then return
     selected = m.searchPickerItems[m.selectedSearchPickerIndex]
+    if m.searchPickerFilterId = "recentActions" or m.searchPickerFilterId = "recentClear"
+        selectRecentSearchAction(selected.id)
+        return
+    end if
     if m.searchPickerFilterId = "type" then m.searchContentType = selected.id
     if m.searchPickerFilterId = "field" then m.searchField = selected.id
     if m.searchPickerFilterId = "sort" then m.searchSortByYear = selected.id = "newest"
@@ -1532,11 +1593,11 @@ sub renderBookmarkFolders()
     for index = m.bookmarkFolderVisibleStart to lastIndex
         folder = m.bookmarkFolders[index]
         row = CreateObject("roSGNode", "Group")
-        row.translation = [0, (index - m.bookmarkFolderVisibleStart) * 52]
+        row.translation = [0, (index - m.bookmarkFolderVisibleStart) * 68]
 
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = 260
-        bg.height = 48
+        bg.height = 64
         bg.color = palette.surface
         row.appendChild(bg)
 
@@ -1544,13 +1605,18 @@ sub renderBookmarkFolders()
         title.text = folder.title
         title.translation = [16, 8]
         title.width = 228
+        title.height = 28
+        title.font.size = 22
+        title.wrap = false
         title.color = palette.text
         row.appendChild(title)
 
         count = CreateObject("roSGNode", "Label")
         count.text = bookmarkFolderCountText(folder)
-        count.translation = [16, 30]
+        count.translation = [16, 36]
         count.width = 228
+        count.height = 24
+        count.font.size = 18
         count.color = palette.muted
         row.appendChild(count)
 
@@ -1601,6 +1667,7 @@ sub loadSelectedBookmarkFolderItems()
     m.bookmarkCurrentFolderId = folder.folderId
     m.bookmarkItemsTitleLabel.text = folder.title
     requestBookmarkFolderItems(folder.folderId, 1, false)
+    m.bookmarkTotalItems = folder.count
 end sub
 
 sub requestBookmarkFolderItems(folderId as Integer, page as Integer, append as Boolean)
@@ -1679,10 +1746,9 @@ sub updateBookmarkPagination(response as Object)
         pagination = response.pagination
         if pagination.current <> invalid then m.bookmarkCurrentPage = pagination.current
         if pagination.total <> invalid then m.bookmarkTotalPages = pagination.total
-        if pagination.total_items <> invalid then m.bookmarkTotalItems = pagination.total_items
+        if pagination.total_items <> invalid and pagination.total_items > 0 then m.bookmarkTotalItems = pagination.total_items
         if pagination.perpage <> invalid then m.bookmarkPerPage = pagination.perpage
     end if
-    if m.bookmarkTotalItems <= 0 then m.bookmarkTotalItems = m.bookmarkItems.Count()
     if m.bookmarkTotalPages > 0 and m.bookmarkCurrentPage >= m.bookmarkTotalPages then m.bookmarkReachedEnd = true
 
     countText = listCountText(m.bookmarkTotalItems, m.bookmarkItems.Count(), hasMoreBookmarkPages())
@@ -2114,7 +2180,10 @@ sub moveBookmarkItemFocus(delta as Integer)
     nextIndex = m.selectedBookmarkItemIndex + delta
     if nextIndex < 0 then nextIndex = 0
     if nextIndex >= m.bookmarkItems.Count() then nextIndex = m.bookmarkItems.Count() - 1
-    if nextIndex = m.selectedBookmarkItemIndex then return
+    if nextIndex = m.selectedBookmarkItemIndex
+        if delta > 0 then loadNextBookmarkPageIfNeeded()
+        return
+    end if
     m.selectedBookmarkItemIndex = nextIndex
     newPagePair = Int(m.selectedBookmarkItemIndex / (m.bookmarkColumns * 2))
     if newPagePair <> oldPagePair
@@ -4515,6 +4584,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                     closeSearchPicker()
                     return true
                 end if
+                return true
             else if m.searchFocusArea = "keyboard"
                 if key = "left"
                     moveSearchKeyboard(-1)
@@ -4572,6 +4642,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                     else if m.recentSearches.Count() > 0 and m.recentSearchesGroup.visible
                         m.searchFocusArea = "recent"
                         m.selectedRecentSearchIndex = 0
+                        renderRecentSearches()
                         updateSearchFocusVisuals()
                     end if
                     return true
@@ -4580,7 +4651,10 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                     return true
                 end if
             else if m.searchFocusArea = "recent"
-                if key = "up"
+                if key = "options"
+                    openRecentSearchActions()
+                    return true
+                else if key = "up"
                     if m.selectedRecentSearchIndex = 0
                         m.searchFocusArea = "filters"
                         updateSearchFocusVisuals()

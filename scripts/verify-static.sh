@@ -1015,5 +1015,13 @@ bash scripts/tests/player-menu-back.sh
 bash scripts/tests/next-episode-flow.sh
 bash scripts/tests/player-season-carousel.sh
 bash scripts/tests/player-buffering-indicator.sh
+bash scripts/tests/video-detail-tabs.sh
+bash scripts/tests/search-history-layout.sh
+bash scripts/tests/bookmark-folder-layout.sh
+if [[ -n "${BRS_BIN:-}" ]] || command -v brs >/dev/null 2>&1; then
+  bash scripts/tests/bookmark-pagination.sh
+else
+  echo "Bookmark pagination runtime tests skipped: install brs or set BRS_BIN."
+fi
 
 echo "Static verification passed."

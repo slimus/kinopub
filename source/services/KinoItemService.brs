@@ -635,8 +635,9 @@ end function
 
 function kinoItemProgressSeconds(media as Dynamic) as Integer
     if media <> invalid and type(media) = "roAssociativeArray" and media.DoesExist("watching") and media.watching <> invalid and type(media.watching) = "roAssociativeArray"
-        progress = m.integerField(media.watching, "time", 0)
-        if progress > 0 then return progress
+        if media.watching.DoesExist("time") and media.watching.time <> invalid
+            return m.integerField(media.watching, "time", 0)
+        end if
     end if
 
     return m.integerField(media, "time", 0)
