@@ -124,5 +124,6 @@
       </Group>
     </Group>
   </children>
+  <script type="text/brightscript" uri="pkg:/components/MediaCardBadges.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/VideoDetailScreen.brs" />
 </component>

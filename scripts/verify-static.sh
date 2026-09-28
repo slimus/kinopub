@@ -204,7 +204,7 @@ grep -q "appendTypeBadge(card, item)" components/screens/HomeScreen.brs
 grep -q "function homeUiPalette" components/screens/HomeScreen.brs
 grep -q "function createMediaCard" components/screens/HomeScreen.brs
 grep -q "function posterBrowseCardLayout" components/screens/HomeScreen.brs
-grep -q "chipWidth = 64" components/screens/HomeScreen.brs
+grep -q "sub appendTypeBadge" components/MediaCardBadges.brs
 grep -q "subtitle.visible = false" components/screens/HomeScreen.brs
 grep -q "function cardYearText" components/screens/HomeScreen.brs
 grep -q "layout.showYear" components/screens/HomeScreen.brs

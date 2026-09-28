@@ -779,6 +779,7 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
     poster.uri = seasonCarouselEpisodeStringField(episode, "thumbnailUrl", "")
     poster.loadDisplayMode = "scaleToFill"
     card.appendChild(poster)
+    appendTypeBadge(card, { type: "episode" }, 8, 8, 68)
 
     title = CreateObject("roSGNode", "Label")
     title.text = seasonCarouselEpisodeTitle(episode)
