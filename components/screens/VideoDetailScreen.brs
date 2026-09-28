@@ -777,7 +777,7 @@ function createSimilarCard(item as Object, index as Integer, focused = false as 
 
     bg = CreateObject("roSGNode", "Rectangle")
     bg.width = m.similarCardWidth
-    bg.height = 288
+    bg.height = 270
     bg.color = palette.surface
     if focused then bg.opacity = 1 else bg.opacity = 0.78
     if focused then bg.color = "#60A5FA"
@@ -787,7 +787,7 @@ function createSimilarCard(item as Object, index as Integer, focused = false as 
         innerBg = CreateObject("roSGNode", "Rectangle")
         innerBg.translation = [4, 4]
         innerBg.width = m.similarCardWidth - 8
-        innerBg.height = 280
+        innerBg.height = 262
         innerBg.color = "#273142"
         innerBg.opacity = 0.94
         card.appendChild(innerBg)
@@ -800,6 +800,8 @@ function createSimilarCard(item as Object, index as Integer, focused = false as 
     poster.loadDisplayMode = "scaleToFit"
     poster.uri = item.posterUrl
     card.appendChild(poster)
+    appendTypeBadge(card, item, 18, 14, 184)
+    if item.year > 0 then appendCardBadge(card, StrI(item.year).Trim(), 154, 202, 48)
 
     title = CreateObject("roSGNode", "Label")
     title.text = item.title
@@ -810,17 +812,6 @@ function createSimilarCard(item as Object, index as Integer, focused = false as 
     title.font.size = 21
     title.color = palette.text
     card.appendChild(title)
-
-    subtitle = CreateObject("roSGNode", "Label")
-    subtitle.text = item.subtitle
-    if item.year > 0 then subtitle.text = StrI(item.year).Trim()
-    subtitle.translation = [12, 263]
-    subtitle.width = 196
-    subtitle.height = 21
-    subtitle.wrap = false
-    subtitle.font.size = 18
-    subtitle.color = palette.muted
-    card.appendChild(subtitle)
 
     return card
 end function
@@ -1377,7 +1368,7 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
 
     title = CreateObject("roSGNode", "Label")
     title.text = episode.title
-    textX = 18
+    textX = 132
     if episode.thumbnailUrl <> invalid and episode.thumbnailUrl <> ""
         thumbnail = CreateObject("roSGNode", "Poster")
         thumbnail.translation = [10, 6]
@@ -1388,6 +1379,7 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
         row.appendChild(thumbnail)
         textX = 132
     end if
+    appendTypeBadge(row, { type: "episode" }, 14, 10, 98)
     title.translation = [textX, 10]
     title.width = 850
     title.color = palette.text

@@ -1900,7 +1900,7 @@ function createMediaCard(item as Object, layout as Object) as Object
     poster.uri = item.posterUrl
     poster.loadDisplayMode = "scaleToFit"
     card.appendChild(poster)
-    if layout.DoesExist("hideTypeBadge") <> true or layout.hideTypeBadge <> true then appendTypeBadge(card, item)
+    appendTypeBadge(card, item)
 
     title = CreateObject("roSGNode", "Label")
     title.text = item.title
@@ -2051,7 +2051,6 @@ function posterBrowseCardLayout(x as Integer, y as Integer) as Object
         subtitleY: 219
         subtitleHeight: 0
         progressY: 186
-        hideTypeBadge: true
         singleLineTitle: true
         showYear: true
         yearChip: true
@@ -2073,7 +2072,6 @@ function posterHomeCardLayout(x as Integer, y as Integer) as Object
         titleHeight: 26
         subtitleY: 242
         subtitleHeight: 0
-        hideTypeBadge: true
         singleLineTitle: true
         showYear: true
         yearChip: true
@@ -2100,7 +2098,6 @@ function expandedPosterCardLayout(x as Integer, y as Integer) as Object
         focusFrame: true
         focusSurface: "#273142"
         focusPop: true
-        hideTypeBadge: true
         singleLineTitle: true
         showYear: true
         yearChip: true
@@ -2801,70 +2798,6 @@ function mediaProgressWidth(item as Object, maxWidth as Integer) as Integer
     return width
 end function
 
-sub appendTypeBadge(card as Object, item as Object)
-    badgeText = itemTypeBadgeText(item)
-    if badgeText = "" then return
-
-    palette = homeUiPalette()
-    chipWidth = 64
-
-    badgeBg = CreateObject("roSGNode", "Rectangle")
-    badgeBg.translation = [24, 14]
-    badgeBg.width = chipWidth
-    badgeBg.height = 24
-    badgeBg.color = palette.chipBg
-    badgeBg.opacity = 0.82
-    card.appendChild(badgeBg)
-
-    badgeBorderTop = CreateObject("roSGNode", "Rectangle")
-    badgeBorderTop.translation = [24, 14]
-    badgeBorderTop.width = chipWidth
-    badgeBorderTop.height = 1
-    badgeBorderTop.color = palette.chipBorder
-    card.appendChild(badgeBorderTop)
-
-    badgeBorderBottom = CreateObject("roSGNode", "Rectangle")
-    badgeBorderBottom.translation = [24, 37]
-    badgeBorderBottom.width = chipWidth
-    badgeBorderBottom.height = 1
-    badgeBorderBottom.color = palette.chipBorder
-    card.appendChild(badgeBorderBottom)
-
-    badgeBorderLeft = CreateObject("roSGNode", "Rectangle")
-    badgeBorderLeft.translation = [24, 14]
-    badgeBorderLeft.width = 1
-    badgeBorderLeft.height = 24
-    badgeBorderLeft.color = palette.chipBorder
-    card.appendChild(badgeBorderLeft)
-
-    badgeBorderRight = CreateObject("roSGNode", "Rectangle")
-    badgeBorderRight.translation = [23 + chipWidth, 14]
-    badgeBorderRight.width = 1
-    badgeBorderRight.height = 24
-    badgeBorderRight.color = palette.chipBorder
-    card.appendChild(badgeBorderRight)
-
-    label = CreateObject("roSGNode", "Label")
-    label.text = badgeText
-    label.translation = [24, 15]
-    label.width = chipWidth
-    label.height = 22
-    label.horizAlign = "center"
-    label.color = palette.text
-    card.appendChild(label)
-end sub
-
-function itemTypeBadgeText(item as Dynamic) as String
-    if item = invalid or type(item) <> "roAssociativeArray" then return ""
-    if item.DoesExist("typeBadge") <> true or item.typeBadge = invalid then return ""
-    badge = item.typeBadge
-    if type(badge) <> "String" and type(badge) <> "roString" then return ""
-    badge = badge.Trim()
-    badge = UCase(badge)
-    if Len(badge) > 3 then badge = Left(badge, 3)
-    return badge
-end function
-
 sub updateHistoryCardFocus()
     showOverlay = m.continueFullListGroup.visible and m.focusArea = "content" and m.selectedSection = "continue" and m.continueMode = "fullList" and m.historyItems.Count() > 0
     nodeIndex = 0
@@ -3477,6 +3410,7 @@ function createLiveCard(item as Object, x as Integer, y as Integer, focused = fa
     logo.uri = item.posterUrl
     logo.loadDisplayMode = "scaleToFit"
     card.appendChild(logo)
+    appendTypeBadge(card, item, 16, 20)
 
     title = CreateObject("roSGNode", "Label")
     title.text = item.title

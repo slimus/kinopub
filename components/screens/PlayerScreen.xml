@@ -72,5 +72,6 @@
     <Timer id="seekSettleTimer" repeat="false" duration="2.5" />
   </children>
   <script type="text/brightscript" uri="pkg:/source/services/PlayerPreferenceStore.brs" />
+  <script type="text/brightscript" uri="pkg:/components/MediaCardBadges.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/PlayerScreen.brs" />
 </component>

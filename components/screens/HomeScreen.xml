@@ -410,5 +410,6 @@
   </children>
   <script type="text/brightscript" uri="pkg:/source/config/BuildInfo.brs" />
   <script type="text/brightscript" uri="pkg:/source/services/SearchHistoryStore.brs" />
+  <script type="text/brightscript" uri="pkg:/components/MediaCardBadges.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/HomeScreen.brs" />
 </component>
