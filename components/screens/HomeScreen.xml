@@ -49,8 +49,10 @@
         <Rectangle id="settingsPercentBg" translation="[0,200]" width="820" height="64" color="#374151" />
         <Label text="Percent remaining" translation="[20,218]" color="#F5F5F5" />
         <Label id="settingsPercentValue" translation="[590,218]" width="210" horizAlign="right" color="#F5F5F5" />
-        <Label id="settingsHint" translation="[0,294]" width="820" height="64" wrap="true" color="#D1D5DB" />
-        <Label text="The button appears when both enabled limits are met.&#10;0 disables a limit. Both 0: only after the episode ends.&#10;Auto-play always waits until the episode ends." translation="[0,380]" width="820" height="140" wrap="true" color="#9CA3AF" />
+        <Rectangle id="settingsTimerBg" translation="[0,284]" width="820" height="64" color="#374151" />
+        <Label id="settingsTimerLabel" translation="[20,302]" width="780" color="#F5F5F5" />
+        <Label id="settingsHint" translation="[0,378]" width="820" height="64" wrap="true" color="#D1D5DB" />
+        <Label text="The button appears when both enabled limits are met.&#10;0 disables a limit. Both 0: only after the episode ends.&#10;Timer off: waits for your choice, even after playback ends.&#10;Timer on: plays next 15 seconds after the card appears." translation="[0,464]" width="820" height="160" wrap="true" color="#9CA3AF" />
       </Group>
       <Group id="continueContent">
         <Label text="Continue Watching" translation="[0,0]" color="#F5F5F5" />

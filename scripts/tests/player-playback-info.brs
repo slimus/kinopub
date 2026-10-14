@@ -6,8 +6,10 @@ sub main()
     resetPlaybackInfoSamples()
     check(onKeyEvent("options", false) = false, "Options release does not open panel")
     check(m.playbackInfoGroup.visible = false, "Panel starts hidden")
-    check(onKeyEvent("options", true), "Options is consumed")
-    check(m.playbackInfoGroup.visible and m.playbackInfoTimer.control = "start", "Options opens panel and starts refresh")
+    m.controls = ["playbackInfo"]
+    m.focusIndex = 0
+    activateFocusedControl()
+    check(m.playbackInfoGroup.visible and m.playbackInfoTimer.control = "start", "Info button opens panel and starts refresh")
     check(m.videoNode.control = "play", "Opening does not pause playback")
     check(Instr(1, m.playbackInfoText.text, "Resolution: " + Chr(8212)) > 0, "Missing resolution is unavailable")
     check(handlePlaybackInfoKey("play") = false, "Transport keys pass through")

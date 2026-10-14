@@ -2,13 +2,7 @@
 function handlePlaybackInfoKey(key as String) as Boolean
     if m.playbackInfoGroup = invalid then return false
     if key = "options"
-        if m.playbackInfoGroup.visible
-            closePlaybackInfo()
-        else
-            m.playbackInfoGroup.visible = true
-            updatePlaybackInfo()
-            m.playbackInfoTimer.control = "start"
-        end if
+        togglePlaybackInfo()
         return true
     end if
     if key = "back" and m.playbackInfoGroup.visible
@@ -17,6 +11,17 @@ function handlePlaybackInfoKey(key as String) as Boolean
     end if
     return false
 end function
+
+sub togglePlaybackInfo()
+    if m.playbackInfoGroup = invalid then return
+    if m.playbackInfoGroup.visible
+        closePlaybackInfo()
+    else
+        m.playbackInfoGroup.visible = true
+        updatePlaybackInfo()
+        m.playbackInfoTimer.control = "start"
+    end if
+end sub
 
 sub closePlaybackInfo()
     if m.playbackInfoGroup <> invalid then m.playbackInfoGroup.visible = false

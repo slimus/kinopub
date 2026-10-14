@@ -54,8 +54,8 @@ http://<roku-ip-address>
 
 ## Useful Commands
 
-During playback, press **✱ (Options)** to toggle the optional playback information
-panel. It shows resolution, video/audio formats, video-segment bitrate, last-segment
+During playback, select **Info** in the player controls and press **OK** to toggle
+the playback information panel. It shows resolution, video/audio formats, video-segment bitrate, last-segment
 download speed, and playback state. Missing statistics appear as `—`; segment
 statistics depend on the stream format and device. **Back** closes the panel first.
 Playback continues normally, and the panel starts hidden each time the player opens.
@@ -85,8 +85,11 @@ The app is built with Roku SceneGraph and BrightScript. There is no dependency i
 ## Next episode settings
 
 Open **Settings** in the sidebar to change when the next-episode button appears.
-The defaults are 180 seconds and 8% remaining; both enabled limits must be met.
+The defaults are 90 seconds and 4% remaining; both enabled limits must be met.
 Set a limit to 0 to disable it, or both to 0 to show the button only after playback ends.
 Press OK to edit, Left/Right to adjust by 1, or Rewind/Fast forward to adjust by 10.
-Values save automatically on this device. Early prompts never interrupt playback;
-automatic playback of the next episode waits until the current video ends.
+The **Start a 15-second auto-play timer** checkbox is off by default. Enable it
+to play the next episode 15 seconds after the card appears. Keep watching cancels
+the timer. With the checkbox off, the card waits for your choice even after the
+video ends. Press OK on the checkbox to toggle it.
+Values save automatically on this device; previously saved thresholds are preserved.

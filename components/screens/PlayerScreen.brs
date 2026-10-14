@@ -58,8 +58,8 @@ sub init()
     m.preferenceStore = PlayerPreferenceStore()
     m.controls = []
     m.controlNodes = []
-    m.controlPositions = [72, 301, 530, 759, 988]
-    m.controlSpacing = 229
+    m.controlPositions = [72, 262, 452, 642, 832, 1022]
+    m.controlSpacing = 190
     m.controlFocusY = 234
     m.focusArea = "controls"
     m.focusIndex = 0
@@ -76,7 +76,8 @@ sub init()
     m.resumePromptOptionNodes = []
     m.nextEpisodePromptOpen = false
     m.nextEpisodePromptIndex = 0
-    m.nextEpisodePromptRemainingSeconds = 10
+    m.nextEpisodePromptRemainingSeconds = 15
+    m.nextEpisodeTimerEnabled = false
     m.nextEpisodePromptPlayback = invalid
     m.nextEpisodeRequestPending = false
     m.nextEpisodeRequested = false
@@ -162,7 +163,8 @@ end sub
 sub resetNextEpisodeState()
     m.nextEpisodePromptOpen = false
     m.nextEpisodePromptIndex = 0
-    m.nextEpisodePromptRemainingSeconds = 10
+    m.nextEpisodePromptRemainingSeconds = 15
+    m.nextEpisodeTimerEnabled = false
     m.nextEpisodePromptPlayback = invalid
     m.nextEpisodeRequestPending = false
     m.nextEpisodeRequested = false
@@ -197,7 +199,7 @@ sub onNextPlaybackChanged(event as Object)
         startNextPlayback(response.playback)
     else if m.nextEpisodeRequestReason = "finished" or m.videoNode.state = "finished"
         markCompletedIfSafe()
-        startNextPlayback(response.playback)
+        showNextEpisodePrompt(response.playback)
     else
         showNextEpisodePrompt(response.playback)
     end if
@@ -464,7 +466,10 @@ sub showNextEpisodePrompt(playback as Object)
     m.nextEpisodePromptPlayback = playback
     m.nextEpisodePromptOpen = true
     m.nextEpisodePromptIndex = 0
-    m.nextEpisodePromptRemainingSeconds = 10
+    m.nextEpisodePromptRemainingSeconds = 15
+    store = AppSettingsStore()
+    settings = store.load()
+    m.nextEpisodeTimerEnabled = settings.nextEpisodeTimerEnabled
 
     title = "Next episode"
     if playback.title <> invalid and playback.title <> "" then title = playback.title
@@ -474,6 +479,7 @@ sub showNextEpisodePrompt(playback as Object)
     m.bottomRailGroup.visible = false
     m.nextEpisodePromptGroup.visible = true
     m.nextEpisodeCountdownTimer.control = "stop"
+    if m.nextEpisodeTimerEnabled then m.nextEpisodeCountdownTimer.control = "start"
 end sub
 
 sub renderNextEpisodePromptOptions()
@@ -508,7 +514,11 @@ sub renderNextEpisodePromptOptions()
 end sub
 
 sub updateNextEpisodePromptCountdown()
-    m.nextEpisodePromptCountdownLabel.text = "Auto-play after this episode ends"
+    if m.nextEpisodeTimerEnabled = true
+        m.nextEpisodePromptCountdownLabel.text = "Auto-play in " + StrI(m.nextEpisodePromptRemainingSeconds).Trim() + " sec"
+    else
+        m.nextEpisodePromptCountdownLabel.text = "Choose Play next now to continue"
+    end if
 end sub
 
 sub closeNextEpisodePrompt()
@@ -520,7 +530,13 @@ sub closeNextEpisodePrompt()
 end sub
 
 sub onNextEpisodeCountdownTimer()
-    ' A queued timer event must never interrupt the current episode.
+    if m.nextEpisodePromptOpen <> true or m.nextEpisodeTimerEnabled <> true then return
+    m.nextEpisodePromptRemainingSeconds = m.nextEpisodePromptRemainingSeconds - 1
+    if m.nextEpisodePromptRemainingSeconds <= 0
+        chooseNextEpisodePromptOption(0)
+    else
+        updateNextEpisodePromptCountdown()
+    end if
 end sub
 
 function handleNextEpisodePromptKey(key as String) as Boolean
@@ -546,6 +562,7 @@ end function
 sub chooseNextEpisodePromptOption(index as Integer)
     if index <> 0
         closeNextEpisodePrompt()
+        if m.videoNode.state = "finished" then exitPlayer()
         return
     end if
 
@@ -934,7 +951,7 @@ end function
 sub buildControls()
     childCount = m.controlsHost.getChildCount()
     if childCount > 0 then m.controlsHost.removeChildrenIndex(childCount, 0)
-    m.controls = ["playPause", "audio", "subtitles", "quality"]
+    m.controls = ["playPause", "audio", "subtitles", "quality", "playbackInfo"]
     if hasSeasonCarousel() then m.controls.Push("episodes")
     m.controlNodes = []
 
@@ -943,7 +960,7 @@ sub buildControls()
         label = CreateObject("roSGNode", "Label")
         label.text = labels[index]
         label.translation = [index * m.controlSpacing + 12, 13]
-        label.width = 196
+        label.width = 160
         label.font.size = 20
         label.color = "#F5F5F5"
         m.controlsHost.appendChild(label)
@@ -1010,7 +1027,7 @@ function controlLabels() as Object
     playLabel = "Play"
     if m.isPlaying then playLabel = "Pause"
 
-    labels = [playLabel, "Audio: " + selectedAudioLabel(), "Subs: " + selectedSubtitleLabel(), "Quality: " + selectedQualityLabel()]
+    labels = [playLabel, "Audio: " + selectedAudioLabel(), "Subs: " + selectedSubtitleLabel(), "Quality: " + selectedQualityLabel(), "Info"]
     if hasSeasonCarousel() then labels.Push("Episodes")
     return labels
 end function
@@ -1186,6 +1203,8 @@ sub onVideoStateChanged(event as Object)
         showRail()
     else if state = "finished"
         hideStreamLoader()
+        m.isPlaying = false
+        m.progressTimer.control = "stop"
         if m.playbackStarted <> true
             print "PlayerScreen: stream finished before playback started"
             if tryNextPlaybackStream() then return
@@ -1194,7 +1213,8 @@ sub onVideoStateChanged(event as Object)
             return
         end if
         if m.nextEpisodePromptOpen
-            chooseNextEpisodePromptOption(0)
+            m.completed = true
+            markCompletedIfSafe()
             return
         end if
         if canAskForNextEpisode()
@@ -1871,6 +1891,8 @@ sub activateFocusedControl()
         openMenu("subtitles")
     else if control = "quality"
         openMenu("quality")
+    else if control = "playbackInfo"
+        togglePlaybackInfo()
     else if control = "episodes"
         m.seasonCarouselOpen = true
         m.focusArea = "seasonCarousel"

@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 source = Path('components/screens/PlayerScreen.brs').read_text()
 helpers = Path('components/screens/PlayerPlaybackInfo.brs')
 assert helpers.exists(), 'Playback info implementation is missing'
-names = ['playbackDiagnosticField', 'playbackDiagnosticNumber', 'playbackDiagnosticString', 'onKeyEvent']
+names = ['playbackDiagnosticField', 'playbackDiagnosticNumber', 'playbackDiagnosticString', 'onKeyEvent', 'activateFocusedControl']
 functions = [re.search(r'^(?:sub|function) ' + name + r'\(.*?^end (?:sub|function)', source, re.M | re.S).group(0) for name in names]
 with tempfile.TemporaryDirectory(prefix='playback-info-') as directory:
     extracted = Path(directory) / 'player.brs'

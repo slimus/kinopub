@@ -11,21 +11,33 @@ sub renderAppSettings()
     m.top.findNode("settingsPercentValue").text = "< " + StrI(m.appSettings.nextEpisodePercent).Trim() + "% >"
     m.top.findNode("settingsSecondsBg").color = "#374151"
     m.top.findNode("settingsPercentBg").color = "#374151"
+    m.top.findNode("settingsTimerBg").color = "#374151"
+    timerLabel = "[ ] Start a 15-second auto-play timer"
+    if m.appSettings.nextEpisodeTimerEnabled = true then timerLabel = "[x] Start a 15-second auto-play timer"
+    m.top.findNode("settingsTimerLabel").text = timerLabel
     if m.focusArea = "content"
         selectedId = "settingsSecondsBg"
         if m.settingsIndex = 1 then selectedId = "settingsPercentBg"
+        if m.settingsIndex = 2 then selectedId = "settingsTimerBg"
         color = "#2563EB"
         if m.settingsEditing then color = "#1D4ED8"
         m.top.findNode(selectedId).color = color
     end if
     hint = "OK: edit value. Up/Down: choose field. Values save automatically."
+    if m.settingsIndex = 2 then hint = "OK: toggle timer. Up/Down: choose field. Values save automatically."
     if m.settingsEditing then hint = "Left/Right: change by 1. Rewind/Fast forward: change by 10. OK/Back: done."
     m.top.findNode("settingsHint").text = hint
 end sub
 
 function handleAppSettingsKey(key as String) as Boolean
     if key = "OK"
-        m.settingsEditing = not m.settingsEditing
+        if m.settingsIndex = 2
+            m.appSettings.nextEpisodeTimerEnabled = m.appSettings.nextEpisodeTimerEnabled <> true
+            m.appSettingsStore.save(m.appSettings)
+            m.settingsEditing = false
+        else
+            m.settingsEditing = not m.settingsEditing
+        end if
     else if key = "back"
         if m.settingsEditing then m.settingsEditing = false else setMenuExpanded(true)
     else if m.settingsEditing and (key = "left" or key = "right" or key = "rewind" or key = "fastforward")
@@ -45,7 +57,9 @@ function handleAppSettingsKey(key as String) as Boolean
         m.appSettings[field] = value
         m.appSettingsStore.save(m.appSettings)
     else if key = "up" or key = "down"
-        if key = "up" then m.settingsIndex = 0 else m.settingsIndex = 1
+        if key = "up" then m.settingsIndex = m.settingsIndex - 1 else m.settingsIndex = m.settingsIndex + 1
+        if m.settingsIndex < 0 then m.settingsIndex = 0
+        if m.settingsIndex > 2 then m.settingsIndex = 2
         m.settingsEditing = false
     else if key = "left" and m.settingsEditing <> true
         setMenuExpanded(true)

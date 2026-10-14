@@ -4,9 +4,14 @@ end function
 
 function appSettingsLoad() as Object
     section = CreateObject("roRegistrySection", "appsettings")
+    return appSettingsFromValues(section.Read("nextEpisodeSeconds"), section.Read("nextEpisodePercent"), section.Read("nextEpisodeTimerEnabled"))
+end function
+
+function appSettingsFromValues(seconds as Dynamic, percent as Dynamic, timerEnabled as Dynamic) as Object
     return {
-        nextEpisodeSeconds: appSettingNumber(section.Read("nextEpisodeSeconds"), 180, 3600)
-        nextEpisodePercent: appSettingNumber(section.Read("nextEpisodePercent"), 8, 100)
+        nextEpisodeSeconds: appSettingNumber(seconds, 90, 3600)
+        nextEpisodePercent: appSettingNumber(percent, 4, 100)
+        nextEpisodeTimerEnabled: timerEnabled = "true"
     }
 end function
 
@@ -30,8 +35,11 @@ end function
 
 sub appSettingsSave(settings as Object)
     section = CreateObject("roRegistrySection", "appsettings")
-    section.Write("nextEpisodeSeconds", StrI(appSettingNumber(settings.nextEpisodeSeconds, 180, 3600)).Trim())
-    section.Write("nextEpisodePercent", StrI(appSettingNumber(settings.nextEpisodePercent, 8, 100)).Trim())
+    section.Write("nextEpisodeSeconds", StrI(appSettingNumber(settings.nextEpisodeSeconds, 90, 3600)).Trim())
+    section.Write("nextEpisodePercent", StrI(appSettingNumber(settings.nextEpisodePercent, 4, 100)).Trim())
+    timerEnabled = "false"
+    if settings.nextEpisodeTimerEnabled = true then timerEnabled = "true"
+    section.Write("nextEpisodeTimerEnabled", timerEnabled)
     section.Flush()
 end sub
 
