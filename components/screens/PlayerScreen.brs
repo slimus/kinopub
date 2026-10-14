@@ -16,6 +16,8 @@ sub init()
     m.bottomRailBackground = m.top.findNode("bottomRailBackground")
     m.titleLabel = m.top.findNode("titleLabel")
     m.timeLabel = m.top.findNode("timeLabel")
+    m.remainingTimeLabel = m.top.findNode("remainingTimeLabel")
+    m.seekFeedbackLabel = m.top.findNode("seekFeedbackLabel")
     m.seasonCarouselGroup = m.top.findNode("seasonCarouselGroup")
     m.seasonCarouselTitleLabel = m.top.findNode("seasonCarouselTitleLabel")
     m.seasonCarouselHost = m.top.findNode("seasonCarouselHost")
@@ -50,8 +52,8 @@ sub init()
     m.preferenceStore = PlayerPreferenceStore()
     m.controls = []
     m.controlNodes = []
-    m.controlPositions = [72, 322, 572, 822]
-    m.controlSpacing = 250
+    m.controlPositions = [72, 301, 530, 759, 988]
+    m.controlSpacing = 229
     m.controlFocusY = 234
     m.focusArea = "controls"
     m.focusIndex = 0
@@ -80,11 +82,16 @@ sub init()
     m.lastSavedSeconds = -1
     m.completed = false
     m.seekStepSeconds = 30
+    m.seekHoldKey = ""
+    m.seekHoldClock = CreateObject("roTimespan")
+    m.seekHoldClock.Mark()
+    m.seekStartPosition = 0
     m.seekPending = false
     m.pendingSeekPosition = invalid
     m.playbackOptions = []
     m.playbackOptionIndex = 0
     m.seasonEpisodes = []
+    m.seasonCarouselOpen = false
     m.seasonCarouselCards = []
     m.seasonCarouselFocusIndex = 0
     m.seasonCarouselVisibleStart = 0
@@ -467,18 +474,19 @@ sub renderNextEpisodePromptOptions()
     labels = ["Play next now", "Keep watching"]
     for index = 0 to labels.Count() - 1
         group = CreateObject("roSGNode", "Group")
-        group.translation = [0, index * 58]
+        group.translation = [index * 208, 0]
 
         bg = CreateObject("roSGNode", "Rectangle")
-        bg.width = 440
+        bg.width = 196
         bg.height = 46
         bg.color = "#374151"
         if index = m.nextEpisodePromptIndex then bg.color = "#E5E7EB"
         group.appendChild(bg)
 
         label = CreateObject("roSGNode", "Label")
-        label.translation = [18, 12]
-        label.width = 404
+        label.translation = [12, 12]
+        label.width = 172
+        label.font.size = 20
         label.text = labels[index]
         label.color = "#D1D5DB"
         if index = m.nextEpisodePromptIndex then label.color = "#111827"
@@ -516,8 +524,12 @@ function handleNextEpisodePromptKey(key as String) as Boolean
     if key = "back"
         chooseNextEpisodePromptOption(1)
         return true
-    else if key = "up" or key = "down"
-        if m.nextEpisodePromptIndex = 0 then m.nextEpisodePromptIndex = 1 else m.nextEpisodePromptIndex = 0
+    else if key = "up" or key = "left"
+        m.nextEpisodePromptIndex = 0
+        renderNextEpisodePromptOptions()
+        return true
+    else if key = "down" or key = "right"
+        m.nextEpisodePromptIndex = 1
         renderNextEpisodePromptOptions()
         return true
     else if key = "OK" or key = "play"
@@ -648,6 +660,9 @@ function isLivePlayback() as Boolean
 end function
 
 sub resetSeasonCarouselState()
+    m.seasonCarouselOpen = false
+    m.focusArea = "controls"
+    m.focusIndex = 0
     m.seasonEpisodes = []
     m.seasonCarouselCards = []
     m.seasonCarouselFocusIndex = 0
@@ -716,7 +731,7 @@ sub renderSeasonCarousel()
     if childCount > 0 then m.seasonCarouselHost.removeChildrenIndex(childCount, 0)
     m.seasonCarouselCards = []
 
-    if hasSeasonCarousel() <> true
+    if hasSeasonCarousel() <> true or m.seasonCarouselOpen <> true
         if m.focusArea = "seasonCarousel" then m.focusArea = "controls"
         m.seasonCarouselGroup.visible = false
         updateSeasonCarouselChevrons()
@@ -847,7 +862,7 @@ end function
 
 sub updateSeasonCarouselChevrons()
     if m.seasonCarouselLeftChevron = invalid or m.seasonCarouselRightChevron = invalid then return
-    showChevrons = hasSeasonCarousel() and m.bottomRailGroup.visible = true
+    showChevrons = hasSeasonCarousel() and m.seasonCarouselOpen = true and m.bottomRailGroup.visible = true
     m.seasonCarouselLeftChevron.visible = showChevrons and m.seasonCarouselVisibleStart > 0
     m.seasonCarouselRightChevron.visible = showChevrons and (m.seasonCarouselVisibleStart + m.maxVisibleSeasonCarouselItems) < m.seasonEpisodes.Count()
 end sub
@@ -920,14 +935,16 @@ sub buildControls()
     childCount = m.controlsHost.getChildCount()
     if childCount > 0 then m.controlsHost.removeChildrenIndex(childCount, 0)
     m.controls = ["playPause", "audio", "subtitles", "quality"]
+    if hasSeasonCarousel() then m.controls.Push("episodes")
     m.controlNodes = []
 
     labels = controlLabels()
     for index = 0 to labels.Count() - 1
         label = CreateObject("roSGNode", "Label")
         label.text = labels[index]
-        label.translation = [index * m.controlSpacing + 24, 13]
-        label.width = 208
+        label.translation = [index * m.controlSpacing + 12, 13]
+        label.width = 196
+        label.font.size = 20
         label.color = "#F5F5F5"
         m.controlsHost.appendChild(label)
         m.controlNodes.Push(label)
@@ -939,13 +956,13 @@ sub buildControls()
 end sub
 
 sub applyBottomRailLayout()
-    hasCarousel = hasSeasonCarousel()
+    hasCarousel = hasSeasonCarousel() and m.seasonCarouselOpen = true
     isLive = isLivePlayback()
 
     railY = 516
     railHeight = 204
-    titleY = 18
-    timeY = 22
+    titleY = 10
+    timeY = 10
     progressFocusY = 72
     progressTrackY = 80
     controlsY = 110
@@ -953,14 +970,14 @@ sub applyBottomRailLayout()
     menuY = -268
 
     if hasCarousel
-        railY = 400
-        railHeight = 320
+        railY = 376
+        railHeight = 344
         titleY = 24
         timeY = 28
-        progressFocusY = 196
-        progressTrackY = 204
-        controlsY = 234
-        statusY = 286
+        progressFocusY = 220
+        progressTrackY = 228
+        controlsY = 258
+        statusY = 310
         menuY = -238
     else if isLive
         railY = 550
@@ -984,14 +1001,33 @@ sub applyBottomRailLayout()
     m.seasonCarouselStatusLabel.translation = [72, statusY]
     m.statusLabel.translation = [72, statusY]
     m.menuPopover.translation = [720, menuY]
+    m.remainingTimeLabel.translation = [72, progressTrackY - 34]
+    m.seekFeedbackLabel.translation = [720, progressTrackY - 38]
 end sub
 
 function controlLabels() as Object
     playLabel = "Play"
     if m.isPlaying then playLabel = "Pause"
 
-    return [playLabel, "Audio: " + selectedAudioLabel(), "Subs: " + selectedSubtitleLabel(), "Quality: " + selectedQualityLabel()]
+    labels = [playLabel, "Audio: " + selectedAudioLabel(), "Subs: " + selectedSubtitleLabel(), "Quality: " + selectedQualityLabel()]
+    if hasSeasonCarousel() then labels.Push("Episodes")
+    return labels
 end function
+
+sub closeSeasonCarousel()
+    m.seasonCarouselOpen = false
+    m.focusArea = "controls"
+    renderSeasonCarousel()
+    applyBottomRailLayout()
+    updateFocusCursor()
+end sub
+
+sub hideRail()
+    m.railHideTimer.control = "stop"
+    m.bottomRailGroup.visible = false
+    closeSeasonCarousel()
+    updateSeasonCarouselChevrons()
+end sub
 
 sub updateControlLabels()
     if m.controlNodes = invalid or m.controlNodes.Count() = 0 then return
@@ -1007,17 +1043,17 @@ sub updatePlayPauseControlLabel()
 end sub
 
 sub showRail()
+    if m.nextEpisodePromptOpen then return
     m.bottomRailGroup.visible = true
+    updateProgressVisuals()
     updateFocusCursor()
     updateSeasonCarouselChevrons()
-    if m.isPlaying and m.menuOpen <> true then m.railHideTimer.control = "start"
+    if m.isPlaying and m.menuOpen <> true and m.seasonCarouselOpen <> true then m.railHideTimer.control = "start"
 end sub
 
 sub onRailHideTimer()
-    if m.isPlaying and m.menuOpen <> true
-        m.bottomRailGroup.visible = false
-        updateFocusCursor()
-        updateSeasonCarouselChevrons()
+    if m.isPlaying and m.menuOpen <> true and m.seasonCarouselOpen <> true
+        hideRail()
     end if
 end sub
 
@@ -1041,6 +1077,8 @@ sub updateFocusCursor()
 end sub
 
 sub updateProgressVisuals()
+    m.remainingTimeLabel.text = ""
+    m.seekFeedbackLabel.visible = false
     if isLivePlayback()
         m.timeLabel.text = "LIVE"
         m.progressFill.width = 0
@@ -1050,6 +1088,14 @@ sub updateProgressVisuals()
     position = displayPositionSeconds()
     duration = playbackDurationSeconds()
     m.timeLabel.text = formatTime(position) + " / " + formatTime(duration)
+    now = CreateObject("roDateTime")
+    now.ToLocalTime()
+    localSeconds = now.GetHours() * 3600 + now.GetMinutes() * 60 + now.GetSeconds()
+    m.remainingTimeLabel.text = remainingTimeText(position, duration, localSeconds, m.videoNode.state = "paused")
+    if m.seekPending
+        m.seekFeedbackLabel.text = seekFeedbackText(position, m.seekStartPosition)
+        m.seekFeedbackLabel.visible = true
+    end if
 
     width = 0
     if duration > 0
@@ -1058,6 +1104,34 @@ sub updateProgressVisuals()
     end if
     m.progressFill.width = width
 end sub
+
+function remainingTimeText(position as Integer, duration as Integer, localSeconds as Integer, paused as Boolean) as String
+    if duration <= 0 then return ""
+    remaining = duration - position
+    if remaining < 0 then remaining = 0
+    minutes = Int((remaining + 59) / 60)
+    result = StrI(minutes).Trim() + " min left"
+    if paused then return result
+    finish = (localSeconds + remaining) MOD 86400
+    hour = StrI(Int(finish / 3600)).Trim()
+    minute = StrI(Int((finish MOD 3600) / 60)).Trim()
+    if Len(hour) < 2 then hour = "0" + hour
+    if Len(minute) < 2 then minute = "0" + minute
+    return result + "  |  Ends at " + hour + ":" + minute
+end function
+
+function seekFeedbackText(position as Integer, startPosition as Integer) as String
+    offset = position - startPosition
+    prefix = ""
+    if offset >= 0 then prefix = "+"
+    return formatTime(position) + "  " + prefix + StrI(offset).Trim() + " sec"
+end function
+
+function seekStepForHold(elapsedMs as Integer) as Integer
+    if elapsedMs >= 4000 then return 120
+    if elapsedMs >= 2000 then return 60
+    return 30
+end function
 
 function currentPositionSeconds() as Integer
     if m.videoNode = invalid or m.videoNode.position = invalid then return 0
@@ -1485,13 +1559,35 @@ sub onMarkWatchedResponse(event as Object)
 end sub
 
 function onKeyEvent(key as String, press as Boolean) as Boolean
-    if press <> true then return false
+    if press <> true
+        if key = m.seekHoldKey then m.seekHoldKey = ""
+        return false
+    end if
+
+    seekKey = key = "left" or key = "right" or key = "replay" or key = "rewind" or key = "fastforward" or key = "rev" or key = "fwd"
+    if seekKey
+        if m.seekHoldKey <> key
+            m.seekHoldKey = key
+            m.seekHoldClock.Mark()
+        end if
+    else
+        m.seekHoldKey = ""
+    end if
 
     if m.resumePromptOpen then return handleResumePromptKey(key)
     if m.nextEpisodePromptOpen then return handleNextEpisodePromptKey(key)
     if m.menuOpen then return handleMenuKey(key)
 
     if key = "back"
+        if m.seasonCarouselOpen
+            closeSeasonCarousel()
+            showRail()
+            return true
+        end if
+        if m.bottomRailGroup.visible
+            hideRail()
+            return true
+        end if
         sendProgressUpdate("exit")
         exitPlayer()
         return true
@@ -1596,11 +1692,7 @@ function handleTransportKey(key as String) as Boolean
 end function
 
 function handleProgressKey(key as String) as Boolean
-    if key = "up" and hasSeasonCarousel()
-        m.focusArea = "seasonCarousel"
-        renderSeasonCarousel()
-        updateFocusCursor()
-    else if key = "down"
+    if key = "down"
         m.focusArea = "controls"
         updateFocusCursor()
     else if key = "left"
@@ -1620,9 +1712,7 @@ end function
 
 function handleSeasonCarouselKey(key as String) as Boolean
     if key = "down"
-        m.focusArea = "progress"
-        renderSeasonCarousel()
-        updateFocusCursor()
+        closeSeasonCarousel()
     else if key = "left"
         moveSeasonCarousel(-1)
     else if key = "right"
@@ -1705,7 +1795,12 @@ end sub
 
 sub seekBy(deltaSeconds as Integer)
     if isLivePlayback() then return
+    if m.seekHoldKey <> "" and m.seekHoldClock <> invalid
+        stepSeconds = seekStepForHold(m.seekHoldClock.TotalMilliseconds())
+        if deltaSeconds < 0 then deltaSeconds = 0 - stepSeconds else deltaSeconds = stepSeconds
+    end if
     basePosition = currentPositionSeconds()
+    if m.seekPending <> true then m.seekStartPosition = basePosition
     if m.seekPending and m.pendingSeekPosition <> invalid then basePosition = m.pendingSeekPosition
 
     nextPosition = clampedSeekPosition(basePosition + deltaSeconds)
@@ -1753,9 +1848,12 @@ sub onSeekSettleTimer()
 end sub
 
 sub clearPendingSeek()
+    m.seekDebounceTimer.control = "stop"
     m.seekSettleTimer.control = "stop"
     m.seekPending = false
     m.pendingSeekPosition = invalid
+    m.seekHoldKey = ""
+    m.seekFeedbackLabel.visible = false
 end sub
 
 sub activateFocusedControl()
@@ -1768,6 +1866,13 @@ sub activateFocusedControl()
         openMenu("subtitles")
     else if control = "quality"
         openMenu("quality")
+    else if control = "episodes"
+        m.seasonCarouselOpen = true
+        m.focusArea = "seasonCarousel"
+        m.railHideTimer.control = "stop"
+        renderSeasonCarousel()
+        applyBottomRailLayout()
+        updateFocusCursor()
     end if
 end sub
 
