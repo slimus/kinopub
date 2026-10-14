@@ -1,6 +1,12 @@
 sub init()
     m.videoNode = m.top.findNode("videoNode")
     m.videoNode.enableUI = false
+    m.playbackInfoGroup = m.top.findNode("playbackInfoGroup")
+    m.playbackInfoText = m.top.findNode("playbackInfoText")
+    m.playbackInfoHint = m.top.findNode("playbackInfoHint")
+    m.playbackInfoTimer = m.top.findNode("playbackInfoTimer")
+    m.playbackInfoTimer.observeField("fire", "updatePlaybackInfo")
+    resetPlaybackInfoSamples()
     configureVideoHttpAgent()
     m.streamLoaderGroup = m.top.findNode("streamLoaderGroup")
     m.streamLoaderPercentLabel = m.top.findNode("streamLoaderPercentLabel")
@@ -180,7 +186,7 @@ sub onNextPlaybackChanged(event as Object)
     m.seasonCarouselRequestPending = false
 
     if response = invalid or response.ok <> true or response.playback = invalid
-        if m.nextEpisodeRequestReason = "finished"
+        if m.nextEpisodeRequestReason = "finished" or m.videoNode.state = "finished"
             markCompletedIfSafe()
             exitPlayer()
         end if
@@ -188,6 +194,9 @@ sub onNextPlaybackChanged(event as Object)
     end if
 
     if response.reason = "seasonCarousel"
+        startNextPlayback(response.playback)
+    else if m.nextEpisodeRequestReason = "finished" or m.videoNode.state = "finished"
+        markCompletedIfSafe()
         startNextPlayback(response.playback)
     else
         showNextEpisodePrompt(response.playback)
@@ -264,6 +273,7 @@ function savedPreferredSubtitleTrackNameForPlayback() as String
 end function
 
 function playbackContentNode(preferredSubtitleTrackName as String) as Object
+    resetPlaybackInfoSamples()
     stream = currentPlaybackStream()
     content = CreateObject("roSGNode", "ContentNode")
     content.url = stream.url
@@ -463,7 +473,7 @@ sub showNextEpisodePrompt(playback as Object)
     updateNextEpisodePromptCountdown()
     m.bottomRailGroup.visible = false
     m.nextEpisodePromptGroup.visible = true
-    m.nextEpisodeCountdownTimer.control = "start"
+    m.nextEpisodeCountdownTimer.control = "stop"
 end sub
 
 sub renderNextEpisodePromptOptions()
@@ -498,7 +508,7 @@ sub renderNextEpisodePromptOptions()
 end sub
 
 sub updateNextEpisodePromptCountdown()
-    m.nextEpisodePromptCountdownLabel.text = "Auto-play in " + StrI(m.nextEpisodePromptRemainingSeconds).Trim() + " sec"
+    m.nextEpisodePromptCountdownLabel.text = "Auto-play after this episode ends"
 end sub
 
 sub closeNextEpisodePrompt()
@@ -510,14 +520,7 @@ sub closeNextEpisodePrompt()
 end sub
 
 sub onNextEpisodeCountdownTimer()
-    if m.nextEpisodePromptOpen <> true then return
-
-    m.nextEpisodePromptRemainingSeconds = m.nextEpisodePromptRemainingSeconds - 1
-    if m.nextEpisodePromptRemainingSeconds <= 0
-        chooseNextEpisodePromptOption(0)
-    else
-        updateNextEpisodePromptCountdown()
-    end if
+    ' A queued timer event must never interrupt the current episode.
 end sub
 
 function handleNextEpisodePromptKey(key as String) as Boolean
@@ -594,16 +597,13 @@ function resumeStartSeconds() as Integer
 end function
 
 function nextEpisodePromptThresholdSeconds(duration as Integer) as Integer
-    if duration <= 0 then return 0
-
-    percentThreshold = Int((duration * 8) / 100)
-    if percentThreshold < 1 then percentThreshold = 1
-    if percentThreshold > 180 then return 180
-    return percentThreshold
+    store = AppSettingsStore()
+    return appNextEpisodeThreshold(duration, store.load())
 end function
 
 sub maybeRequestNextEpisodePrompt(reason as String)
     if m.playback = invalid then return
+    if reason = "finished" and m.nextEpisodeRequestPending <> true then m.nextEpisodeRequested = false
     if m.nextEpisodeRequested = true or m.nextEpisodeRequestPending = true or m.nextEpisodePromptOpen = true then return
     if canAskForNextEpisode() <> true then return
 
@@ -1000,6 +1000,7 @@ sub applyBottomRailLayout()
     m.controlFocusY = controlsY
     m.seasonCarouselStatusLabel.translation = [72, statusY]
     m.statusLabel.translation = [72, statusY]
+    if m.playbackInfoHint <> invalid then m.playbackInfoHint.translation = [930, statusY]
     m.menuPopover.translation = [720, menuY]
     m.remainingTimeLabel.translation = [72, progressTrackY - 34]
     m.seekFeedbackLabel.translation = [720, progressTrackY - 38]
@@ -1243,6 +1244,7 @@ end sub
 sub onVideoDownloadedSegmentChanged(event as Object)
     segment = event.getData()
     if segment = invalid or type(segment) <> "roAssociativeArray" then return
+    recordPlaybackInfoDownload(segment)
 
     downloadDurationMs = playbackDiagnosticNumber(playbackDiagnosticField(segment, "DownloadDuration"))
     segmentSize = playbackDiagnosticNumber(playbackDiagnosticField(segment, "SegSize"))
@@ -1261,6 +1263,7 @@ end sub
 sub onVideoStreamingSegmentChanged(event as Object)
     segment = event.getData()
     if segment = invalid or type(segment) <> "roAssociativeArray" then return
+    recordPlaybackInfoStream(segment)
 
     segmentUrl = playbackDiagnosticString(playbackDiagnosticField(segment, "segUrl"))
     print "PlayerScreen: streaming segment sequence="; playbackDiagnosticField(segment, "segSequence"); " type="; playbackDiagnosticField(segment, "segTypeStr"); " start="; playbackDiagnosticField(segment, "segStart")
@@ -1303,7 +1306,7 @@ end function
 function playbackDiagnosticNumber(value as Dynamic) as Float
     if value = invalid then return 0.0
     valueType = type(value)
-    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value * 1.0
     if valueType = "Float" or valueType = "Double" or valueType = "roFloat" or valueType = "roDouble" then return value
     if valueType = "String" or valueType = "roString" then return Val(value)
     return 0.0
@@ -1563,6 +1566,8 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
         if key = m.seekHoldKey then m.seekHoldKey = ""
         return false
     end if
+
+    if handlePlaybackInfoKey(key) then return true
 
     seekKey = key = "left" or key = "right" or key = "replay" or key = "rewind" or key = "fastforward" or key = "rev" or key = "fwd"
     if seekKey
@@ -2522,6 +2527,7 @@ sub onStatusClearTimer()
 end sub
 
 sub exitPlayer()
+    closePlaybackInfo()
     m.progressTimer.control = "stop"
     m.railHideTimer.control = "stop"
     m.statusClearTimer.control = "stop"

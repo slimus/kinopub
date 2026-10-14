@@ -125,7 +125,7 @@ sub main()
     m.nextEpisodePromptOpen = true
     m.nextEpisodePromptPlayback = { title: "Next" }
     onNextEpisodeCountdownTimer()
-    check(m.nextStarted, "Countdown still starts next episode")
+    check(m.nextStarted = false, "Early next-episode card never auto-plays")
     print "Player usability tests passed."
 end sub
 

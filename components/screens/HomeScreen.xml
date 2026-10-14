@@ -20,6 +20,7 @@
       <Label id="collapsedSearch" text="SE" translation="[0,298]" width="84" horizAlign="center" color="#9CA3AF" />
       <Label id="collapsedBookmarks" text="BK" translation="[0,358]" width="84" horizAlign="center" color="#9CA3AF" />
       <Label id="collapsedAccount" text="AC" translation="[0,418]" width="84" horizAlign="center" color="#9CA3AF" />
+      <Label id="collapsedSettings" text="ST" translation="[0,478]" width="84" horizAlign="center" color="#9CA3AF" />
     </Group>
 
     <Group id="expandedMenu" translation="[0,0]" visible="false">
@@ -33,11 +34,24 @@
       <Label id="searchNav" text="S  Search" translation="[32,304]" color="#D1D5DB" />
       <Label id="bookmarksNav" text="K  Bookmarks" translation="[32,364]" color="#D1D5DB" />
       <Label id="accountNav" text="A  Account" translation="[32,424]" color="#D1D5DB" />
+      <Label id="settingsNav" text="Settings" translation="[32,484]" color="#D1D5DB" />
       <Rectangle id="signOutFocusBg" translation="[12,616]" width="260" height="44" color="#181818" />
       <Label id="signOutNav" text="Sign out" translation="[32,628]" color="#9CA3AF" />
     </Group>
 
     <Group id="contentHost" translation="[116,44]">
+      <Group id="settingsContent" visible="false">
+        <Label text="Settings" color="#F5F5F5" />
+        <Label text="Next episode button" translation="[0,60]" color="#D1D5DB" />
+        <Rectangle id="settingsSecondsBg" translation="[0,116]" width="820" height="64" color="#374151" />
+        <Label text="Seconds remaining" translation="[20,134]" color="#F5F5F5" />
+        <Label id="settingsSecondsValue" translation="[590,134]" width="210" horizAlign="right" color="#F5F5F5" />
+        <Rectangle id="settingsPercentBg" translation="[0,200]" width="820" height="64" color="#374151" />
+        <Label text="Percent remaining" translation="[20,218]" color="#F5F5F5" />
+        <Label id="settingsPercentValue" translation="[590,218]" width="210" horizAlign="right" color="#F5F5F5" />
+        <Label id="settingsHint" translation="[0,294]" width="820" height="64" wrap="true" color="#D1D5DB" />
+        <Label text="The button appears when both enabled limits are met.&#10;0 disables a limit. Both 0: only after the episode ends.&#10;Auto-play always waits until the episode ends." translation="[0,380]" width="820" height="140" wrap="true" color="#9CA3AF" />
+      </Group>
       <Group id="continueContent">
         <Label text="Continue Watching" translation="[0,0]" color="#F5F5F5" />
         <Label id="continueSubtitleLabel" text="" translation="[0,38]" color="#9CA3AF" />
@@ -410,6 +424,8 @@
   </children>
   <script type="text/brightscript" uri="pkg:/source/config/BuildInfo.brs" />
   <script type="text/brightscript" uri="pkg:/source/services/SearchHistoryStore.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/AppSettingsStore.brs" />
+  <script type="text/brightscript" uri="pkg:/components/screens/HomeSettings.brs" />
   <script type="text/brightscript" uri="pkg:/components/MediaCardBadges.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/HomeScreen.brs" />
 </component>

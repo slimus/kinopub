@@ -9,6 +9,11 @@ sub init()
     m.searchNav = m.top.findNode("searchNav")
     m.bookmarksNav = m.top.findNode("bookmarksNav")
     m.accountNav = m.top.findNode("accountNav")
+    m.settingsNav = m.top.findNode("settingsNav")
+    m.collapsedSettings = m.top.findNode("collapsedSettings")
+    m.settingsContent = m.top.findNode("settingsContent")
+    m.settingsIndex = 0
+    m.settingsEditing = false
     m.signOutNav = m.top.findNode("signOutNav")
     m.contentHost = m.top.findNode("contentHost")
     m.continueContent = m.top.findNode("continueContent")
@@ -4090,6 +4095,8 @@ sub showSection(section as String)
     m.searchContent.visible = section = "search"
     m.bookmarksContent.visible = section = "bookmarks"
     m.accountContent.visible = section = "account"
+    m.settingsContent.visible = section = "settings"
+    if section = "settings" then loadAppSettings()
 
     m.menuIndex = menuIndexForSection(section)
 
@@ -4115,6 +4122,7 @@ sub showSection(section as String)
 end sub
 
 sub updateSelectedContentFocusVisuals()
+    if m.selectedSection = "settings" then renderAppSettings()
     updateContinueFocusVisuals()
     updateHomeCardFocus()
     updateLiveFocusVisuals()
@@ -4156,6 +4164,7 @@ function menuEntries() as Object
     entries.Push({ section: "search", nav: m.searchNav, collapsed: m.collapsedSearch })
     entries.Push({ section: "bookmarks", nav: m.bookmarksNav, collapsed: m.collapsedBookmarks })
     entries.Push({ section: "account", nav: m.accountNav, collapsed: m.collapsedAccount })
+    entries.Push({ section: "settings", nav: m.settingsNav, collapsed: m.collapsedSettings })
     entries.Push({ section: "signOut", nav: m.signOutNav, collapsed: invalid })
     return entries
 end function
@@ -4312,6 +4321,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
     end if
 
     if m.focusArea = "content"
+        if m.selectedSection = "settings" then return handleAppSettingsKey(key)
         if m.selectedSection = "continue"
             if m.continueMode = "summary"
                 if key = "left"
