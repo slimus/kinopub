@@ -23,7 +23,7 @@ grep -q 'sub updateSeasonCarouselChevrons' components/screens/PlayerScreen.brs
 grep -q 'sub moveSeasonCarousel' components/screens/PlayerScreen.brs
 grep -q 'sub selectFocusedSeasonCarouselEpisode' components/screens/PlayerScreen.brs
 grep -q 'function seasonCarouselCurrentMediaId' components/screens/PlayerScreen.brs
-grep -q 'if key = "up" and hasSeasonCarousel()' components/screens/PlayerScreen.brs
+grep -q 'else if control = "episodes"' components/screens/PlayerScreen.brs
 grep -q 'if key = "down"' components/screens/PlayerScreen.brs
 grep -q 'm.focusArea = "progress"' components/screens/PlayerScreen.brs
 

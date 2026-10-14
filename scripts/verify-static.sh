@@ -734,7 +734,7 @@ grep -q "m.playback.itemTitle" components/screens/PlayerScreen.brs
 grep -q 'sub buildControls' components/screens/PlayerScreen.brs
 grep -q 'sub applyBottomRailLayout' components/screens/PlayerScreen.brs
 grep -q 'railY = 516' components/screens/PlayerScreen.brs
-grep -q 'railY = 400' components/screens/PlayerScreen.brs
+grep -q 'railY = 376' components/screens/PlayerScreen.brs
 grep -q 'railY = 550' components/screens/PlayerScreen.brs
 grep -q 'm.bottomRailBackground.height = railHeight' components/screens/PlayerScreen.brs
 grep -q 'm.controlFocusY = controlsY' components/screens/PlayerScreen.brs
@@ -1020,6 +1020,7 @@ bash scripts/tests/search-history-layout.sh
 bash scripts/tests/bookmark-folder-layout.sh
 if [[ -n "${BRS_BIN:-}" ]] || command -v brs >/dev/null 2>&1; then
   bash scripts/tests/bookmark-pagination.sh
+  bash scripts/tests/player-usability.sh
 else
   echo "Bookmark pagination runtime tests skipped: install brs or set BRS_BIN."
 fi

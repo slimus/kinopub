@@ -25,8 +25,8 @@
 
     <Group id="bottomRailGroup" translation="[0,400]" visible="false">
       <Rectangle id="bottomRailBackground" width="1280" height="320" color="#101010" opacity="0.84" />
-      <Label id="titleLabel" translation="[72,24]" width="860" color="#F5F5F5" />
-      <Label id="timeLabel" translation="[1030,28]" width="180" horizAlign="right" color="#D1D5DB" />
+      <Label id="titleLabel" translation="[72,24]" width="860" height="28" color="#F5F5F5" font="font:SmallBoldSystemFont" />
+      <Label id="timeLabel" translation="[1030,28]" width="180" height="28" horizAlign="right" color="#D1D5DB" font="font:SmallSystemFont" />
       <Group id="seasonCarouselGroup" translation="[72,54]" visible="false">
         <Label id="seasonCarouselTitleLabel" text="Season" width="180" color="#D1D5DB" />
         <Label id="seasonCarouselLeftChevron" text="&lt;" translation="[-42,52]" width="30" horizAlign="center" color="#D1D5DB" visible="false" />
@@ -36,13 +36,15 @@
       <Rectangle id="progressFocus" translation="[68,196]" width="1144" height="22" color="#F5F5F5" opacity="0.18" visible="false" />
       <Rectangle id="progressTrack" translation="[72,204]" width="1136" height="6" color="#4B5563" />
       <Rectangle id="progressFill" translation="[72,204]" width="0" height="6" color="#EF4444" />
+      <Label id="remainingTimeLabel" width="620" height="28" color="#D1D5DB" font="font:SmallSystemFont" />
+      <Label id="seekFeedbackLabel" width="488" height="34" horizAlign="right" color="#F5F5F5" font="font:MediumBoldSystemFont" visible="false" />
       <Group id="controlsHost" translation="[72,234]" />
       <Group id="focusCursor" translation="[72,234]" visible="false">
-        <Rectangle width="232" height="48" color="#E5E7EB" opacity="0.22" />
-        <Rectangle width="232" height="4" color="#F5F5F5" />
-        <Rectangle translation="[0,44]" width="232" height="4" color="#F5F5F5" />
+        <Rectangle width="220" height="48" color="#E5E7EB" opacity="0.22" />
+        <Rectangle width="220" height="4" color="#F5F5F5" />
+        <Rectangle translation="[0,44]" width="220" height="4" color="#F5F5F5" />
         <Rectangle width="4" height="48" color="#F5F5F5" />
-        <Rectangle translation="[228,0]" width="4" height="48" color="#F5F5F5" />
+        <Rectangle translation="[216,0]" width="4" height="48" color="#F5F5F5" />
       </Group>
       <Group id="menuPopover" translation="[720,-238]" visible="false">
         <Rectangle id="menuBackground" width="420" height="264" color="#111827" opacity="0.96" />
@@ -53,12 +55,12 @@
       <Label id="statusLabel" translation="[72,286]" width="700" color="#9CA3AF" />
     </Group>
 
-    <Group id="nextEpisodePromptGroup" translation="[390,214]" visible="false">
-      <Rectangle width="500" height="292" color="#111827" opacity="0.96" />
-      <Label id="nextEpisodePromptTitleLabel" translation="[30,28]" width="440" text="Play next episode?" color="#F5F5F5" />
-      <Label id="nextEpisodePromptMessageLabel" translation="[30,74]" width="440" color="#D1D5DB" />
-      <Group id="nextEpisodePromptOptionsHost" translation="[30,126]" />
-      <Label id="nextEpisodePromptCountdownLabel" translation="[30,246]" width="440" horizAlign="center" color="#9CA3AF" />
+    <Group id="nextEpisodePromptGroup" translation="[764,468]" visible="false">
+      <Rectangle width="444" height="204" color="#111827" opacity="0.96" />
+      <Label id="nextEpisodePromptTitleLabel" translation="[20,16]" width="404" height="28" text="Up next" color="#F5F5F5" font="font:SmallBoldSystemFont" />
+      <Label id="nextEpisodePromptMessageLabel" translation="[20,50]" width="404" height="54" wrap="true" maxLines="2" color="#D1D5DB" font="font:SmallSystemFont" />
+      <Group id="nextEpisodePromptOptionsHost" translation="[20,112]" />
+      <Label id="nextEpisodePromptCountdownLabel" translation="[20,170]" width="404" height="26" horizAlign="right" color="#9CA3AF" font="font:SmallSystemFont" />
     </Group>
 
     <Timer id="railHideTimer" repeat="false" duration="4" />
