@@ -10,6 +10,13 @@
   <children>
     <Video id="videoNode" width="1280" height="720" enableUI="false" />
 
+    <Group id="playbackInfoGroup" translation="[72,40]" visible="false">
+      <Rectangle width="500" height="280" color="#111827" opacity="0.88" />
+      <Label translation="[20,14]" width="460" height="28" text="Playback info" color="#F5F5F5" font="font:SmallBoldSystemFont" />
+      <Label id="playbackInfoText" translation="[20,50]" width="460" height="180" wrap="true" maxLines="6" color="#D1D5DB" font="font:SmallSystemFont" />
+      <Label translation="[20,242]" width="460" height="26" text="Back to close" color="#9CA3AF" font="font:SmallSystemFont" />
+    </Group>
+
     <Group id="streamLoaderGroup" translation="[1100,32]" visible="false">
       <Poster id="streamLoaderRing" width="144" height="144" uri="pkg:/images/buffering/progress-000.png" />
       <Label id="streamLoaderPercentLabel" translation="[8,54]" width="128" height="36" horizAlign="center" vertAlign="center" text="Loading" color="#F5F5F5" font="font:SmallBoldSystemFont" />
@@ -40,11 +47,11 @@
       <Label id="seekFeedbackLabel" width="488" height="34" horizAlign="right" color="#F5F5F5" font="font:MediumBoldSystemFont" visible="false" />
       <Group id="controlsHost" translation="[72,234]" />
       <Group id="focusCursor" translation="[72,234]" visible="false">
-        <Rectangle width="220" height="48" color="#E5E7EB" opacity="0.22" />
-        <Rectangle width="220" height="4" color="#F5F5F5" />
-        <Rectangle translation="[0,44]" width="220" height="4" color="#F5F5F5" />
+        <Rectangle width="184" height="48" color="#E5E7EB" opacity="0.22" />
+        <Rectangle width="184" height="4" color="#F5F5F5" />
+        <Rectangle translation="[0,44]" width="184" height="4" color="#F5F5F5" />
         <Rectangle width="4" height="48" color="#F5F5F5" />
-        <Rectangle translation="[216,0]" width="4" height="48" color="#F5F5F5" />
+        <Rectangle translation="[180,0]" width="4" height="48" color="#F5F5F5" />
       </Group>
       <Group id="menuPopover" translation="[720,-238]" visible="false">
         <Rectangle id="menuBackground" width="420" height="264" color="#111827" opacity="0.96" />
@@ -53,6 +60,7 @@
       </Group>
       <Label id="seasonCarouselStatusLabel" translation="[72,286]" width="700" color="#9CA3AF" visible="false" />
       <Label id="statusLabel" translation="[72,286]" width="700" color="#9CA3AF" />
+      <Label id="playbackInfoHint" translation="[930,286]" width="278" height="28" horizAlign="right" text="Info: playback details" color="#9CA3AF" font="font:SmallSystemFont" />
     </Group>
 
     <Group id="nextEpisodePromptGroup" translation="[764,468]" visible="false">
@@ -64,6 +72,7 @@
     </Group>
 
     <Timer id="railHideTimer" repeat="false" duration="4" />
+    <Timer id="playbackInfoTimer" repeat="true" duration="1" />
     <Timer id="progressTimer" repeat="true" duration="60" />
     <Timer id="statusClearTimer" repeat="false" duration="2.5" />
     <Timer id="resumePromptTimer" repeat="true" duration="1" />
@@ -74,6 +83,8 @@
     <Timer id="seekSettleTimer" repeat="false" duration="2.5" />
   </children>
   <script type="text/brightscript" uri="pkg:/source/services/PlayerPreferenceStore.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/AppSettingsStore.brs" />
   <script type="text/brightscript" uri="pkg:/components/MediaCardBadges.brs" />
+  <script type="text/brightscript" uri="pkg:/components/screens/PlayerPlaybackInfo.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/PlayerScreen.brs" />
 </component>

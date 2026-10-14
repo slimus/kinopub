@@ -1021,6 +1021,8 @@ bash scripts/tests/bookmark-folder-layout.sh
 if [[ -n "${BRS_BIN:-}" ]] || command -v brs >/dev/null 2>&1; then
   bash scripts/tests/bookmark-pagination.sh
   bash scripts/tests/player-usability.sh
+  bash scripts/tests/app-settings.sh
+  bash scripts/tests/player-playback-info.sh
 else
   echo "Bookmark pagination runtime tests skipped: install brs or set BRS_BIN."
 fi

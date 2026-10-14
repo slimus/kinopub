@@ -14,7 +14,8 @@ names = ['applyBottomRailLayout', 'controlLabels', 'hasSeasonCarousel',
          'seekBy', 'clampedSeekPosition', 'currentPositionSeconds', 'displayPositionSeconds',
          'playbackDurationSeconds', 'formatTime', 'isLivePlayback',
          'handleNextEpisodePromptKey', 'chooseNextEpisodePromptOption', 'closeNextEpisodePrompt',
-         'onNextEpisodeCountdownTimer', 'activateFocusedControl', 'handleMenuKey', 'closeMenu',
+         'onNextEpisodeCountdownTimer', 'onVideoStateChanged', 'activateFocusedControl', 'handleMenuKey', 'closeMenu',
+         'updateNextEpisodePromptCountdown',
          'showRail', 'onRailHideTimer', 'updateProgressVisuals', 'clearPendingSeek']
 # Include the new helpers when present so the initial run exercises old behavior.
 names += [name for name in ['hideRail', 'closeSeasonCarousel', 'seekStepForHold',
@@ -27,7 +28,7 @@ for name in names:
     functions.append(match.group(0))
 with tempfile.TemporaryDirectory(prefix='player-usability-') as directory:
     extracted = Path(directory) / 'player.brs'
-    extracted.write_text('\n\n'.join(functions))
+    extracted.write_text('\n\n'.join(functions) + '\n' + Path('components/screens/PlayerPlaybackInfo.brs').read_text())
     result = subprocess.run([os.environ.get('BRS_BIN', 'brs'), str(extracted),
                              str(Path('scripts/tests/player-usability.brs').resolve())],
                             cwd=directory, text=True, capture_output=True)

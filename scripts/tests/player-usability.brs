@@ -13,9 +13,10 @@ sub main()
     applyBottomRailLayout()
     check(m.bottomRailBackground.height >= 320, "Episode list expands only when open")
     check(m.remainingTimeLabel.translation[1] >= 180, "Time information clears episode cards")
-    check(controlLabels().Count() = 5, "Series exposes Episodes action")
+    check(controlLabels().Count() = 6 and controlLabels()[5] = "Episodes", "Series exposes Episodes action")
+    check(controlLabels()[4] = "Info", "Info follows quality in player controls")
     m.seasonEpisodes = []
-    check(controlLabels().Count() = 4, "Movie has no Episodes action")
+    check(controlLabels().Count() = 5, "Movie has no Episodes action")
 
     m.resumePromptOpen = false
     m.nextEpisodePromptOpen = false
@@ -40,8 +41,8 @@ sub main()
     m.focusArea = "seasonCarousel"
     onKeyEvent("back", true)
     check(m.exitCount = 1 and m.bottomRailGroup.visible and m.seasonCarouselOpen = false, "Back closes episode list first")
-    m.controls = ["playPause", "audio", "subtitles", "quality", "episodes"]
-    m.focusIndex = 4
+    m.controls = ["playPause", "audio", "subtitles", "quality", "playbackInfo", "episodes"]
+    m.focusIndex = 5
     m.seasonEpisodes = [{}, {}]
     activateFocusedControl()
     check(m.seasonCarouselOpen and m.focusArea = "seasonCarousel", "Episodes button opens list")
@@ -107,6 +108,7 @@ sub main()
     m.nextEpisodePromptPlayback = { title: "Next" }
     m.nextEpisodePromptGroup = { visible: true }
     m.nextEpisodeCountdownTimer = {}
+    m.nextEpisodePromptCountdownLabel = { text: "" }
     m.isPlaying = true
     m.nextEpisodePromptIndex = 0
     m.nextEpisodePromptRemainingSeconds = 1
@@ -125,7 +127,38 @@ sub main()
     m.nextEpisodePromptOpen = true
     m.nextEpisodePromptPlayback = { title: "Next" }
     onNextEpisodeCountdownTimer()
-    check(m.nextStarted, "Countdown still starts next episode")
+    check(m.nextStarted = false, "Early next-episode card never auto-plays")
+    m.nextEpisodeTimerEnabled = true
+    m.nextEpisodePromptRemainingSeconds = 15
+    for tick = 1 to 14
+        onNextEpisodeCountdownTimer()
+    end for
+    check(m.nextStarted = false and m.nextEpisodePromptRemainingSeconds = 1, "Timer waits fifteen seconds")
+    onNextEpisodeCountdownTimer()
+    check(m.nextStarted, "Enabled timer starts next on fifteenth second")
+    m.nextStarted = false
+    m.nextEpisodePromptOpen = true
+    m.nextEpisodePromptPlayback = { title: "Next" }
+    m.nextEpisodePromptRemainingSeconds = 1
+    handleNextEpisodePromptKey("back")
+    onNextEpisodeCountdownTimer()
+    check(m.nextStarted = false, "Keep watching cancels enabled timer")
+    m.nextEpisodePromptOpen = true
+    m.nextEpisodeTimerEnabled = false
+    m.playbackStarted = true
+    m.progressTimer = {}
+    m.videoNode.state = "finished"
+    onVideoStateChanged({ getData: finishedState })
+    check(m.nextStarted = false and m.nextEpisodePromptOpen, "End of video still waits for choice without timer")
+    check(m.isPlaying = false, "Ended playback no longer runs progress updates")
+    m.nextEpisodeTimerEnabled = true
+    m.nextEpisodePromptRemainingSeconds = 1
+    onVideoStateChanged({ getData: finishedState })
+    check(m.nextStarted = false, "End of video does not shorten enabled timer")
+    m.nextEpisodeTimerEnabled = false
+    beforeExit = m.exitCount
+    handleNextEpisodePromptKey("back")
+    check(m.exitCount = beforeExit + 1, "Dismissing ended prompt returns from player")
     print "Player usability tests passed."
 end sub
 
@@ -163,4 +196,11 @@ sub renderNextEpisodePromptOptions()
 end sub
 sub startNextPlayback(playback as Object)
     m.nextStarted = true
+end sub
+
+function finishedState() as String
+    return "finished"
+end function
+
+sub hideStreamLoader()
 end sub
