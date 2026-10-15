@@ -18,4 +18,6 @@
     <Timer id="requestTimer" repeat="false" duration="20" />
   </children>
   <script type="text/brightscript" uri="pkg:/components/screens/AuthScreen.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/AppSettingsStore.brs" />
+  <script type="text/brightscript" uri="pkg:/components/UiTheme.brs" />
 </component>

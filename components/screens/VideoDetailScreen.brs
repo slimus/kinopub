@@ -1,4 +1,5 @@
 sub init()
+    initializeAppTheme()
     m.loadingGroup = m.top.findNode("loadingGroup")
     m.errorGroup = m.top.findNode("errorGroup")
     m.errorLabel = m.top.findNode("errorLabel")
@@ -447,7 +448,7 @@ sub renderMovieProgress()
     else
         m.resetActionLabel.text = "Reset viewing  *"
     end if
-    m.resetFocusBg.color = detailButtonColor(m.focusArea = "reset", false)
+    setThemeColor(m.resetFocusBg, detailButtonColor(m.focusArea = "reset", false))
 end sub
 
 sub buildDetailTabs()
@@ -476,13 +477,13 @@ sub renderDetailTabs()
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = 248
         bg.height = 48
-        bg.color = "#202B3A"
+        setThemeColor(bg, "#202B3A")
         tabGroup.appendChild(bg)
         label = CreateObject("roSGNode", "Label")
         label.text = m.detailTabs[index].label
         label.translation = [22, 11]
         label.width = 200
-        label.color = "#F8FAFC"
+        setThemeColor(label, "#F8FAFC")
         label.font.size = 24
         tabGroup.appendChild(label)
         m.detailTabHost.appendChild(tabGroup)
@@ -494,11 +495,11 @@ end sub
 sub updateDetailTabFocus()
     for index = 0 to m.detailTabBgs.Count() - 1
         if m.focusArea = "tabs" and index = m.focusedTabIndex
-            m.detailTabBgs[index].color = "#60A5FA"
+            setThemeColor(m.detailTabBgs[index], "#60A5FA", "focusSurface")
         else if m.detailTabs[index].id = m.activeTab
-            m.detailTabBgs[index].color = "#2563EB"
+            setThemeColor(m.detailTabBgs[index], "#2563EB")
         else
-            m.detailTabBgs[index].color = "#202B3A"
+            setThemeColor(m.detailTabBgs[index], "#202B3A")
         end if
     end for
     if m.aboutFocusBg <> invalid
@@ -613,14 +614,14 @@ function createDetailFactRow(fact as Object, index as Integer) as Object
     label = CreateObject("roSGNode", "Label")
     label.text = fact.label
     label.width = 96
-    label.color = palette.muted
+    setThemeColor(label, palette.muted)
     row.appendChild(label)
 
     value = CreateObject("roSGNode", "Label")
     value.text = fact.value
     value.translation = [108, 0]
     value.width = 340
-    value.color = "#D1D5DB"
+    setThemeColor(value, "#D1D5DB")
     row.appendChild(value)
 
     return row
@@ -778,9 +779,9 @@ function createSimilarCard(item as Object, index as Integer, focused = false as 
     bg = CreateObject("roSGNode", "Rectangle")
     bg.width = m.similarCardWidth
     bg.height = 270
-    bg.color = palette.surface
+    setThemeColor(bg, palette.surface)
     if focused then bg.opacity = 1 else bg.opacity = 0.78
-    if focused then bg.color = "#60A5FA"
+    if focused then setThemeColor(bg, "#60A5FA")
     card.appendChild(bg)
 
     if focused
@@ -788,7 +789,7 @@ function createSimilarCard(item as Object, index as Integer, focused = false as 
         innerBg.translation = [4, 4]
         innerBg.width = m.similarCardWidth - 8
         innerBg.height = 262
-        innerBg.color = "#273142"
+        setThemeColor(innerBg, "#273142")
         innerBg.opacity = 0.94
         card.appendChild(innerBg)
     end if
@@ -810,7 +811,7 @@ function createSimilarCard(item as Object, index as Integer, focused = false as 
     title.height = 30
     title.wrap = false
     title.font.size = 21
-    title.color = palette.text
+    setThemeColor(title, palette.text)
     card.appendChild(title)
 
     return card
@@ -820,11 +821,11 @@ sub updateDetailExtrasFocusVisuals()
     palette = detailUiPalette()
     if m.trailerFocusBg <> invalid
         if m.focusArea = "trailer" and m.trailerGroup.visible = true
-            m.trailerFocusBg.color = detailButtonColor(true, false)
-            m.trailerLabel.color = palette.primaryText
+            setThemeColor(m.trailerFocusBg, detailButtonColor(true, false))
+            setThemeColor(m.trailerLabel, palette.primaryText)
         else
-            m.trailerFocusBg.color = detailButtonColor(false, false)
-            m.trailerLabel.color = "#D1D5DB"
+            setThemeColor(m.trailerFocusBg, detailButtonColor(false, false))
+            setThemeColor(m.trailerLabel, "#D1D5DB")
         end if
     end if
 
@@ -939,13 +940,13 @@ sub updateBookmarkActionFocus()
     if m.bookmarkFocusBg = invalid then return
     palette = detailUiPalette()
     if m.focusArea = "bookmark"
-        m.bookmarkFocusBg.color = detailButtonColor(true, false)
+        setThemeColor(m.bookmarkFocusBg, detailButtonColor(true, false))
         m.bookmarkFocusBg.opacity = 1
-        m.bookmarkLabel.color = palette.primaryText
+        setThemeColor(m.bookmarkLabel, palette.primaryText)
     else
-        m.bookmarkFocusBg.color = detailButtonColor(false, false)
+        setThemeColor(m.bookmarkFocusBg, detailButtonColor(false, false))
         m.bookmarkFocusBg.opacity = 0.88
-        m.bookmarkLabel.color = "#D1D5DB"
+        setThemeColor(m.bookmarkLabel, "#D1D5DB")
     end if
 end sub
 
@@ -1017,7 +1018,7 @@ sub renderBookmarkOverlayFolders()
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = 504
         bg.height = 42
-        bg.color = palette.surface
+        setThemeColor(bg, palette.surface)
         row.appendChild(bg)
 
         marker = CreateObject("roSGNode", "Label")
@@ -1028,21 +1029,21 @@ sub renderBookmarkOverlayFolders()
         end if
         marker.translation = [14, 11]
         marker.width = 44
-        marker.color = "#D1D5DB"
+        setThemeColor(marker, "#D1D5DB")
         row.appendChild(marker)
 
         label = CreateObject("roSGNode", "Label")
         label.text = folder.title
         label.translation = [64, 11]
         label.width = 360
-        label.color = palette.text
+        setThemeColor(label, palette.text)
         row.appendChild(label)
 
         count = CreateObject("roSGNode", "Label")
         count.text = bookmarkFolderCountText(folder)
         count.translation = [424, 11]
         count.width = 64
-        count.color = palette.muted
+        setThemeColor(count, palette.muted)
         count.horizAlign = "right"
         row.appendChild(count)
 
@@ -1071,9 +1072,9 @@ sub updateBookmarkOverlayFocus()
     palette = detailUiPalette()
     for index = 0 to m.bookmarkOverlayRowBgs.Count() - 1
         if index = m.selectedBookmarkFolderIndex
-            m.bookmarkOverlayRowBgs[index].color = palette.surfaceFocus
+            setThemeColor(m.bookmarkOverlayRowBgs[index], palette.surfaceFocus)
         else
-            m.bookmarkOverlayRowBgs[index].color = palette.surface
+            setThemeColor(m.bookmarkOverlayRowBgs[index], palette.surface)
         end if
     end for
 end sub
@@ -1203,7 +1204,7 @@ end sub
 sub updateDescriptionFocusVisual()
     if m.descriptionFocusBg = invalid then return
     palette = detailUiPalette()
-    m.descriptionFocusBg.color = palette.surfaceFocus
+    setThemeColor(m.descriptionFocusBg, palette.surfaceFocus)
     if m.focusArea = "description" and m.detailGroup.visible = true and m.descriptionOverlayGroup.visible <> true
         m.descriptionFocusBg.opacity = 0.74
     else
@@ -1243,13 +1244,13 @@ sub renderSeasonTabs()
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = m.seasonTabWidth
         bg.height = m.seasonTabHeight
-        bg.color = palette.surface
+        setThemeColor(bg, palette.surface)
         tabGroup.appendChild(bg)
 
         label = CreateObject("roSGNode", "Label")
         label.text = "S" + StrI(m.seasons[index].number).Trim()
         label.translation = [14, 10]
-        label.color = "#D1D5DB"
+        setThemeColor(label, "#D1D5DB")
         tabGroup.appendChild(label)
 
         m.seasonTabsHost.appendChild(tabGroup)
@@ -1346,7 +1347,7 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
     shadow.translation = [4, 8]
     shadow.width = 1100
     shadow.height = 74
-    shadow.color = "#000000"
+    setThemeColor(shadow, "#000000")
     shadow.opacity = 0.45
     shadow.visible = false
     row.appendChild(shadow)
@@ -1354,7 +1355,7 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
     bg = CreateObject("roSGNode", "Rectangle")
     bg.width = 1100
     bg.height = 74
-    bg.color = palette.surface
+    setThemeColor(bg, palette.surface)
     bg.opacity = 0.82
     row.appendChild(bg)
 
@@ -1362,7 +1363,7 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
     accent.translation = [0, 0]
     accent.width = 4
     accent.height = 74
-    accent.color = palette.primaryFocus
+    setThemeColor(accent, palette.primaryFocus)
     accent.opacity = 0.52
     row.appendChild(accent)
 
@@ -1382,7 +1383,7 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
     appendTypeBadge(row, { type: "episode" }, 14, 10, 98)
     title.translation = [textX, 10]
     title.width = 850
-    title.color = palette.text
+    setThemeColor(title, palette.text)
     row.appendChild(title)
 
     subtitle = CreateObject("roSGNode", "Label")
@@ -1393,8 +1394,8 @@ function createEpisodeRow(episode as Object, visibleIndex as Integer) as Object
     end if
     subtitle.translation = [textX, 42]
     subtitle.width = 850
-    subtitle.color = palette.muted
-    if episodeWatchStatus(episode) <> 1 and progressText <> "" then subtitle.color = palette.success
+    setThemeColor(subtitle, palette.muted)
+    if episodeWatchStatus(episode) <> 1 and progressText <> "" then setThemeColor(subtitle, palette.success)
     row.appendChild(subtitle)
 
     if episodeWatchStatus(episode) = 1 then appendWatchedCheck(row)
@@ -1500,7 +1501,7 @@ sub appendWatchedCheck(row as Object)
     check.translation = [1042, 10]
     check.width = 26
     check.horizAlign = "center"
-    check.color = palette.success
+    setThemeColor(check, palette.success)
     row.appendChild(check)
 end sub
 
@@ -1573,13 +1574,13 @@ sub updateSelectedMediaVisuals()
 
     for index = 0 to m.seasonTabBgs.Count() - 1
         if m.focusArea = "seasons" and index + m.visibleSeasonStart = m.currentSeasonIndex
-            m.seasonTabBgs[index].color = palette.primaryFocus
+            setThemeColor(m.seasonTabBgs[index], palette.primaryFocus, "focusSurface")
             m.seasonTabBgs[index].opacity = 1
         else if index + m.visibleSeasonStart = m.currentSeasonIndex
-            m.seasonTabBgs[index].color = palette.primary
+            setThemeColor(m.seasonTabBgs[index], palette.primary)
             m.seasonTabBgs[index].opacity = 1
         else
-            m.seasonTabBgs[index].color = palette.surface
+            setThemeColor(m.seasonTabBgs[index], palette.surface)
             m.seasonTabBgs[index].opacity = 0.84
         end if
     end for
@@ -1590,17 +1591,17 @@ sub updateSelectedMediaVisuals()
         m.episodeRowShadows[index].visible = isFocused
         m.episodeRowNodes[index].scale = [1.0, 1.0]
         if rowIndex = m.currentEpisodeIndex
-            if isFocused then m.episodeRows[index].color = "#31435C" else m.episodeRows[index].color = palette.surfaceRaised
+            if isFocused then setThemeColor(m.episodeRows[index], "#31435C") else setThemeColor(m.episodeRows[index], palette.surfaceRaised)
         else
-            m.episodeRows[index].color = palette.surface
+            setThemeColor(m.episodeRows[index], palette.surface)
         end if
         if isFocused then m.episodeRows[index].opacity = 0.96 else m.episodeRows[index].opacity = 0.82
     end for
 
     if media = invalid
         m.playButtonLabel.text = "Unavailable"
-        m.playFocusBg.color = palette.surface
-        m.playButtonLabel.color = "#D1D5DB"
+        setThemeColor(m.playFocusBg, palette.surface)
+        setThemeColor(m.playButtonLabel, "#D1D5DB")
         updateBookmarkActionFocus()
         m.episodeCursor.visible = false
         updateDetailExtrasFocusVisuals()
@@ -1621,11 +1622,11 @@ sub updateSelectedMediaVisuals()
     end if
 
     if m.focusArea = "play"
-        m.playFocusBg.color = detailButtonColor(true, true)
+        setThemeColor(m.playFocusBg, detailButtonColor(true, true), "primary")
     else
-        m.playFocusBg.color = detailButtonColor(false, true)
+        setThemeColor(m.playFocusBg, detailButtonColor(false, true), "primary")
     end if
-    m.playButtonLabel.color = palette.primaryText
+    setThemeColor(m.playButtonLabel, palette.primaryText, "onPrimary")
     updateDescriptionFocusVisual()
     updateBookmarkActionFocus()
     updateDetailExtrasFocusVisuals()

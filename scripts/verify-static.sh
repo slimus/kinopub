@@ -22,9 +22,11 @@ required_files=(
   source/services/TokenStore.brs
   components/AppScene.xml
   components/AppScene.brs
+  components/UiTheme.brs
   components/screens/AuthScreen.xml
   components/screens/AuthScreen.brs
   components/screens/LoadingScreen.xml
+  components/screens/LoadingScreen.brs
   components/screens/HomeScreen.xml
   components/screens/HomeScreen.brs
   components/screens/PlayerScreen.xml
@@ -332,8 +334,8 @@ grep -q 'bookmarkItemsScrollDownChevron' components/screens/HomeScreen.xml
 grep -q "function detailUiPalette" components/screens/VideoDetailScreen.brs
 grep -q "function detailButtonColor" components/screens/VideoDetailScreen.brs
 grep -q "createEpisodeRow" components/screens/VideoDetailScreen.brs
-grep -q "m.playButtonLabel.color = palette.primaryText" components/screens/VideoDetailScreen.brs
-grep -q "m.descriptionFocusBg.color = palette.surfaceFocus" components/screens/VideoDetailScreen.brs
+grep -q "setThemeColor(m.playButtonLabel, palette.primaryText, \"onPrimary\")" components/screens/VideoDetailScreen.brs
+grep -q "setThemeColor(m.descriptionFocusBg, palette.surfaceFocus)" components/screens/VideoDetailScreen.brs
 grep -q 'id="heroGradientOverlay"' components/screens/VideoDetailScreen.xml
 grep -q 'id="detailAccentBar"' components/screens/VideoDetailScreen.xml
 grep -q 'accountContent' components/screens/HomeScreen.xml
@@ -1025,6 +1027,7 @@ if [[ -n "${BRS_BIN:-}" ]] || command -v brs >/dev/null 2>&1; then
   bash scripts/tests/bookmark-pagination.sh
   bash scripts/tests/player-usability.sh
   bash scripts/tests/app-settings.sh
+  bash scripts/tests/app-theme.sh
   bash scripts/tests/player-playback-info.sh
 else
   echo "Bookmark pagination runtime tests skipped: install brs or set BRS_BIN."

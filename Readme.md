@@ -82,6 +82,14 @@ Create a fresh package:
 
 The app is built with Roku SceneGraph and BrightScript. There is no dependency install step; the only local requirements are a shell, `python3`, and `zip`.
 
+## Appearance
+
+Open **Settings** in the sidebar and press **OK** on **Light theme** to switch
+between dark and light appearance. The light palette uses warm backgrounds and
+teal accents across every screen, including player controls and dialogs.
+The change applies immediately and is saved on this device. Dark is the default;
+automatic theme selection is not enabled.
+
 ## Next episode settings
 
 Open **Settings** in the sidebar to change when the next-episode button appears.
