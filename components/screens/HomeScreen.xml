@@ -424,6 +424,7 @@
       </Group>
     </Group>
   </children>
+  <script type="text/brightscript" uri="pkg:/source/HomeRailCatalog.brs" />
   <script type="text/brightscript" uri="pkg:/source/config/BuildInfo.brs" />
   <script type="text/brightscript" uri="pkg:/source/services/SearchHistoryStore.brs" />
   <script type="text/brightscript" uri="pkg:/source/services/AppSettingsStore.brs" />

@@ -198,8 +198,8 @@ sub init()
     m.visualSelectedHistoryIndex = -1
     m.historyColumns = 5
     m.historyVisiblePagePair = 0
+    m.continueGeneration = 0
     m.continueLoaded = false
-    m.isLoadingContinue = false
     m.continueMode = "summary"
     m.continueRails = []
     m.continueRailNodes = []
@@ -217,8 +217,8 @@ sub init()
     m.continueRailHeight = 266
     m.continueSummaryPerPage = 10
     m.continueFullListKind = "history"
+    m.homeGeneration = 0
     m.homeLoaded = false
-    m.isLoadingHome = false
     m.homeRails = []
     m.homeRailNodes = []
     m.homeCardNodes = []
@@ -2323,55 +2323,65 @@ sub loadInitialHistory()
 end sub
 
 sub loadContinueIfNeeded(force as Boolean)
-    if m.continueLoaded = true and force <> true then return
-    if m.isLoadingContinue = true then return
-    m.isLoadingContinue = true
+    if m.continueLoaded and force <> true then return
+    m.continueGeneration++
     m.continueMode = "summary"
-    showContinueState("loading")
-
-    task = CreateObject("roSGNode", "ContentTask")
-    task.command = "loadContinueSummary"
-    task.request = { perpage: m.continueSummaryPerPage }
-    task.observeField("response", "onContinueSummaryResponse")
-    task.control = "RUN"
-    m.continueTask = task
-end sub
-
-sub retryContinue()
-    m.continueLoaded = false
-    loadContinueIfNeeded(true)
-end sub
-
-sub onContinueSummaryResponse(event as Object)
-    response = event.getData()
-    m.isLoadingContinue = false
-
-    if responseRequiresSignIn(response)
-        requestSignInAgain(response)
-        return
-    end if
-
-    if response = invalid or response.ok <> true
-        message = "Unable to load Continue"
-        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
-        m.continueErrorLabel.text = message
-        showContinueState("error")
-        return
-    end if
-
-    m.continueRails = continueRailsFromResponse(response)
     m.continueLoaded = true
+    m.continueTasks = {}
+    m.continueRails = [
+        { id: "history", title: "History", items: railLoadingItems(m.continueVisibleCards) },
+        { id: "newEpisodes", title: "New Episodes", items: railLoadingItems(m.continueVisibleCards) }
+    ]
     m.selectedContinueRailIndex = 0
     m.selectedContinueCardIndex = 0
     m.visualSelectedContinueRailIndex = -1
     m.visualSelectedContinueCardIndex = -1
+    for index = 0 to 1
+        requestContinueRail(index)
+    end for
     renderContinueSummary()
+    showContinueState("summary")
+end sub
 
-    if m.continueRails.Count() = 0
-        showContinueState("empty")
-    else
-        showContinueState("summary")
+sub requestContinueRail(index as Integer)
+    rail = m.continueRails[index]
+    if rail.state = "loading" then return
+    rail.state = "loading"
+    rail.items = railLoadingItems(m.continueVisibleCards)
+    task = CreateObject("roSGNode", "ContentTask")
+    task.command = "loadContinueHistoryPage"
+    if rail.id = "newEpisodes" then task.command = "loadContinueNewEpisodesPage"
+    task.request = { page: 1, perpage: m.continueSummaryPerPage, railIndex: index, generation: m.continueGeneration }
+    task.observeField("response", "onContinueSummaryResponse")
+    m.continueTasks[rail.id] = task
+    task.control = "RUN"
+end sub
+
+sub retryContinue()
+    loadContinueIfNeeded(true)
+end sub
+
+sub onContinueSummaryResponse(event as Object)
+    task = event.getRoSGNode()
+    if task.request.generation <> m.continueGeneration then return
+    index = task.request.railIndex
+    rail = m.continueRails[index]
+    if m.continueTasks[rail.id] = invalid then return
+    response = event.getData()
+    if responseRequiresSignIn(response)
+        requestSignInAgain(response)
+        return
     end if
+    updated = continueRailFromPage(rail.id, rail.title, response)
+    if updated = invalid
+        rail.items = [railMessageItem("No items", false)]
+    else
+        rail.items = updated.items
+    end if
+    rail.state = "loaded"
+    if response = invalid or response.ok <> true then rail.state = "error"
+    if m.selectedContinueRailIndex = index and m.selectedContinueCardIndex >= rail.items.Count() then m.selectedContinueCardIndex = 0
+    renderContinueSummary()
 end sub
 
 function continueRailsFromResponse(response as Object) as Object
@@ -2384,7 +2394,7 @@ function continueRailsFromResponse(response as Object) as Object
 end function
 
 function continueRailFromPage(id as String, title as String, pageResponse as Dynamic) as Dynamic
-    if pageResponse = invalid then return invalid
+    if pageResponse = invalid then return { id: id, title: title, items: [railMessageItem("Retry", true)] }
 
     items = []
     if pageResponse.ok = true and pageResponse.items <> invalid
@@ -2400,7 +2410,7 @@ function continueRailFromPage(id as String, title as String, pageResponse as Dyn
             items.Push({ isViewAll: true, itemId: -1, mediaId: 0, title: "View all", subtitle: title, posterUrl: "", type: "", typeBadge: "" })
         end if
     else
-        items.Push({ isError: true, itemId: -1, mediaId: 0, title: "Unable to load", subtitle: title, posterUrl: "", type: "", typeBadge: "" })
+        items.Push({ isError: true, itemId: -1, mediaId: 0, title: "Retry", subtitle: title, posterUrl: "", type: "", typeBadge: "" })
     end if
 
     if items.Count() = 0 then return invalid
@@ -2704,7 +2714,8 @@ sub selectContinueCard()
     item = rail.items[m.selectedContinueCardIndex]
 
     if item.DoesExist("isError") and item.isError = true
-        loadContinueIfNeeded(true)
+        requestContinueRail(m.selectedContinueRailIndex)
+        renderContinueSummary()
         return
     end if
 
@@ -2713,6 +2724,7 @@ sub selectContinueCard()
         return
     end if
 
+    if item.itemId <= 0 then return
     m.visualSelectedContinueRailIndex = m.selectedContinueRailIndex
     m.visualSelectedContinueCardIndex = m.selectedContinueCardIndex
     updateContinueCardFocus()
@@ -2950,56 +2962,91 @@ sub showHomeState(state as String)
     updateHomeChevrons()
 end sub
 
+function pendingVisibleRails(rails as Object, first as Integer, count as Integer) as Object
+    indexes = []
+    last = first + count - 1
+    if last >= rails.Count() then last = rails.Count() - 1
+    for index = first to last
+        if rails[index].state = "idle" then indexes.Push(index)
+    end for
+    return indexes
+end function
+
+function railLoadingItems(count as Integer) as Object
+    items = []
+    for index = 0 to count - 1
+        title = ""
+        if index = 0 then title = "Loading..."
+        items.Push(railMessageItem(title, false))
+    end for
+    return items
+end function
+
+function railMessageItem(title as String, retry as Boolean) as Object
+    return { itemId: -1, mediaId: 0, title: title, subtitle: "", posterUrl: "", type: "", typeBadge: "", isError: retry }
+end function
+
 sub loadHomeIfNeeded(force as Boolean)
-    if m.isLoadingHome = true then return
-    if force <> true and m.homeLoaded = true then return
+    if force <> true and m.homeLoaded then return
+    m.homeGeneration++
+    m.homeRails = kinoHomeRails()
+    m.homeTasks = {}
+    for each rail in m.homeRails
+        rail.state = "idle"
+        rail.items = railLoadingItems(m.homeVisibleCards)
+    end for
+    m.homeLoaded = true
+    m.selectedHomeRailIndex = 0
+    m.selectedHomeCardIndex = 0
+    m.homeVisibleRailStart = 0
+    m.visualSelectedHomeRailIndex = -1
+    m.visualSelectedHomeCardIndex = -1
+    renderHomeRails()
+    showHomeState("rails")
+end sub
 
-    m.isLoadingHome = true
-    m.homeErrorLabel.text = "Unable to load Home"
-    showHomeState("loading")
+sub loadVisibleHomeRails()
+    if m.selectedSection <> "home" then return
+    for each index in pendingVisibleRails(m.homeRails, m.homeVisibleRailStart, m.homeMaxVisibleRails)
+        requestHomeRail(index)
+    end for
+end sub
 
+sub requestHomeRail(index as Integer)
+    rail = m.homeRails[index]
+    if rail.state = "loading" then return
+    rail.state = "loading"
+    rail.items = railLoadingItems(m.homeVisibleCards)
     task = CreateObject("roSGNode", "ContentTask")
-    task.command = "loadHome"
-    task.request = { perpage: m.homePerPage }
+    task.command = "loadHomeRail"
+    task.request = { railIndex: index, generation: m.homeGeneration, perpage: m.homePerPage }
     task.observeField("response", "onHomeResponse")
+    m.homeTasks[rail.id] = task
     task.control = "RUN"
-    m.homeTask = task
 end sub
 
 sub onHomeResponse(event as Object)
+    task = event.getRoSGNode()
+    if task.request.generation <> m.homeGeneration then return
+    index = task.request.railIndex
+    rail = m.homeRails[index]
+    if m.homeTasks[rail.id] = invalid then return
     response = event.getData()
-    m.isLoadingHome = false
-
-    if response = invalid or response.ok <> true
-        if responseRequiresSignIn(response)
-            requestSignInAgain(response)
-            return
-        end if
-        m.homeLoaded = false
-        message = "Unable to load Home."
-        if response <> invalid and response.message <> invalid and response.message <> "" then message = response.message
-        m.homeErrorLabel.text = message
-        clearHomeRails()
-        showHomeState("error")
+    if responseRequiresSignIn(response)
+        requestSignInAgain(response)
         return
     end if
-
-    m.homeLoaded = true
-    m.homeRails = []
-    if response.rails <> invalid then m.homeRails = response.rails
-    m.selectedHomeRailIndex = 0
-    m.selectedHomeCardIndex = 0
-    m.visualSelectedHomeRailIndex = -1
-    m.visualSelectedHomeCardIndex = -1
-    m.homeVisibleRailStart = 0
-
-    if m.homeRails.Count() = 0
-        clearHomeRails()
-        showHomeState("empty")
+    rail.state = "loaded"
+    if response = invalid or response.ok <> true
+        rail.state = "error"
+        rail.items = [railMessageItem("Retry", true)]
+    else if response.items.Count() = 0
+        rail.items = [railMessageItem("No items", false)]
     else
-        renderHomeRails()
-        showHomeState("rails")
+        rail.items = response.items
     end if
+    if m.selectedHomeRailIndex = index and m.selectedHomeCardIndex >= rail.items.Count() then m.selectedHomeCardIndex = 0
+    renderHomeRails()
 end sub
 
 sub retryHome()
@@ -3021,6 +3068,7 @@ sub renderHomeRails()
     if m.homeRails.Count() = 0 then return
 
     normalizeHomeVisibleWindow()
+    loadVisibleHomeRails()
     lastRail = m.homeVisibleRailStart + m.homeMaxVisibleRails - 1
     if lastRail >= m.homeRails.Count() then lastRail = m.homeRails.Count() - 1
 
@@ -3237,6 +3285,12 @@ sub selectHomeCard()
     if rail.items.Count() = 0 then return
 
     selectedItem = rail.items[m.selectedHomeCardIndex]
+    if rail.state = "error"
+        requestHomeRail(m.selectedHomeRailIndex)
+        renderHomeRails()
+        return
+    end if
+    if selectedItem.itemId <= 0 then return
     m.visualSelectedHomeRailIndex = m.selectedHomeRailIndex
     m.visualSelectedHomeCardIndex = m.selectedHomeCardIndex
     updateHomeCardFocus()
@@ -4104,6 +4158,7 @@ sub showSection(section as String)
         loadContinueIfNeeded(false)
     else if section = "home"
         loadHomeIfNeeded(false)
+        loadVisibleHomeRails()
     else if section = "live"
         loadLiveTv()
     else if section = "browse"

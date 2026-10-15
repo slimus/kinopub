@@ -4,6 +4,7 @@ set -euo pipefail
 required_files=(
   manifest
   source/main.brs
+  source/HomeRailCatalog.brs
   source/services/KinoApiClient.brs
   source/services/KinoAuthService.brs
   source/services/KinoBookmarkService.brs
@@ -1019,6 +1020,8 @@ bash scripts/tests/video-detail-tabs.sh
 bash scripts/tests/search-history-layout.sh
 bash scripts/tests/bookmark-folder-layout.sh
 if [[ -n "${BRS_BIN:-}" ]] || command -v brs >/dev/null 2>&1; then
+  bash scripts/tests/visible-rails.sh
+  bash scripts/tests/rail-responses.sh
   bash scripts/tests/bookmark-pagination.sh
   bash scripts/tests/player-usability.sh
   bash scripts/tests/app-settings.sh
