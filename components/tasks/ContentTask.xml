@@ -5,6 +5,7 @@
     <field id="request" type="assocarray" />
     <field id="response" type="assocarray" alwaysNotify="true" />
   </interface>
+  <script type="text/brightscript" uri="pkg:/source/HomeRailCatalog.brs" />
   <script type="text/brightscript" uri="pkg:/components/tasks/ContentTask.brs" />
   <script type="text/brightscript" uri="pkg:/source/services/TokenStore.brs" />
   <script type="text/brightscript" uri="pkg:/source/services/KinoApiClient.brs" />

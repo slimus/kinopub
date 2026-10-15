@@ -28,6 +28,8 @@ sub runContentTask()
         m.top.response = contentTaskLoadContinueHistoryPage(tokenStore, authService, historyService, typeService, request)
     else if command = "loadContinueNewEpisodesPage"
         m.top.response = contentTaskLoadContinueNewEpisodesPage(tokenStore, authService, watchingService, typeService, request)
+    else if command = "loadHomeRail"
+        m.top.response = contentTaskLoadHomeRail(tokenStore, authService, homeService, typeService, request)
     else if command = "loadHome"
         m.top.response = contentTaskLoadHome(tokenStore, authService, homeService, typeService, request)
     else if command = "loadItemDetail"
@@ -677,4 +679,14 @@ function contentTaskTokenString(tokens as Dynamic, key as String) as String
     if tokens = invalid or type(tokens) <> "roAssociativeArray" then return ""
     if tokens.DoesExist(key) <> true or tokens[key] = invalid then return ""
     return tokens[key]
+end function
+
+function contentTaskLoadHomeRail(tokenStore as Object, authService as Object, homeService as Object, typeService as Object, request as Object) as Object
+    tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to load Home.")
+    if tokenResult.ok <> true then return tokenResult
+    definitions = homeService.rails()
+    index = contentTaskIntegerField(request, "railIndex", -1)
+    if index < 0 or index >= definitions.Count() then return { ok: false, error: "invalid_rail" }
+    typeMap = contentTaskTypeMap(typeService, tokenResult.accessToken)
+    return homeService.fetchRail(tokenResult.accessToken, definitions[index], contentTaskIntegerField(request, "perpage", 12), typeMap)
 end function
