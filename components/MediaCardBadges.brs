@@ -7,7 +7,7 @@ sub appendCardBadge(card as Object, text as String, x as Integer, y as Integer, 
     background.translation = [x, y]
     background.width = chipWidth
     background.height = 22
-    background.color = "#111827"
+    setThemeColor(background, "#111827")
     background.opacity = 0.88
     card.appendChild(background)
 
@@ -18,7 +18,7 @@ sub appendCardBadge(card as Object, text as String, x as Integer, y as Integer, 
     label.height = 20
     label.font.size = 16
     label.horizAlign = "center"
-    label.color = "#F5F5F5"
+    setThemeColor(label, "#F5F5F5")
     card.appendChild(label)
 end sub
 

@@ -1,4 +1,7 @@
 sub init()
+    initializeAppTheme()
+    ' The loader image has its own dark center, so its text stays light.
+    setThemeColor(m.top.findNode("streamLoaderPercentLabel"), "#F5F5F5", "onPrimary")
     m.videoNode = m.top.findNode("videoNode")
     m.videoNode.enableUI = false
     m.playbackInfoGroup = m.top.findNode("playbackInfoGroup")
@@ -439,16 +442,16 @@ sub renderResumePromptOptions()
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = 440
         bg.height = 46
-        bg.color = "#374151"
-        if index = m.resumePromptIndex then bg.color = "#E5E7EB"
+        setThemeColor(bg, "#374151")
+        if index = m.resumePromptIndex then setThemeColor(bg, "#E5E7EB")
         group.appendChild(bg)
 
         label = CreateObject("roSGNode", "Label")
         label.translation = [18, 12]
         label.width = 404
         label.text = labels[index]
-        label.color = "#D1D5DB"
-        if index = m.resumePromptIndex then label.color = "#111827"
+        setThemeColor(label, "#D1D5DB")
+        if index = m.resumePromptIndex then setThemeColor(label, "#111827")
         group.appendChild(label)
 
         m.resumePromptOptionsHost.appendChild(group)
@@ -495,8 +498,8 @@ sub renderNextEpisodePromptOptions()
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = 196
         bg.height = 46
-        bg.color = "#374151"
-        if index = m.nextEpisodePromptIndex then bg.color = "#E5E7EB"
+        setThemeColor(bg, "#374151")
+        if index = m.nextEpisodePromptIndex then setThemeColor(bg, "#E5E7EB")
         group.appendChild(bg)
 
         label = CreateObject("roSGNode", "Label")
@@ -504,8 +507,8 @@ sub renderNextEpisodePromptOptions()
         label.width = 172
         label.font.size = 20
         label.text = labels[index]
-        label.color = "#D1D5DB"
-        if index = m.nextEpisodePromptIndex then label.color = "#111827"
+        setThemeColor(label, "#D1D5DB")
+        if index = m.nextEpisodePromptIndex then setThemeColor(label, "#111827")
         group.appendChild(label)
 
         m.nextEpisodePromptOptionsHost.appendChild(group)
@@ -791,7 +794,7 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
         shadow.translation = [4, 9]
         shadow.width = 168
         shadow.height = 86
-        shadow.color = "#000000"
+        setThemeColor(shadow, "#000000")
         shadow.opacity = 0.45
         card.appendChild(shadow)
     end if
@@ -799,9 +802,9 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
     bg = CreateObject("roSGNode", "Rectangle")
     bg.width = 168
     bg.height = 86
-    bg.color = "#1F2937"
-    if isCurrent then bg.color = "#1D4ED8"
-    if isFocused then bg.color = "#273142"
+    setThemeColor(bg, "#1F2937")
+    if isCurrent then setThemeColor(bg, "#1D4ED8")
+    if isFocused then setThemeColor(bg, "#273142")
     card.appendChild(bg)
 
     poster = CreateObject("roSGNode", "Poster")
@@ -820,14 +823,14 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
     title.height = 38
     title.wrap = true
     title.font.size = 16
-    title.color = "#F5F5F5"
+    setThemeColor(title, "#F5F5F5")
     card.appendChild(title)
 
     meta = CreateObject("roSGNode", "Label")
     meta.text = seasonCarouselEpisodeMeta(episode)
     meta.translation = [86, 50]
     meta.width = 74
-    meta.color = "#D1D5DB"
+    setThemeColor(meta, "#D1D5DB")
     card.appendChild(meta)
 
     if seasonCarouselEpisodeWatched(episode)
@@ -836,7 +839,7 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
         watched.translation = [140, 6]
         watched.width = 20
         watched.horizAlign = "center"
-        watched.color = "#34D399"
+        setThemeColor(watched, "#34D399")
         card.appendChild(watched)
     end if
 
@@ -845,7 +848,7 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
         nowLabel.text = "Now"
         nowLabel.translation = [8, 58]
         nowLabel.width = 54
-        nowLabel.color = "#BFDBFE"
+        setThemeColor(nowLabel, "#BFDBFE")
         card.appendChild(nowLabel)
     end if
 
@@ -853,24 +856,24 @@ function createSeasonCarouselCard(episode as Object, index as Integer, visibleIn
         focus = CreateObject("roSGNode", "Rectangle")
         focus.width = 168
         focus.height = 4
-        focus.color = "#60A5FA"
+        setThemeColor(focus, "#60A5FA")
         card.appendChild(focus)
         focusBottom = CreateObject("roSGNode", "Rectangle")
         focusBottom.translation = [0, 82]
         focusBottom.width = 168
         focusBottom.height = 4
-        focusBottom.color = "#60A5FA"
+        setThemeColor(focusBottom, "#60A5FA")
         card.appendChild(focusBottom)
         focusLeft = CreateObject("roSGNode", "Rectangle")
         focusLeft.width = 4
         focusLeft.height = 86
-        focusLeft.color = "#60A5FA"
+        setThemeColor(focusLeft, "#60A5FA")
         card.appendChild(focusLeft)
         focusRight = CreateObject("roSGNode", "Rectangle")
         focusRight.translation = [164, 0]
         focusRight.width = 4
         focusRight.height = 86
-        focusRight.color = "#60A5FA"
+        setThemeColor(focusRight, "#60A5FA")
         card.appendChild(focusRight)
     end if
 
@@ -962,7 +965,7 @@ sub buildControls()
         label.translation = [index * m.controlSpacing + 12, 13]
         label.width = 160
         label.font.size = 20
-        label.color = "#F5F5F5"
+        setThemeColor(label, "#F5F5F5")
         m.controlsHost.appendChild(label)
         m.controlNodes.Push(label)
     end for
@@ -1948,8 +1951,8 @@ sub renderMenuItems()
         visibleIndex = index - m.menuScrollStart
         row.translation = [0, visibleIndex * 32]
         row.width = 384
-        row.color = "#D1D5DB"
-        if index = m.menuIndex then row.color = "#F5F5F5"
+        setThemeColor(row, "#D1D5DB")
+        if index = m.menuIndex then setThemeColor(row, "#F5F5F5")
         prefix = "   "
         if isSelectedMenuItem(item) then prefix = "* "
         row.text = prefix + item.label

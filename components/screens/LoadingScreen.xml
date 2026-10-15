@@ -5,4 +5,7 @@
     <Label id="brandLabel" text="KinoPub" translation="[64,44]" color="#F9FAFB" />
     <Label text="Loading..." translation="[0,336]" width="1280" horizAlign="center" color="#D1D5DB" />
   </children>
+  <script type="text/brightscript" uri="pkg:/source/services/AppSettingsStore.brs" />
+  <script type="text/brightscript" uri="pkg:/components/UiTheme.brs" />
+  <script type="text/brightscript" uri="pkg:/components/screens/LoadingScreen.brs" />
 </component>

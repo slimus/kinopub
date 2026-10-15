@@ -1,4 +1,7 @@
 sub main()
+    check(appThemeName(invalid) = "dark", "Missing theme preserves dark appearance")
+    check(appThemeName("light") = "light", "Saved light theme is restored")
+    check(appThemeName("automatic") = "dark", "Unsupported theme falls back to dark")
     defaults = appSettingsFromValues(invalid, invalid, invalid)
     check(defaults.nextEpisodeSeconds = 90 and defaults.nextEpisodePercent = 4 and defaults.nextEpisodeTimerEnabled = false, "Fresh install defaults to 90 seconds, 4 percent and timer off")
     check(appNextEpisodeThreshold(2700, defaults) = 90, "Fresh install shows card ninety seconds before a long episode ends")
@@ -44,6 +47,15 @@ sub main()
     check(m.saved.nextEpisodeTimerEnabled = true and m.settingsEditing = false, "OK enables and persists timer")
     handleAppSettingsKey("OK")
     check(m.saved.nextEpisodeTimerEnabled = false, "OK disables timer")
+    handleAppSettingsKey("down")
+    check(m.settingsIndex = 3, "Down reaches theme switch")
+    handleAppSettingsKey("OK")
+    check(m.saved.theme = "light" and m.appliedTheme = "light", "Theme switch saves and immediately applies light")
+    check(m.saved.nextEpisodeSeconds = 181 and m.saved.nextEpisodePercent = 100, "Changing theme preserves playback settings")
+    handleAppSettingsKey("down")
+    check(m.settingsIndex = 3, "Theme is the last settings row")
+    handleAppSettingsKey("OK")
+    check(m.saved.theme = "dark" and m.appliedTheme = "dark", "Theme switch restores dark")
 
     m.videoNode = { state: "playing" }
     m.nextEpisodeRequestReason = "threshold"
@@ -79,6 +91,10 @@ sub captureSave(settings as Object)
 end sub
 
 sub renderAppSettings()
+end sub
+
+sub applyAppTheme(theme as String)
+    m.appliedTheme = theme
 end sub
 
 sub setMenuExpanded(expanded as Boolean)

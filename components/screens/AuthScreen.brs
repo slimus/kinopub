@@ -1,4 +1,5 @@
 sub init()
+    initializeAppTheme()
     m.instructionLabel = m.top.findNode("instructionLabel")
     m.codeLabel = m.top.findNode("codeLabel")
     m.codeLabel.font.size = 170

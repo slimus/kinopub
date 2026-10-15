@@ -1,4 +1,5 @@
 sub init()
+    initializeAppTheme()
     m.collapsedMenu = m.top.findNode("collapsedMenu")
     m.expandedMenu = m.top.findNode("expandedMenu")
     m.navFocusBg = m.top.findNode("navFocusBg")
@@ -433,10 +434,10 @@ end sub
 sub renderSearchQuery()
     if m.searchQuery = ""
         m.searchQueryLabel.text = "Search KinoPub"
-        m.searchQueryLabel.color = "#9CA3AF"
+        setThemeColor(m.searchQueryLabel, "#9CA3AF")
     else
         m.searchQueryLabel.text = m.searchQuery
-        m.searchQueryLabel.color = "#F5F5F5"
+        setThemeColor(m.searchQueryLabel, "#F5F5F5")
     end if
 end sub
 
@@ -511,14 +512,14 @@ sub renderRecentSearches()
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = 760
         bg.height = 44
-        bg.color = "#2A2A2A"
+        setThemeColor(bg, "#2A2A2A")
         row.appendChild(bg)
 
         label = CreateObject("roSGNode", "Label")
         label.text = m.recentSearches[index]
         label.translation = [20, 12]
         label.width = 720
-        label.color = "#F5F5F5"
+        setThemeColor(label, "#F5F5F5")
         row.appendChild(label)
 
         m.recentSearchesHost.appendChild(row)
@@ -535,9 +536,9 @@ sub updateRecentSearchFocus()
     for index = 0 to m.recentSearchBgNodes.Count() - 1
         bg = m.recentSearchBgNodes[index]
         if index + m.recentSearchVisibleStart = m.selectedRecentSearchIndex and m.searchFocusArea = "recent" and m.focusArea = "content" and m.searchPickerVisible <> true
-            bg.color = "#3B82F6"
+            setThemeColor(bg, "#3B82F6")
         else
-            bg.color = "#2A2A2A"
+            setThemeColor(bg, "#2A2A2A")
         end if
     end for
 end sub
@@ -670,7 +671,7 @@ sub renderSearchPickerRows()
         label.text = m.searchPickerItems[index].title
         label.translation = [12, 10]
         label.width = 356
-        label.color = "#F5F5F5"
+        setThemeColor(label, "#F5F5F5")
         row.appendChild(label)
         m.searchPickerRowsHost.appendChild(row)
         m.searchPickerRowNodes.Push(row)
@@ -800,10 +801,10 @@ sub renderAccountInfo()
     active = accountBooleanField(info, "subscriptionActive", false)
     if active
         m.accountSubscriptionStatusLabel.text = "Active subscription"
-        m.accountSubscriptionStatusLabel.color = "#86EFAC"
+        setThemeColor(m.accountSubscriptionStatusLabel, "#86EFAC")
     else
         m.accountSubscriptionStatusLabel.text = "Inactive subscription"
-        m.accountSubscriptionStatusLabel.color = "#FCA5A5"
+        setThemeColor(m.accountSubscriptionStatusLabel, "#FCA5A5")
     end if
 
     daysLeft = accountNumberField(info, "subscriptionDaysLeft", -1)
@@ -1257,9 +1258,9 @@ sub updateBrowseFocusVisuals()
     for index = 0 to browseFilterBgs.Count() - 1
         bg = browseFilterBgs[index]
         if index = m.selectedBrowseFilterIndex and m.selectedSection = "browse" and m.focusArea = "content" and m.browseFocusArea = "filters" and m.browsePickerVisible <> true
-            bg.color = cardVisualStateColor(true, false)
+            setThemeColor(bg, cardVisualStateColor(true, false))
         else
-            bg.color = cardVisualStateColor(false, false)
+            setThemeColor(bg, cardVisualStateColor(false, false))
         end if
     end for
 
@@ -1267,9 +1268,9 @@ sub updateBrowseFocusVisuals()
         bg = m.browseCardBgNodes[nodeIndex]
         index = m.browseCardIndexes[nodeIndex]
         if index = m.selectedBrowseIndex and m.selectedSection = "browse" and m.focusArea = "content" and m.browseFocusArea = "results"
-            bg.color = baseCardFocusColor(showOverlay)
+            setThemeColor(bg, baseCardFocusColor(showOverlay))
         else
-            bg.color = cardVisualStateColor(false, false)
+            setThemeColor(bg, cardVisualStateColor(false, false))
         end if
     end for
 
@@ -1396,7 +1397,7 @@ sub renderBrowsePickerRows()
         label.text = m.browsePickerItems[index].title
         label.translation = [12, 10]
         label.width = 356
-        label.color = "#F5F5F5"
+        setThemeColor(label, "#F5F5F5")
         row.appendChild(label)
         m.browsePickerRowsHost.appendChild(row)
         m.browsePickerRowNodes.Push(row)
@@ -1603,7 +1604,7 @@ sub renderBookmarkFolders()
         bg = CreateObject("roSGNode", "Rectangle")
         bg.width = 260
         bg.height = 64
-        bg.color = palette.surface
+        setThemeColor(bg, palette.surface)
         row.appendChild(bg)
 
         title = CreateObject("roSGNode", "Label")
@@ -1613,7 +1614,7 @@ sub renderBookmarkFolders()
         title.height = 28
         title.font.size = 22
         title.wrap = false
-        title.color = palette.text
+        setThemeColor(title, palette.text)
         row.appendChild(title)
 
         count = CreateObject("roSGNode", "Label")
@@ -1622,7 +1623,7 @@ sub renderBookmarkFolders()
         count.width = 228
         count.height = 24
         count.font.size = 18
-        count.color = palette.muted
+        setThemeColor(count, palette.muted)
         row.appendChild(count)
 
         m.bookmarkFoldersHost.appendChild(row)
@@ -1869,7 +1870,7 @@ function createMediaCard(item as Object, layout as Object) as Object
         shadow.translation = [4, 10]
         shadow.width = layout.cardWidth
         shadow.height = layout.cardHeight
-        shadow.color = "#000000"
+        setThemeColor(shadow, "#000000")
         shadow.opacity = 0.45
         card.appendChild(shadow)
     end if
@@ -1880,9 +1881,9 @@ function createMediaCard(item as Object, layout as Object) as Object
     if layout.DoesExist("focusOverlay") and layout.focusOverlay
         focusColor = cardVisualStateColor(true, false)
         if layout.DoesExist("focusSurface") then focusColor = layout.focusSurface
-        focusBg.color = focusColor
+        setThemeColor(focusBg, focusColor)
     else
-        focusBg.color = palette.surface
+        setThemeColor(focusBg, palette.surface)
     end if
     card.appendChild(focusBg)
 
@@ -1894,7 +1895,7 @@ function createMediaCard(item as Object, layout as Object) as Object
     fallback.translation = [layout.posterX, 8]
     fallback.width = layout.posterWidth
     fallback.height = layout.posterHeight
-    fallback.color = palette.posterFallback
+    setThemeColor(fallback, palette.posterFallback)
     fallback.visible = true
     card.appendChild(fallback)
 
@@ -1917,7 +1918,7 @@ function createMediaCard(item as Object, layout as Object) as Object
         title.wrap = false
         title.font.size = 22
     end if
-    title.color = palette.text
+    setThemeColor(title, palette.text)
     card.appendChild(title)
 
     yearText = ""
@@ -1931,7 +1932,7 @@ function createMediaCard(item as Object, layout as Object) as Object
                 yearBg.translation = [chipX, chipY]
                 yearBg.width = 46
                 yearBg.height = 22
-                yearBg.color = "#111827"
+                setThemeColor(yearBg, "#111827")
                 yearBg.opacity = 0.88
                 card.appendChild(yearBg)
             end if
@@ -1944,13 +1945,13 @@ function createMediaCard(item as Object, layout as Object) as Object
             year.height = 24
             year.font.size = 24
             year.horizAlign = "right"
-            year.color = palette.muted
+            setThemeColor(year, palette.muted)
             if layout.DoesExist("yearChip") and layout.yearChip
                 year.translation = [chipX + 2, chipY + 1]
                 year.width = 42
                 year.height = 20
                 year.font.size = 16
-                year.color = palette.text
+                setThemeColor(year, palette.text)
             end if
             card.appendChild(year)
         end if
@@ -1962,7 +1963,7 @@ function createMediaCard(item as Object, layout as Object) as Object
     subtitle.translation = [layout.textX, layout.subtitleY]
     subtitle.width = layout.textWidth
     subtitle.height = layout.subtitleHeight
-    subtitle.color = palette.muted
+    setThemeColor(subtitle, palette.muted)
     subtitle.visible = false
     if layout.DoesExist("focusOverlay") and layout.focusOverlay and subtitle.text <> "" then subtitle.visible = true
     if yearText <> "" then subtitle.visible = false
@@ -1977,7 +1978,7 @@ function createMediaCard(item as Object, layout as Object) as Object
         progressBg.translation = [layout.posterX, progressY]
         progressBg.width = layout.posterWidth
         progressBg.height = 5
-        progressBg.color = palette.progressTrack
+        setThemeColor(progressBg, palette.progressTrack)
         progressBg.visible = mediaProgressVisible(item)
         card.appendChild(progressBg)
 
@@ -1985,7 +1986,7 @@ function createMediaCard(item as Object, layout as Object) as Object
         progressFill.translation = [layout.posterX, progressY]
         progressFill.width = mediaProgressWidth(item, layout.posterWidth)
         progressFill.height = 5
-        progressFill.color = palette.progressFill
+        setThemeColor(progressFill, palette.progressFill)
         progressFill.visible = progressBg.visible
         card.appendChild(progressFill)
     end if
@@ -1999,27 +2000,27 @@ sub appendFocusFrame(card as Object, layout as Object, color as String)
     top = CreateObject("roSGNode", "Rectangle")
     top.width = layout.cardWidth
     top.height = frameSize
-    top.color = color
+    setThemeColor(top, color)
     card.appendChild(top)
 
     bottom = CreateObject("roSGNode", "Rectangle")
     bottom.translation = [0, layout.cardHeight - frameSize]
     bottom.width = layout.cardWidth
     bottom.height = frameSize
-    bottom.color = color
+    setThemeColor(bottom, color)
     card.appendChild(bottom)
 
     left = CreateObject("roSGNode", "Rectangle")
     left.width = frameSize
     left.height = layout.cardHeight
-    left.color = color
+    setThemeColor(left, color)
     card.appendChild(left)
 
     right = CreateObject("roSGNode", "Rectangle")
     right.translation = [layout.cardWidth - frameSize, 0]
     right.width = frameSize
     right.height = layout.cardHeight
-    right.color = color
+    setThemeColor(right, color)
     card.appendChild(right)
 end sub
 
@@ -2202,11 +2203,11 @@ sub updateBookmarksFocusVisuals()
         bg = m.bookmarkFolderBgNodes[index]
         folderIndex = m.bookmarkFolderIndexes[index]
         if folderIndex = m.selectedBookmarkFolderIndex and m.selectedSection = "bookmarks" and m.focusArea = "content" and m.bookmarksFocusArea = "folders"
-            bg.color = cardVisualStateColor(true, false)
+            setThemeColor(bg, cardVisualStateColor(true, false))
         else if folderIndex = m.selectedBookmarkFolderIndex
-            bg.color = cardVisualStateColor(false, true)
+            setThemeColor(bg, cardVisualStateColor(false, true))
         else
-            bg.color = cardVisualStateColor(false, false)
+            setThemeColor(bg, cardVisualStateColor(false, false))
         end if
     end for
 
@@ -2214,9 +2215,9 @@ sub updateBookmarksFocusVisuals()
         bg = m.bookmarkItemBgNodes[nodeIndex]
         index = m.bookmarkItemIndexes[nodeIndex]
         if index = m.selectedBookmarkItemIndex and m.selectedSection = "bookmarks" and m.focusArea = "content" and m.bookmarksFocusArea = "items"
-            bg.color = baseCardFocusColor(showOverlay)
+            setThemeColor(bg, baseCardFocusColor(showOverlay))
         else
-            bg.color = cardVisualStateColor(false, false)
+            setThemeColor(bg, cardVisualStateColor(false, false))
         end if
     end for
 
@@ -2281,9 +2282,9 @@ end sub
 sub updateSearchFocusVisuals()
     if m.searchBoxFocusBg <> invalid
         if m.selectedSection = "search" and m.focusArea = "content" and m.searchFocusArea = "box"
-            m.searchBoxFocusBg.color = "#3B82F6"
+            setThemeColor(m.searchBoxFocusBg, "#3B82F6")
         else
-            m.searchBoxFocusBg.color = "#374151"
+            setThemeColor(m.searchBoxFocusBg, "#374151")
         end if
     end if
     filterBgs = [m.searchTypeFilterBg, m.searchFieldFilterBg, m.searchSortFilterBg]
@@ -2291,9 +2292,9 @@ sub updateSearchFocusVisuals()
         bg = filterBgs[index]
         if bg <> invalid
             if index = m.selectedSearchFilterIndex and m.selectedSection = "search" and m.focusArea = "content" and m.searchFocusArea = "filters" and m.searchPickerVisible <> true
-                bg.color = "#3B82F6"
+                setThemeColor(bg, "#3B82F6")
             else
-                bg.color = "#1E293B"
+                setThemeColor(bg, "#1E293B")
             end if
         end if
     end for
@@ -2588,7 +2589,7 @@ sub renderContinueSummary()
         title = CreateObject("roSGNode", "Label")
         title.text = rail.title
         title.translation = [0, y]
-        title.color = "#D1D5DB"
+        setThemeColor(title, "#D1D5DB")
         m.continueSummaryRailsHost.appendChild(title)
         m.continueRailNodes.Push(title)
 
@@ -2636,11 +2637,11 @@ sub updateContinueCardFocus()
         focusBg = m.continueCardBgNodes[nodeIndex]
         position = m.continueCardPositions[nodeIndex]
         if position.railIndex = m.selectedContinueRailIndex and position.cardIndex = m.selectedContinueCardIndex
-            focusBg.color = baseCardFocusColor(showOverlay)
+            setThemeColor(focusBg, baseCardFocusColor(showOverlay))
         else if position.railIndex = m.visualSelectedContinueRailIndex and position.cardIndex = m.visualSelectedContinueCardIndex
-            focusBg.color = cardVisualStateColor(false, true)
+            setThemeColor(focusBg, cardVisualStateColor(false, true))
         else
-            focusBg.color = cardVisualStateColor(false, false)
+            setThemeColor(focusBg, cardVisualStateColor(false, false))
         end if
     end for
     overlayItem = invalid
@@ -2822,11 +2823,11 @@ sub updateHistoryCardFocus()
         focusBg = m.historyCardBgNodes[nodeIndex]
         index = m.historyCardIndexes[nodeIndex]
         if index = m.selectedHistoryIndex
-            focusBg.color = baseCardFocusColor(showOverlay)
+            setThemeColor(focusBg, baseCardFocusColor(showOverlay))
         else if index = m.visualSelectedHistoryIndex
-            focusBg.color = cardVisualStateColor(false, true)
+            setThemeColor(focusBg, cardVisualStateColor(false, true))
         else
-            focusBg.color = cardVisualStateColor(false, false)
+            setThemeColor(focusBg, cardVisualStateColor(false, false))
         end if
     end for
     selectedSlot = m.selectedHistoryIndex MOD (m.historyColumns * 2)
@@ -3109,7 +3110,7 @@ function createHomeRail(rail as Object, railIndex as Integer, visibleRailSlot as
     title.text = rail.title
     title.translation = [0, 0]
     title.width = 900
-    title.color = "#D1D5DB"
+    setThemeColor(title, "#D1D5DB")
     railGroup.appendChild(title)
 
     startCard = homeRailWindowStart(railIndex)
@@ -3171,11 +3172,11 @@ sub updateHomeCardFocus()
         focusBg = m.homeCardBgNodes[nodeIndex]
         position = m.homeCardPositions[nodeIndex]
         if position.railIndex = m.selectedHomeRailIndex and position.cardIndex = m.selectedHomeCardIndex
-            focusBg.color = baseCardFocusColor(showOverlay)
+            setThemeColor(focusBg, baseCardFocusColor(showOverlay))
         else if position.railIndex = m.visualSelectedHomeRailIndex and position.cardIndex = m.visualSelectedHomeCardIndex
-            focusBg.color = cardVisualStateColor(false, true)
+            setThemeColor(focusBg, cardVisualStateColor(false, true))
         else
-            focusBg.color = cardVisualStateColor(false, false)
+            setThemeColor(focusBg, cardVisualStateColor(false, false))
         end if
     end for
     overlayItem = invalid
@@ -3443,7 +3444,7 @@ function createLiveCard(item as Object, x as Integer, y as Integer, focused = fa
         shadow.translation = [4, 10]
         shadow.width = 160
         shadow.height = 220
-        shadow.color = "#000000"
+        setThemeColor(shadow, "#000000")
         shadow.opacity = 0.45
         card.appendChild(shadow)
     end if
@@ -3451,15 +3452,15 @@ function createLiveCard(item as Object, x as Integer, y as Integer, focused = fa
     focusBg = CreateObject("roSGNode", "Rectangle")
     focusBg.width = 160
     focusBg.height = 220
-    focusBg.color = palette.surface
-    if focused then focusBg.color = "#273142"
+    setThemeColor(focusBg, palette.surface)
+    if focused then setThemeColor(focusBg, "#273142")
     card.appendChild(focusBg)
 
     logoBg = CreateObject("roSGNode", "Rectangle")
     logoBg.translation = [8, 12]
     logoBg.width = 144
     logoBg.height = 116
-    logoBg.color = palette.posterFallback
+    setThemeColor(logoBg, palette.posterFallback)
     card.appendChild(logoBg)
 
     logo = CreateObject("roSGNode", "Poster")
@@ -3476,7 +3477,7 @@ function createLiveCard(item as Object, x as Integer, y as Integer, focused = fa
     title.translation = [8, 142]
     title.width = 144
     title.height = 30
-    title.color = palette.text
+    setThemeColor(title, palette.text)
     card.appendChild(title)
 
     subtitle = CreateObject("roSGNode", "Label")
@@ -3484,7 +3485,7 @@ function createLiveCard(item as Object, x as Integer, y as Integer, focused = fa
     subtitle.translation = [8, 178]
     subtitle.width = 144
     subtitle.height = 28
-    subtitle.color = palette.muted
+    setThemeColor(subtitle, palette.muted)
     card.appendChild(subtitle)
 
     if focused then appendFocusFrame(card, { cardWidth: 160, cardHeight: 220 }, palette.focusBorder)
@@ -3497,11 +3498,11 @@ sub updateLiveFocusVisuals()
     for index = 0 to m.liveCardBgNodes.Count() - 1
         itemIndex = m.liveCardIndexes[index]
         if itemIndex = m.selectedLiveIndex and m.selectedSection = "live" and m.focusArea = "content"
-            m.liveCardBgNodes[index].color = baseCardFocusColor(showOverlay)
+            setThemeColor(m.liveCardBgNodes[index], baseCardFocusColor(showOverlay))
         else if itemIndex = m.visualSelectedLiveIndex
-            m.liveCardBgNodes[index].color = cardVisualStateColor(false, true)
+            setThemeColor(m.liveCardBgNodes[index], cardVisualStateColor(false, true))
         else
-            m.liveCardBgNodes[index].color = cardVisualStateColor(false, false)
+            setThemeColor(m.liveCardBgNodes[index], cardVisualStateColor(false, false))
         end if
     end for
 
@@ -3670,7 +3671,7 @@ sub renderSearchKeyboard()
             bg = CreateObject("roSGNode", "Rectangle")
             bg.width = keyWidth
             bg.height = keyHeight
-            bg.color = "#2A2A2A"
+            setThemeColor(bg, "#2A2A2A")
             group.appendChild(bg)
 
             label = CreateObject("roSGNode", "Label")
@@ -3678,7 +3679,7 @@ sub renderSearchKeyboard()
             label.translation = [0, 10]
             label.width = keyWidth
             label.horizAlign = "center"
-            label.color = "#F5F5F5"
+            setThemeColor(label, "#F5F5F5")
             group.appendChild(label)
 
             m.searchKeyboardHost.appendChild(group)
@@ -3702,9 +3703,9 @@ sub updateSearchKeyboardFocus()
         key = m.searchKeyboardKeys[index]
         if key.bg <> invalid
             if index = m.searchKeyboardIndex
-                key.bg.color = "#3B82F6"
+                setThemeColor(key.bg, "#3B82F6")
             else
-                key.bg.color = "#2A2A2A"
+                setThemeColor(key.bg, "#2A2A2A")
             end if
         end if
     end for
@@ -4031,11 +4032,11 @@ sub updateSearchCardFocus()
         focusBg = m.searchCardBgNodes[nodeIndex]
         index = m.searchCardIndexes[nodeIndex]
         if index = m.selectedSearchIndex and m.searchFocusArea = "results"
-            focusBg.color = baseCardFocusColor(showOverlay)
+            setThemeColor(focusBg, baseCardFocusColor(showOverlay))
         else if index = m.visualSelectedSearchIndex
-            focusBg.color = cardVisualStateColor(false, true)
+            setThemeColor(focusBg, cardVisualStateColor(false, true))
         else
-            focusBg.color = cardVisualStateColor(false, false)
+            setThemeColor(focusBg, cardVisualStateColor(false, false))
         end if
     end for
     selectedSlot = m.selectedSearchIndex MOD (m.searchColumns * 2)
@@ -4255,23 +4256,23 @@ sub updateMenuVisuals()
 
     for each entry in entries
         if entry.section = "signOut"
-            entry.nav.color = "#9CA3AF"
+            setThemeColor(entry.nav, "#9CA3AF")
         else
-            entry.nav.color = "#D1D5DB"
-            entry.collapsed.color = "#9CA3AF"
+            setThemeColor(entry.nav, "#D1D5DB")
+            setThemeColor(entry.collapsed, "#9CA3AF")
         end if
     end for
-    m.signOutFocusBg.color = "#0F131A"
+    setThemeColor(m.signOutFocusBg, "#0F131A")
 
     selected = entries[m.menuIndex]
     if selected.section = "signOut"
         focusY = 616
-        selected.nav.color = palette.text
-        m.signOutFocusBg.color = "#2563EB"
+        setThemeColor(selected.nav, palette.text)
+        setThemeColor(m.signOutFocusBg, "#2563EB")
     else
         focusY = 112 + (m.menuIndex * 60)
-        selected.nav.color = palette.text
-        selected.collapsed.color = palette.text
+        setThemeColor(selected.nav, palette.text)
+        setThemeColor(selected.collapsed, palette.text)
     end if
     m.navFocusBg.translation = [12, focusY]
     m.collapsedActiveIndicator.translation = [0, focusY]
@@ -4338,15 +4339,15 @@ end sub
 
 sub updateExitConfirmationVisuals()
     if m.exitConfirmIndex = 0
-        m.exitYesFocusBg.color = "#E5E7EB"
-        m.exitNoFocusBg.color = "#2A2A2A"
-        m.exitYesLabel.color = "#111827"
-        m.exitNoLabel.color = "#D1D5DB"
+        setThemeColor(m.exitYesFocusBg, "#E5E7EB")
+        setThemeColor(m.exitNoFocusBg, "#2A2A2A")
+        setThemeColor(m.exitYesLabel, "#111827")
+        setThemeColor(m.exitNoLabel, "#D1D5DB")
     else
-        m.exitYesFocusBg.color = "#2A2A2A"
-        m.exitNoFocusBg.color = "#E5E7EB"
-        m.exitYesLabel.color = "#D1D5DB"
-        m.exitNoLabel.color = "#111827"
+        setThemeColor(m.exitYesFocusBg, "#2A2A2A")
+        setThemeColor(m.exitNoFocusBg, "#E5E7EB")
+        setThemeColor(m.exitYesLabel, "#D1D5DB")
+        setThemeColor(m.exitNoLabel, "#111827")
     end if
 end sub
 

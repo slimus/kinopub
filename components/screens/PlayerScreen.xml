@@ -87,4 +87,5 @@
   <script type="text/brightscript" uri="pkg:/components/MediaCardBadges.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/PlayerPlaybackInfo.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/PlayerScreen.brs" />
+  <script type="text/brightscript" uri="pkg:/components/UiTheme.brs" />
 </component>

@@ -4,7 +4,14 @@ end function
 
 function appSettingsLoad() as Object
     section = CreateObject("roRegistrySection", "appsettings")
-    return appSettingsFromValues(section.Read("nextEpisodeSeconds"), section.Read("nextEpisodePercent"), section.Read("nextEpisodeTimerEnabled"))
+    settings = appSettingsFromValues(section.Read("nextEpisodeSeconds"), section.Read("nextEpisodePercent"), section.Read("nextEpisodeTimerEnabled"))
+    settings.theme = appThemeName(section.Read("theme"))
+    return settings
+end function
+
+function appThemeName(value as Dynamic) as String
+    if value = "light" then return "light"
+    return "dark"
 end function
 
 function appSettingsFromValues(seconds as Dynamic, percent as Dynamic, timerEnabled as Dynamic) as Object
@@ -12,6 +19,7 @@ function appSettingsFromValues(seconds as Dynamic, percent as Dynamic, timerEnab
         nextEpisodeSeconds: appSettingNumber(seconds, 90, 3600)
         nextEpisodePercent: appSettingNumber(percent, 4, 100)
         nextEpisodeTimerEnabled: timerEnabled = "true"
+        theme: "dark"
     }
 end function
 
@@ -40,6 +48,7 @@ sub appSettingsSave(settings as Object)
     timerEnabled = "false"
     if settings.nextEpisodeTimerEnabled = true then timerEnabled = "true"
     section.Write("nextEpisodeTimerEnabled", timerEnabled)
+    section.Write("theme", appThemeName(settings.theme))
     section.Flush()
 end sub
 
