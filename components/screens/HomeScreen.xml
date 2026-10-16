@@ -394,16 +394,19 @@
         </Group>
 
         <Group id="accountDetailsGroup" translation="[0,86]" visible="false">
-          <Label id="accountDisplayNameLabel" text="Account" translation="[0,0]" width="920" color="#F5F5F5" />
-          <Label id="accountUsernameLabel" text="" translation="[0,38]" width="920" color="#9CA3AF" />
+          <Label id="accountDisplayNameLabel" text="Account" translation="[0,0]" width="430" color="#F5F5F5" />
+          <Label id="accountUsernameLabel" text="" translation="[0,38]" width="430" color="#9CA3AF" />
 
-          <Rectangle translation="[0,102]" width="760" height="238" color="#242424" />
-          <Label id="accountSubscriptionTitleLabel" text="Subscription" translation="[28,126]" color="#D1D5DB" />
-          <Label id="accountSubscriptionStatusLabel" text="" translation="[28,166]" width="700" color="#F5F5F5" />
-          <Label id="accountSubscriptionDaysLabel" text="" translation="[28,206]" width="700" color="#9CA3AF" />
-          <Label id="accountSubscriptionEndLabel" text="" translation="[28,246]" width="700" color="#9CA3AF" />
-          <Label id="accountRegisteredLabel" text="" translation="[28,286]" width="700" color="#9CA3AF" />
+          <Label id="accountRegisteredLabel" text="" translation="[0,76]" width="430" color="#9CA3AF" />
+          <Label id="accountSubscriptionTitleLabel" text="Subscription" translation="[470,0]" width="430" color="#D1D5DB" />
+          <Label id="accountSubscriptionStatusLabel" text="" translation="[470,36]" width="430" color="#F5F5F5" />
+          <Label id="accountSubscriptionDaysLabel" text="" translation="[470,72]" width="430" color="#9CA3AF" />
+          <Label id="accountSubscriptionEndLabel" text="" translation="[470,108]" width="430" color="#9CA3AF" />
         </Group>
+        <Label id="deviceTitle" text="Current device" translation="[0,250]" width="920" color="#F5F5F5" />
+        <Group id="deviceSettingsRows" translation="[0,296]" />
+        <Label id="deviceStatus" text="" translation="[0,554]" width="920" height="36" color="#9CA3AF" />
+        <Label id="deviceHint" text="OK: toggle. Arrows: choose setting. Changes save automatically." translation="[0,596]" width="940" height="44" wrap="true" color="#9CA3AF" font="font:SmallSystemFont" />
       </Group>
     </Group>
 
@@ -431,6 +434,7 @@
   <script type="text/brightscript" uri="pkg:/source/services/SearchHistoryStore.brs" />
   <script type="text/brightscript" uri="pkg:/source/services/AppSettingsStore.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/HomeSettings.brs" />
+  <script type="text/brightscript" uri="pkg:/components/screens/HomeAccount.brs" />
   <script type="text/brightscript" uri="pkg:/components/MediaCardBadges.brs" />
   <script type="text/brightscript" uri="pkg:/components/screens/HomeScreen.brs" />
   <script type="text/brightscript" uri="pkg:/components/UiTheme.brs" />

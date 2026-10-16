@@ -40,6 +40,8 @@ sub runContentTask()
         m.top.response = contentTaskLoadSearchOptions(tokenStore, authService, typeService)
     else if command = "searchItems"
         m.top.response = contentTaskSearchItems(tokenStore, authService, searchService, typeService, request)
+    else if command = "loadDeviceSettings" or command = "saveDeviceSettings"
+        m.top.response = contentTaskDeviceSettings(tokenStore, authService, KinoDeviceService(client), command, request)
     else if command = "loadUserInfo"
         m.top.response = contentTaskLoadUserInfo(tokenStore, authService, userService)
     else if command = "loadBookmarkFolders"
@@ -66,6 +68,26 @@ sub runContentTask()
         m.top.response = { command: command, ok: false, error: "unknown_command", message: "Unknown content task command." }
     end if
 end sub
+
+function contentTaskDeviceSettings(tokenStore as Object, authService as Object, service as Object, command as String, request as Object) as Object
+    token = contentTaskAccessToken(tokenStore, authService, "Sign in again to load device settings.")
+    if token.ok <> true
+        token.command = command
+        return token
+    end if
+    if command = "saveDeviceSettings"
+        result = service.save(token.accessToken, request.deviceId, request.changes)
+    else
+        result = service.current(token.accessToken)
+        if result.ok = true
+            device = result.device
+            result = service.settings(token.accessToken, device.id)
+            result.device = device
+        end if
+    end if
+    result.command = command
+    return result
+end function
 
 function contentTaskLoadSearchOptions(tokenStore as Object, authService as Object, typeService as Object) as Object
     tokenResult = contentTaskAccessToken(tokenStore, authService, "Sign in again to load Search filters.")
