@@ -486,9 +486,6 @@ grep -q "subtitleTracks" source/services/KinoItemService.brs
 grep -q "kinoItemQualityOptions" source/services/KinoItemService.brs
 grep -q "addQualityUrlOptions: kinoItemAddQualityUrlOptions" source/services/KinoItemService.brs
 grep -q "sub kinoItemAddQualityUrlOptions" source/services/KinoItemService.brs
-grep -q 'hlsKeys = \["hls4", "hls2", "http", "hls"\]' source/services/KinoItemService.brs
-grep -q 'for each key in \["hls4", "hls2", "http", "hls"\]' source/services/KinoItemService.brs
-grep -q 'if key = "http" then format = "mp4"' source/services/KinoItemService.brs
 grep -q "kinoItemTrackOptions" source/services/KinoItemService.brs
 grep -q "similarResult = itemService.similar" components/tasks/ContentTask.brs
 grep -q "trailerResult = itemService.trailer" components/tasks/ContentTask.brs
@@ -1030,6 +1027,9 @@ if [[ -n "${BRS_BIN:-}" ]] || command -v brs >/dev/null 2>&1; then
   bash scripts/tests/device-settings.sh
   bash scripts/tests/app-theme.sh
   bash scripts/tests/player-playback-info.sh
+  bash scripts/tests/player-current-selection.sh
+  bash scripts/tests/player-hls4-sources.sh
+  bash scripts/tests/player-buffer-capacity-error.sh
 else
   echo "Bookmark pagination runtime tests skipped: install brs or set BRS_BIN."
 fi

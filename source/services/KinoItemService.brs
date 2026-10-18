@@ -363,194 +363,67 @@ function kinoItemMergeMediaLinkFields(media as Object, body as Dynamic) as Objec
 end function
 
 function kinoItemMediaStream(media as Dynamic) as Object
-    if media = invalid or type(media) <> "roAssociativeArray" then return { url: "", format: "" }
+    emptyStream = { url: "", format: "" }
+    if media = invalid or type(media) <> "roAssociativeArray" then return emptyStream
+    if media.files = invalid then return emptyStream
 
-    if media.DoesExist("files") and media.files <> invalid
-        files = media.files
-        if type(files) = "roAssociativeArray"
-            hls = m.stringField(files, "hls", "")
-            if hls <> "" then return { url: hls, format: "hls" }
+    files = media.files
+    if type(files) = "roAssociativeArray" then return m.streamFromUrlContainer(files)
+    if type(files) <> "roArray" then return emptyStream
 
-            mp4 = m.stringField(files, "mp4", "")
-            if mp4 <> "" then return { url: mp4, format: "mp4" }
-
-            url = m.stringField(files, "url", "")
-            if url <> "" then return { url: url, format: "mp4" }
-
-            hlsFallback = ""
-            mp4Fallback = ""
-            for each key in files
-                candidate = files[key]
-                if type(candidate) = "String" or type(candidate) = "roString"
-                    if Instr(1, candidate, ".m3u8") > 0 then hlsFallback = candidate
-                    if mp4Fallback = "" and Instr(1, candidate, "http") = 1 then mp4Fallback = candidate
-                end if
-            end for
-            if hlsFallback <> "" then return { url: hlsFallback, format: "hls" }
-            if mp4Fallback <> "" then return { url: mp4Fallback, format: "mp4" }
-        else if type(files) = "roArray"
-            hlsFallback = ""
-            mp4Fallback = ""
-            for each file in files
-                if file <> invalid and type(file) = "roAssociativeArray"
-                    urlStream = { url: "", format: "" }
-                    if file.DoesExist("urls") and file.urls <> invalid then urlStream = m.streamFromUrlContainer(file.urls)
-                    if urlStream.url = "" and file.DoesExist("url") and file.url <> invalid then urlStream = m.streamFromUrlContainer(file.url)
-                    if urlStream.url = "" then urlStream = { url: m.stringField(file, "url", ""), format: m.stringField(file, "format", "") }
-                    if urlStream.url <> ""
-                        if urlStream.format = "hls" or Instr(1, urlStream.url, ".m3u8") > 0 then hlsFallback = urlStream.url
-                        if mp4Fallback = "" and Instr(1, urlStream.url, "http") = 1 then mp4Fallback = urlStream.url
-                    end if
-                else if type(file) = "String" or type(file) = "roString"
-                    if Instr(1, file, ".m3u8") > 0 then hlsFallback = file
-                    if mp4Fallback = "" and Instr(1, file, "http") = 1 then mp4Fallback = file
-                end if
-            end for
-            if hlsFallback <> "" then return { url: hlsFallback, format: "hls" }
-            if mp4Fallback <> "" then return { url: mp4Fallback, format: "mp4" }
+    for each file in files
+        if file <> invalid and type(file) = "roAssociativeArray"
+            stream = m.streamFromUrlContainer(file.urls)
+            if stream.url = "" then stream = m.streamFromUrlContainer(file.url)
+            if stream.url <> "" then return stream
         end if
-    end if
-
-    directHls = m.stringField(media, "hls", "")
-    if directHls <> "" then return { url: directHls, format: "hls" }
-
-    directUrl = m.stringField(media, "url", "")
-    if directUrl <> "" then return { url: directUrl, format: "mp4" }
-
-    return { url: "", format: "" }
+    end for
+    return emptyStream
 end function
 
 function kinoItemStreamFromUrlContainer(container as Dynamic) as Object
-    if container = invalid then return { url: "", format: "" }
-
-    containerType = type(container)
-    if containerType = "String" or containerType = "roString"
-        if Instr(1, container, ".m3u8") > 0 then return { url: container, format: "hls" }
-        if Instr(1, container, "http") = 1 then return { url: container, format: "mp4" }
-        return { url: "", format: "" }
+    if container <> invalid and type(container) = "roAssociativeArray"
+        url = m.stringField(container, "hls4", "")
+        if url <> "" then return { url: url, format: "hls" }
     end if
-
-    if containerType <> "roAssociativeArray" then return { url: "", format: "" }
-
-    hlsKeys = ["hls4", "hls2", "http", "hls"]
-    for each key in hlsKeys
-        url = m.stringField(container, key, "")
-        if url <> ""
-            format = "hls"
-            if key = "http" then format = "mp4"
-            return { url: url, format: format }
-        end if
-    end for
-
-    directUrl = m.stringField(container, "url", "")
-    if directUrl <> ""
-        if Instr(1, directUrl, ".m3u8") > 0 then return { url: directUrl, format: "hls" }
-        return { url: directUrl, format: "mp4" }
-    end if
-
     return { url: "", format: "" }
 end function
 
 function kinoItemQualityOptions(media as Dynamic, selectedStream as Object) as Object
     options = []
     seen = {}
+    if media = invalid or type(media) <> "roAssociativeArray" then return options
+    if media.files = invalid then return options
 
-    if selectedStream <> invalid and selectedStream.url <> "" and selectedStream.format = "hls"
-        options.Push({
-            id: "auto"
-            label: "Auto"
-            url: selectedStream.url
-            streamFormat: "hls"
-            isAuto: true
-        })
-        seen[selectedStream.url] = true
+    if type(media.files) = "roAssociativeArray"
+        m.addQualityUrlOptions(options, seen, "", media.files)
+    else if type(media.files) = "roArray"
+        for each file in media.files
+            if file <> invalid and type(file) = "roAssociativeArray"
+                m.addQualityUrlOptions(options, seen, "", file.urls)
+                m.addQualityUrlOptions(options, seen, "", file.url)
+            end if
+        end for
     end if
-
-    if media <> invalid and type(media) = "roAssociativeArray" and media.DoesExist("files") and media.files <> invalid
-        files = media.files
-        if type(files) = "roAssociativeArray"
-            for each key in files
-                candidate = files[key]
-                if type(candidate) = "String" or type(candidate) = "roString"
-                    if Instr(1, candidate, "http") = 1 and not seen.DoesExist(candidate)
-                        options.Push({
-                            id: key
-                            label: m.sourceFileLabel(key, candidate)
-                            url: candidate
-                            streamFormat: m.streamFormatForUrl(candidate)
-                            isAuto: false
-                        })
-                        seen[candidate] = true
-                    end if
-                end if
-            end for
-        else if type(files) = "roArray"
-            for each file in files
-                if file <> invalid and type(file) = "roAssociativeArray"
-                    label = m.stringField(file, "quality", "")
-                    if label = "" then label = m.stringField(file, "name", "")
-                    if label = "" then label = m.sourceFileLabel(label, "")
-                    if file.DoesExist("urls") and file.urls <> invalid
-                        m.addQualityUrlOptions(options, seen, label, file.urls)
-                    else if file.DoesExist("url") and file.url <> invalid and type(file.url) = "roAssociativeArray"
-                        m.addQualityUrlOptions(options, seen, label, file.url)
-                    end if
-
-                    urlStream = { url: "", format: "" }
-                    if file.DoesExist("urls") and file.urls <> invalid then urlStream = m.streamFromUrlContainer(file.urls)
-                    if urlStream.url = "" and file.DoesExist("url") and file.url <> invalid then urlStream = m.streamFromUrlContainer(file.url)
-                    if urlStream.url = "" then urlStream = { url: m.stringField(file, "url", ""), format: m.stringField(file, "format", "") }
-
-                    if urlStream.url <> "" and not seen.DoesExist(urlStream.url)
-                        if label = "" then label = m.sourceFileLabel(label, urlStream.url)
-                        options.Push({
-                            id: label
-                            label: label
-                            url: urlStream.url
-                            streamFormat: urlStream.format
-                            isAuto: urlStream.format = "hls"
-                        })
-                        seen[urlStream.url] = true
-                    end if
-                end if
-            end for
-        end if
-    end if
-
-    if options.Count() = 0 and selectedStream <> invalid and selectedStream.url <> ""
-        options.Push({
-            id: "default"
-            label: "Default"
-            url: selectedStream.url
-            streamFormat: selectedStream.format
-            isAuto: selectedStream.format = "hls"
-        })
-    end if
-
     return options
 end function
 
 sub kinoItemAddQualityUrlOptions(options as Object, seen as Object, baseLabel as String, urls as Dynamic)
     if urls = invalid or type(urls) <> "roAssociativeArray" then return
+    url = m.stringField(urls, "hls4", "")
+    if url = "" or seen.DoesExist(url) then return
 
-    for each key in ["hls4", "hls2", "http", "hls"]
-        url = m.stringField(urls, key, "")
-        if url <> "" and not seen.DoesExist(url)
-            format = "mp4"
-            if key <> "http" then format = "hls"
-            label = baseLabel
-            if label = "" then label = m.sourceFileLabel(key, url)
-            if key <> "http" then label = label + " " + key
-            options.Push({
-                id: label + "-" + key
-                label: label
-                url: url
-                streamFormat: format
-                isAuto: format = "hls"
-            })
-            seen[url] = true
-        end if
-    end for
+    id = "auto"
+    if options.Count() > 0 then id = "hls4-" + StrI(options.Count()).Trim()
+    ' A shared master is adaptive, regardless of the file entry containing it.
+    options.Push({
+        id: id
+        label: "Auto"
+        url: url
+        streamFormat: "hls"
+        isAuto: true
+    })
+    seen[url] = true
 end sub
 
 function kinoItemSourceFileLabel(key as String, url as String) as String

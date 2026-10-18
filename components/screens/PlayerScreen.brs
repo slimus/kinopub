@@ -116,6 +116,7 @@ sub init()
     m.videoNode.observeField("downloadedSegment", "onVideoDownloadedSegmentChanged")
     m.videoNode.observeField("streamingSegment", "onVideoStreamingSegmentChanged")
     m.videoNode.observeField("availableAudioTracks", "onAvailableAudioTracksChanged")
+    m.videoNode.observeField("currentAudioTrack", "onCurrentAudioTrackChanged")
     m.videoNode.observeField("availableSubtitleTracks", "onAvailableSubtitleTracksChanged")
     m.railHideTimer.observeField("fire", "onRailHideTimer")
     m.progressTimer.observeField("fire", "onProgressTimer")
@@ -279,6 +280,8 @@ end function
 
 function playbackContentNode(preferredSubtitleTrackName as String) as Object
     resetPlaybackInfoSamples()
+    m.playbackMediaReady = false
+    refreshPlaybackSelections()
     stream = currentPlaybackStream()
     content = CreateObject("roSGNode", "ContentNode")
     content.url = stream.url
@@ -966,6 +969,7 @@ sub buildControls()
         label.width = 160
         label.font.size = 20
         setThemeColor(label, "#F5F5F5")
+        if m.controls[index] = "quality" then setThemeColor(label, "#9CA3AF")
         m.controlsHost.appendChild(label)
         m.controlNodes.Push(label)
     end for
@@ -1186,7 +1190,9 @@ sub onVideoStateChanged(event as Object)
         hideStreamLoader()
         m.isPlaying = true
         m.playbackStarted = true
+        m.playbackMediaReady = true
         applySavedAudioPreference()
+        refreshPlaybackSelections()
         if isLivePlayback() <> true then m.progressTimer.control = "start"
         updatePlayPauseControlLabel()
         showRail()
@@ -1230,7 +1236,9 @@ sub onVideoStateChanged(event as Object)
     else if state = "error"
         hideStreamLoader()
         printVideoErrorDiagnostics()
-        if tryNextPlaybackStream() then return
+        if isVideoBufferReservationError() <> true
+            if tryNextPlaybackStream() then return
+        end if
         details = videoErrorDetails()
         print "PlayerScreen: video error "; details
         m.top.playbackError = details
@@ -1286,7 +1294,9 @@ end sub
 sub onVideoStreamingSegmentChanged(event as Object)
     segment = event.getData()
     if segment = invalid or type(segment) <> "roAssociativeArray" then return
+    previousHeight = m.playbackInfoHeight
     recordPlaybackInfoStream(segment)
+    if m.playbackInfoHeight <> previousHeight then refreshPlaybackSelections()
 
     segmentUrl = playbackDiagnosticString(playbackDiagnosticField(segment, "segUrl"))
     print "PlayerScreen: streaming segment sequence="; playbackDiagnosticField(segment, "segSequence"); " type="; playbackDiagnosticField(segment, "segTypeStr"); " start="; playbackDiagnosticField(segment, "segStart")
@@ -1455,6 +1465,7 @@ function tryNextPlaybackStream() as Boolean
 end function
 
 function videoErrorDetails() as String
+    if isVideoBufferReservationError() then return "Disable 4K in KinoPub device settings, then try again."
     code = 0
     message = ""
     diagnostic = ""
@@ -1468,6 +1479,22 @@ function videoErrorDetails() as String
     if message <> "" then details = details + " msg=" + message
     if diagnostic <> "" then details = details + " diag=" + diagnostic
     return details
+end function
+
+function isVideoBufferReservationError() as Boolean
+    if m.videoNode = invalid then return false
+    if m.videoNode.errorCode <> -3 then return false
+
+    reservationPattern = "Requested reservation \([0-9]+\s*\+\s*[0-9]+\) is larger than the entire buffer \([0-9]+\)"
+    extensionPattern = "Extend size \([0-9]+\s*\+\s*[0-9]+\) exceeds max_wrap_allocation \([0-9]+\)"
+    pattern = CreateObject("roRegex", "buffer loop exception:(" + reservationPattern + "|" + extensionPattern + ")", "i")
+    diagnostic = m.videoNode.errorStr
+    if diagnostic <> invalid and pattern.IsMatch(diagnostic) then return true
+    info = m.videoNode.errorInfo
+    if info <> invalid and type(info) = "roAssociativeArray"
+        if info.dbgmsg <> invalid and pattern.IsMatch(info.dbgmsg) then return true
+    end if
+    return false
 end function
 
 sub printVideoErrorDiagnostics()
@@ -1489,7 +1516,22 @@ end sub
 
 sub onAvailableAudioTracksChanged()
     applySavedAudioPreference()
+    refreshPlaybackSelections()
+end sub
+
+sub onCurrentAudioTrackChanged()
+    refreshPlaybackSelections()
+end sub
+
+sub refreshPlaybackSelections()
     updateControlLabels()
+    if m.menuOpen <> true then return
+    if m.menuType = "audio"
+        m.menuItems = audioMenuItems()
+        if m.menuIndex >= m.menuItems.Count() then m.menuIndex = m.menuItems.Count() - 1
+        if m.menuIndex < 0 then m.menuIndex = 0
+    end if
+    if m.menuType = "audio" or m.menuType = "quality" then renderMenuItems()
 end sub
 
 sub onAvailableSubtitleTracksChanged()
@@ -1638,11 +1680,13 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
         return true
     else if key = "left"
         if m.focusIndex > 0 then m.focusIndex = m.focusIndex - 1
+        if m.controls[m.focusIndex] = "quality" and m.focusIndex > 0 then m.focusIndex = m.focusIndex - 1
         updateFocusCursor()
         showRail()
         return true
     else if key = "right"
         if m.focusIndex < m.controls.Count() - 1 then m.focusIndex = m.focusIndex + 1
+        if m.controls[m.focusIndex] = "quality" and m.focusIndex < m.controls.Count() - 1 then m.focusIndex = m.focusIndex + 1
         updateFocusCursor()
         showRail()
         return true
@@ -1892,8 +1936,6 @@ sub activateFocusedControl()
         openMenu("audio")
     else if control = "subtitles"
         openMenu("subtitles")
-    else if control = "quality"
-        openMenu("quality")
     else if control = "playbackInfo"
         togglePlaybackInfo()
     else if control = "episodes"
@@ -1907,6 +1949,7 @@ sub activateFocusedControl()
 end sub
 
 sub openMenu(menuType as String)
+    if menuType <> "audio" and menuType <> "subtitles" then return
     m.menuOpen = true
     m.menuType = menuType
     m.menuIndex = 0
@@ -1915,8 +1958,6 @@ sub openMenu(menuType as String)
         m.menuItems = audioMenuItems()
     else if menuType = "subtitles"
         m.menuItems = subtitleMenuItems()
-    else
-        m.menuItems = qualityMenuItems()
     end if
     updateMenuTitle()
     renderMenuItems()
@@ -1955,7 +1996,9 @@ sub renderMenuItems()
         if index = m.menuIndex then setThemeColor(row, "#F5F5F5")
         prefix = "   "
         if isSelectedMenuItem(item) then prefix = "* "
-        row.text = prefix + item.label
+        label = item.label
+        if m.menuType = "quality" then label = qualityMenuLabel(item)
+        row.text = prefix + label
         m.menuItemsHost.appendChild(row)
     end for
 end sub
@@ -1993,19 +2036,17 @@ function isSelectedMenuItem(item as Object) as Boolean
     if item = invalid then return false
 
     if m.menuType = "audio"
-        return menuItemId(item) = m.preferenceStore.stringField(m.preferences, "audioTrackId", "")
+        current = currentAudioMenuItem()
+        if current = invalid then return false
+        return trackDedupeKey(item) = trackDedupeKey(current)
     else if m.menuType = "subtitles"
         selectedId = m.preferenceStore.stringField(m.preferences, "subtitleTrackId", "")
         if selectedId = "" then selectedId = "off"
         return menuItemId(item) = selectedId
     else if m.menuType = "quality"
-        selectedQuality = m.preferenceStore.stringField(m.preferences, "qualityId", "")
-        if selectedQuality <> "" and menuItemId(item) = selectedQuality then return true
-
-        selectedUrl = m.preferenceStore.stringField(m.preferences, "qualityUrl", "")
-        if selectedUrl <> "" and item.url <> invalid and item.url = selectedUrl then return true
-
-        return selectedQuality = "" and item.url <> invalid and m.playback <> invalid and item.url = m.playback.streamUrl
+        current = currentQualityMenuItem()
+        if current = invalid then return false
+        return item.url <> invalid and item.url = current.url
     end if
 
     return false
@@ -2051,25 +2092,7 @@ function subtitleTrackMetadata(track as Dynamic, trackName as String) as Object
 end function
 
 function audioMenuItems() as Object
-    if hasAvailableAudioTracks() then return availableAudioMenuItems()
-
-    items = []
-    if m.playback <> invalid and m.playback.audioTracks <> invalid and m.playback.audioTracks.Count() > 0
-        seen = {}
-        for each track in m.playback.audioTracks
-            label = trackLabel(track)
-            if label = "" then label = "Audio " + StrI(items.Count() + 1).Trim()
-            appendUniqueTrackMenuItem(items, seen, {
-                id: menuItemId(track)
-                label: label
-                language: trackLanguage(track)
-                Track: trackIdentifier(track)
-            })
-        end for
-    else
-        items.Push({ id: "default", label: "Default" })
-    end if
-    return items
+    return availableAudioMenuItems()
 end function
 
 function availableAudioMenuItems() as Object
@@ -2166,13 +2189,20 @@ function qualityMenuItems() as Object
 end function
 
 function selectedAudioLabel() as String
-    audioId = m.preferenceStore.stringField(m.preferences, "audioTrackId", "")
-    items = audioMenuItems()
-    for each item in items
-        if menuItemId(item) = audioId then return trackLabel(item)
+    track = currentAudioMenuItem()
+    if track <> invalid then return trackLabel(track)
+    return "Loading..."
+end function
+
+function currentAudioMenuItem() as Dynamic
+    if m.playbackMediaReady <> true or hasAvailableAudioTracks() <> true then return invalid
+    trackId = m.videoNode.currentAudioTrack
+    if trackId = invalid or trackId = "" then return invalid
+    ' Resolve before deduplication: Roku may play a duplicate with a different ID.
+    for each track in m.videoNode.availableAudioTracks
+        if trackIdentifier(track) = trackId then return track
     end for
-    if items.Count() = 1 then return trackLabel(items[0])
-    return "Default"
+    return invalid
 end function
 
 function selectedSubtitleLabel() as String
@@ -2187,18 +2217,36 @@ function selectedSubtitleLabel() as String
 end function
 
 function selectedQualityLabel() as String
-    qualityId = m.preferenceStore.stringField(m.preferences, "qualityId", "")
-    qualityUrl = m.preferenceStore.stringField(m.preferences, "qualityUrl", "")
-    items = qualityMenuItems()
+    if m.playbackMediaReady <> true then return "Loading..."
+    if m.playbackInfoHeight <> invalid and m.playbackInfoHeight > 0
+        return StrI(m.playbackInfoHeight).Trim() + "p"
+    end if
     stream = currentPlaybackStream()
+    item = currentQualityMenuItem()
+    if stream.streamFormat = "mp4" and item <> invalid
+        label = trackLabel(item)
+        if label <> "" and label <> "Default" and label <> "Auto" then return label
+    end if
+    return "Loading..."
+end function
 
-    for each item in items
-        if qualityId <> "" and menuItemId(item) = qualityId then return trackLabel(item)
-        if qualityUrl <> "" and item.url <> invalid and item.url = qualityUrl then return trackLabel(item)
-        if qualityId = "" and qualityUrl = "" and item.url <> invalid and item.url = stream.url then return trackLabel(item)
+function currentQualityMenuItem() as Dynamic
+    stream = currentPlaybackStream()
+    for each item in qualityMenuItems()
+        if item.url <> invalid and item.url = stream.url then return item
     end for
+    for each item in qualityMenuItems()
+        if item.url <> invalid and hlsDirectMediaPlaylistUrl(item.url) = stream.url then return item
+    end for
+    return invalid
+end function
 
-    return "Default"
+function qualityMenuLabel(item as Object) as String
+    label = trackLabel(item)
+    if item.isAuto = true and isSelectedMenuItem(item) and m.playbackMediaReady = true and m.playbackInfoHeight <> invalid and m.playbackInfoHeight > 0
+        return label + " (" + selectedQualityLabel() + ")"
+    end if
+    return label
 end function
 
 function trackIdentifier(track as Dynamic) as String
