@@ -364,6 +364,7 @@ sub init()
     m.bookmarkFolderVisibleStart = 0
     m.bookmarkMaxVisibleFolders = 6
     m.bookmarksFocusArea = "folders"
+    initDeviceSettings()
     m.accountLoaded = false
     m.isLoadingAccount = false
     m.accountInfo = invalid
@@ -856,6 +857,12 @@ function accountBooleanField(source as Dynamic, key as String, fallback as Boole
     value = source[key]
     valueType = type(value)
     if valueType = "Boolean" or valueType = "roBoolean" then return value
+    if valueType = "Integer" or valueType = "roInt" or valueType = "roInteger" then return value <> 0
+    if valueType = "String" or valueType = "roString"
+        normalized = LCase(value.Trim())
+        if normalized = "true" or normalized = "1" then return true
+        if normalized = "false" or normalized = "0" then return false
+    end if
     return fallback
 end function
 
@@ -4170,6 +4177,7 @@ sub showSection(section as String)
         loadBookmarkFoldersIfNeeded(false)
     else if section = "account"
         loadAccountInfo(false)
+        loadDeviceSettings(false)
     end if
 
     updateMenuLayout()
@@ -4178,6 +4186,7 @@ sub showSection(section as String)
 end sub
 
 sub updateSelectedContentFocusVisuals()
+    renderDeviceSettings()
     if m.selectedSection = "settings" then renderAppSettings()
     updateContinueFocusVisuals()
     updateHomeCardFocus()
@@ -4769,15 +4778,11 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                 end if
             end if
         else if m.selectedSection = "account"
-            if key = "OK"
-                if m.accountErrorGroup.visible
-                    loadAccountInfo(true)
-                end if
-                return true
-            else if key = "left" or key = "back"
-                setMenuExpanded(true)
+            if key = "OK" and m.accountErrorGroup.visible
+                loadAccountInfo(true)
                 return true
             end if
+            return handleDeviceSettingsKey(key)
         else if key = "left" or key = "back"
             setMenuExpanded(true)
             return true

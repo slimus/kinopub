@@ -82,6 +82,16 @@ Create a fresh package:
 
 The app is built with Roku SceneGraph and BrightScript. There is no dependency install step; the only local requirements are a shell, `python3`, and `zip`.
 
+## Current device settings
+
+Open **Account** to see compact profile and subscription details above the current
+device settings. Use the arrows to move between the two columns and **OK** to
+toggle SSL, HEVC, HDR, 4K, or mixed AVC/HEVC playlists. For server region and
+streaming type, press **OK**, choose with Left/Right, then **OK** to save or
+**Back** to cancel. Available settings and list options come from KinoAPI.
+Changes save immediately to the current device; failed saves keep the previous
+value. **Back** returns to the sidebar. Device settings affect subsequent playback.
+
 ## Appearance
 
 Open **Settings** in the sidebar and press **OK** on **Light theme** to switch
