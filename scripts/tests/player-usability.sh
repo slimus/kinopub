@@ -15,7 +15,7 @@ names = ['applyBottomRailLayout', 'controlLabels', 'hasSeasonCarousel',
          'playbackDurationSeconds', 'formatTime', 'isLivePlayback',
          'handleNextEpisodePromptKey', 'chooseNextEpisodePromptOption', 'closeNextEpisodePrompt',
          'onNextEpisodeCountdownTimer', 'onVideoStateChanged', 'activateFocusedControl', 'handleMenuKey', 'closeMenu',
-         'updateNextEpisodePromptCountdown',
+         'updateNextEpisodePromptCountdown', 'refreshPlaybackSelections',
          'showRail', 'onRailHideTimer', 'updateProgressVisuals', 'clearPendingSeek']
 # Include the new helpers when present so the initial run exercises old behavior.
 names += [name for name in ['hideRail', 'closeSeasonCarousel', 'seekStepForHold',

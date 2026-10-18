@@ -42,6 +42,15 @@ sub main()
     onKeyEvent("back", true)
     check(m.exitCount = 1 and m.bottomRailGroup.visible and m.seasonCarouselOpen = false, "Back closes episode list first")
     m.controls = ["playPause", "audio", "subtitles", "quality", "playbackInfo", "episodes"]
+    m.seekHoldClock = CreateObject("roTimespan")
+    m.focusIndex = 2
+    onKeyEvent("right", true)
+    check(m.focusIndex = 4, "Right skips the quality indicator and focuses Info")
+    onKeyEvent("left", true)
+    check(m.focusIndex = 2, "Left skips the quality indicator and focuses subtitles")
+    m.focusIndex = 3
+    activateFocusedControl()
+    check(m.menuOpen = false, "Quality indicator cannot open a selection menu")
     m.focusIndex = 5
     m.seasonEpisodes = [{}, {}]
     activateFocusedControl()
@@ -171,6 +180,9 @@ end sub
 
 ' SceneGraph rendering and network/transport side effects are outside this runtime.
 sub updateFocusCursor()
+end sub
+sub openMenu(menuType as String)
+    m.menuOpen = true
 end sub
 sub updateSeasonCarouselChevrons()
 end sub
