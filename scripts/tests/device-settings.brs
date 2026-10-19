@@ -1,5 +1,13 @@
 sub main()
-    client = { get: fakeGet, postFormBody: fakePost, defaultTimeoutMs: 15000 }
+    jsonClient = KinoApiClient({})
+    jsonClient.request = captureRequest
+    jsonClient.postJson("/v1/device/42/settings", { access_token: "token" }, { support4k: false, supportHevc: true, serverLocation: 5 })
+    payload = ParseJson(jsonClient.body)
+    check(jsonClient.method = "POST" and jsonClient.contentType = "application/json", "Settings use a JSON POST")
+    check((type(payload.support4k) = "Boolean" or type(payload.support4k) = "roBoolean") and payload.support4k = false, "JSON preserves false boolean")
+    check(payload.supportHevc = true and payload.serverLocation = 5, "JSON preserves true and numeric option IDs")
+    check(jsonClient.query.access_token = "token", "JSON request keeps token in query")
+    client = { get: fakeGet, postJson: fakePost, defaultTimeoutMs: 15000 }
     client.reply = { ok: true, status: 200, body: { device: { id: 42, title: "Living room" } } }
     service = KinoDeviceService(client)
     result = service.current("token")
@@ -22,6 +30,14 @@ sub main()
     check(service.settings("token", 42).error = "unauthorized", "Preserve authorization errors")
     print "Device settings tests passed."
 end sub
+
+function captureRequest(method, path, query, body, timeout, contentType)
+    m.method = method
+    m.query = query
+    m.body = body
+    m.contentType = contentType
+    return { ok: true }
+end function
 
 function fakeGet(path, query, timeout)
     m.path = path

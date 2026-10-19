@@ -6,10 +6,15 @@ function KinoApiClient(config as Object) as Object
         get: kinoApiGet
         postForm: kinoApiPostForm
         postFormBody: kinoApiPostFormBody
+        postJson: kinoApiPostJson
         post: kinoApiPost
         request: kinoApiRequest
         normalizeError: kinoApiNormalizeError
     }
+end function
+
+function kinoApiPostJson(path as String, queryParams as Object, bodyParams as Object, timeoutMs = invalid as Dynamic) as Object
+    return m.request("POST", path, queryParams, FormatJson(bodyParams), timeoutMs, "application/json")
 end function
 
 function kinoApiPostForm(path as String, params as Object, timeoutMs = invalid as Dynamic) as Object
@@ -28,7 +33,7 @@ function kinoApiPost(path as String, queryParams as Object, bodyParams as Object
     return m.request("POST", path, queryParams, bodyParams, timeoutMs)
 end function
 
-function kinoApiRequest(method as String, path as String, queryParams as Object, bodyParams as Object, timeoutMs = invalid as Dynamic) as Object
+function kinoApiRequest(method as String, path as String, queryParams as Object, bodyParams as Dynamic, timeoutMs = invalid as Dynamic, contentType = "application/x-www-form-urlencoded" as String) as Object
     requestTimeoutMs = timeoutMs
     if requestTimeoutMs = invalid then requestTimeoutMs = m.defaultTimeoutMs
 
@@ -48,8 +53,13 @@ function kinoApiRequest(method as String, path as String, queryParams as Object,
     if method = "GET"
         started = transfer.AsyncGetToString()
     else
-        requestBody = kinoApiEncodeParams(bodyParams)
-        if requestBody <> "" then transfer.AddHeader("Content-Type", "application/x-www-form-urlencoded")
+        if contentType = "application/json"
+            requestBody = bodyParams
+            transfer.AddHeader("Content-Type", "application/json")
+        else
+            requestBody = kinoApiEncodeParams(bodyParams)
+            if requestBody <> "" then transfer.AddHeader("Content-Type", "application/x-www-form-urlencoded")
+        end if
         started = transfer.AsyncPostFromString(requestBody)
     end if
     if started <> true

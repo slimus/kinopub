@@ -26,6 +26,25 @@ sub main()
     check(Instr(1, m.playbackInfoText.text, "1920 x 1080") > 0, "Audio segment cannot replace video resolution")
     check(Instr(1, m.playbackInfoText.text, "8.0 Mbps") > 0, "Video bitrate survives audio segments")
     check(Instr(1, m.playbackInfoText.text, "16.0 Mbps") > 0, "Download rate uses bytes and milliseconds")
+    m.playbackMediaReady = true
+    m.menuOpen = false
+    m.isPlaying = true
+    m.seasonEpisodes = []
+    m.controlNodes = [{}, {}, {}, {}, {}]
+    segmentEvent = { getData: testSegmentData, segment: { width: 3840, height: 1600, segBitrateBps: 13809722, segTypeStr: "video" } }
+    onVideoStreamingSegmentChanged(segmentEvent)
+    updatePlaybackInfo()
+    check(m.controlNodes[3].text = "Quality: 1600p", "Video segment updates the actual quality indicator")
+    check(Instr(1, m.playbackInfoText.text, "3840 x 1600") > 0, "Info displays the playing high-resolution segment")
+    segmentEvent.segment = { Width: 1920, Height: 800, segBitrateBps: 4715141, segTypeStr: "video" }
+    onVideoStreamingSegmentChanged(segmentEvent)
+    updatePlaybackInfo()
+    check(m.controlNodes[3].text = "Quality: 800p", "Adaptive switch updates Quality without reopening the rail")
+    check(Instr(1, m.playbackInfoText.text, "1920 x 800") > 0 and Instr(1, m.playbackInfoText.text, "4.7 Mbps") > 0, "Info refresh shows the new resolution and bitrate")
+    segmentEvent.segment = { segBitrateBps: 128000, segTypeStr: "audio" }
+    onVideoStreamingSegmentChanged(segmentEvent)
+    updatePlaybackInfo()
+    check(m.controlNodes[3].text = "Quality: 800p" and Instr(1, m.playbackInfoText.text, "4.7 Mbps") > 0, "Audio-only updates preserve current video quality and bitrate")
     m.videoNode.state = "buffering"
     m.videoNode.bufferingStatus = { percentage: 42 }
     updatePlaybackInfo()
@@ -43,6 +62,18 @@ sub main()
     check(m.playbackInfoText.text = "unchanged", "Hidden panel is not refreshed")
     print "Playback info tests passed."
 end sub
+
+function testSegmentData() as Object
+    return m.segment
+end function
+
+function selectedAudioLabel() as String
+    return "English"
+end function
+
+function selectedSubtitleLabel() as String
+    return "Off"
+end function
 
 sub check(condition as Boolean, message as String)
     if condition <> true then print "FAIL: " + message
