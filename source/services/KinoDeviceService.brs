@@ -27,7 +27,7 @@ end function
 
 function kinoDeviceSave(accessToken as String, deviceId as Dynamic, changes as Object) as Object
     path = "/v1/device/" + kinoApiStringValue(deviceId) + "/settings"
-    return m.validate(m.client.postFormBody(path, { access_token: accessToken }, changes, m.client.defaultTimeoutMs))
+    return m.validate(m.client.postJson(path, { access_token: accessToken }, changes, m.client.defaultTimeoutMs))
 end function
 
 function kinoDeviceValidate(response as Object) as Object
