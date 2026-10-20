@@ -1,4 +1,9 @@
 sub main()
+    m.startupTimer = { control: "stop", observeField: captureObserver }
+    m.dialogTimer = { control: "stop", observeField: captureObserver }
+    m.top = { findNode: findTimer, startupTimer: m.startupTimer, dialogTimer: m.dialogTimer }
+    initUpdates()
+    check(m.dialogTimer.callback = "onUpdateDialogTimer", "Dialog timer must deliver fire events to show the result")
     m.accountAction = "updates"
     m.accountErrorGroup = { visible: false }
     m.deviceRows = [{ column: 0 }, { column: 0 }, { column: 1 }]
@@ -49,7 +54,15 @@ function BuildInfo()
     return { version: "0.9.0" }
 end function
 function findTimer(id)
+    if id = "updateStartupTimer" then return m.startupTimer
+    if m.dialogTimer <> invalid then return m.dialogTimer
     return { control: "stop" }
+end function
+sub captureObserver(field, callback)
+    m.callback = callback
+end sub
+function updateLoadState()
+    return { lastAttempt: 0, release: invalid }
 end function
 function errorResponse()
     return { ok: false, state: { release: { version: "v1.0.0", notes: "Cached" } } }

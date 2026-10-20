@@ -7,6 +7,7 @@ sub initUpdates()
     renderUpdateState()
     timer = m.top.findNode("updateStartupTimer")
     timer.observeField("fire", "onUpdateStartupTimer")
+    m.top.findNode("updateDialogTimer").observeField("fire", "onUpdateDialogTimer")
     timer.control = "start"
 end sub
 

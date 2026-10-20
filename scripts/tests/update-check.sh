@@ -23,7 +23,7 @@ with tempfile.TemporaryDirectory(prefix='update-check-') as directory:
     print(result.stdout + result.stderr, end='')
     assert result.returncode == 0 and 'FAIL:' not in result.stdout and 'Update task tests passed.' in result.stdout
     ui_text = Path('components/screens/HomeUpdates.brs').read_text()
-    ui_functions = [re.search(r'^(?:sub|function) ' + name + r'\(.*?^end (?:sub|function)', ui_text, flags=re.M | re.S)[0] for name in ['handleAccountKey', 'updateAvailable', 'onUpdateResponse']]
+    ui_functions = [re.search(r'^(?:sub|function) ' + name + r'\(.*?^end (?:sub|function)', ui_text, flags=re.M | re.S)[0] for name in ['initUpdates', 'handleAccountKey', 'updateAvailable', 'onUpdateResponse']]
     production.write_text(service_text + '\n' + '\n'.join(ui_functions))
     result = subprocess.run([os.environ.get('BRS_BIN', 'brs'), str(production), str(Path('scripts/tests/update-ui.brs').resolve())], cwd=directory, text=True, capture_output=True)
     print(result.stdout + result.stderr, end='')
