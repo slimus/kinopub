@@ -48,6 +48,11 @@ function kinoApiRequest(method as String, path as String, queryParams as Object,
     url = m.config.apiBaseUrl + path
     if query <> "" then url = url + "?" + query
     transfer.SetUrl(url)
+    if type(m.config.headers) = "roAssociativeArray"
+        for each header in m.config.headers
+            transfer.AddHeader(header, m.config.headers[header])
+        end for
+    end if
 
     started = false
     if method = "GET"

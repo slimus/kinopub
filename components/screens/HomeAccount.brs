@@ -115,7 +115,7 @@ sub renderDeviceSettings()
         background.width = 446
         background.height = 44
         color = "#242424"
-        if m.focusArea = "content" and index = m.deviceIndex then color = "#2563EB"
+        if m.focusArea = "content" and m.accountAction <> "updates" and m.accountAction <> "retry" and index = m.deviceIndex then color = "#2563EB"
         setThemeColor(background, color)
         label = group.createChild("Label")
         label.translation = [12, 7]
