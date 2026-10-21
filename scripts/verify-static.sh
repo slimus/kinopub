@@ -751,7 +751,7 @@ grep -q 'directName = "index-v" + videoId + "-a" + audioId + extension' componen
 grep -q 'label: label + " media"' components/screens/PlayerScreen.brs
 grep -q "function currentPlaybackStream" components/screens/PlayerScreen.brs
 grep -q "function tryNextPlaybackStream" components/screens/PlayerScreen.brs
-grep -q "if tryNextPlaybackStream() then return" components/screens/PlayerScreen.brs
+grep -q "if tryNextPlaybackStream()" components/screens/PlayerScreen.brs
 grep -q "m.videoNode.audioTrack = trackId" components/screens/PlayerScreen.brs
 grep -q 'm.preferences\["audioTrackId"\]' components/screens/PlayerScreen.brs
 grep -q 'm.preferences\["audioTrackLabel"\]' components/screens/PlayerScreen.brs
@@ -786,14 +786,10 @@ grep -q 'startBufferingDebounce()' components/screens/PlayerScreen.brs
 grep -q 'sub onBufferingDebounceTimer' components/screens/PlayerScreen.brs
 grep -q 'hideStreamLoader()' components/screens/PlayerScreen.brs
 grep -q 'function streamLoaderPercent' components/screens/PlayerScreen.brs
-if grep -A 8 'else if state = "error"' components/screens/PlayerScreen.brs | grep -q 'sendProgressUpdate("error")'; then
-  echo "Playback errors must not save progress while probing fallback streams." >&2
-  exit 1
-fi
 grep -q "m.playbackStarted = false" components/screens/PlayerScreen.brs
 grep -q "m.playbackStarted = true" components/screens/PlayerScreen.brs
 grep -q "if m.playbackStarted <> true" components/screens/PlayerScreen.brs
-grep -q "m.top.playbackError = \"Unable to play this video. Stream ended before playback started.\"" components/screens/PlayerScreen.brs
+grep -q 'handlePlaybackFailure("Unable to play this video. Stream ended before playback started."' components/screens/PlayerScreen.brs
 grep -q "PlayerScreen: stream finished before playback started" components/screens/PlayerScreen.brs
 grep -q "PlayerScreen: retrying playback with stream option=" components/screens/PlayerScreen.brs
 grep -q "function videoErrorDetails" components/screens/PlayerScreen.brs
@@ -984,7 +980,7 @@ unzip -p dist/kinopub.zip source/config/BuildInfo.brs | grep -q "displayVersion:
 unzip -p dist/kinopub.zip images/channel-icon_hd.png >/dev/null
 unzip -p dist/kinopub.zip images/channel-icon_fhd.png >/dev/null
 unzip -p dist/kinopub.zip components/screens/PlayerScreen.xml | grep -q "bottomRailGroup"
-unzip -p dist/kinopub.zip components/screens/PlayerScreen.brs | grep -q "sendProgressUpdate"
+unzip -p dist/kinopub.zip components/screens/PlayerScreen.brs | grep "sendProgressUpdate" >/dev/null
 unzip -p dist/kinopub.zip source/services/KinoWatchingService.brs | grep -q '"/v1/watching/marktime"'
 unzip -p dist/kinopub.zip source/services/KinoBookmarkService.brs | grep -q '"/v1/bookmarks/toggle-item"'
 unzip -p dist/kinopub.zip source/services/KinoItemService.brs | grep -q '"/v1/items/media-links"'
@@ -1031,6 +1027,7 @@ if [[ -n "${BRS_BIN:-}" ]] || command -v brs >/dev/null 2>&1; then
   bash scripts/tests/player-current-selection.sh
   bash scripts/tests/player-hls4-sources.sh
   bash scripts/tests/player-buffer-capacity-error.sh
+  bash scripts/tests/player-error-handling.sh
 else
   echo "Bookmark pagination runtime tests skipped: install brs or set BRS_BIN."
 fi

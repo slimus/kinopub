@@ -2,6 +2,12 @@ sub main()
     m.top = {}
     m.retryCount = 0
     m.exitCount = 0
+    m.progressTimer = {}
+    m.railHideTimer = {}
+    m.resumePromptTimer = {}
+    m.nextEpisodeCountdownTimer = {}
+    m.bufferingDebounceTimer = {}
+    m.seekDebounceTimer = {}
     diagnostic = "buffer loop exception:Requested reservation (11065599+25960249) is larger than the entire buffer (31616000).:extra:content_id:1"
     m.videoNode = { errorCode: -3, errorMsg: "An unexpected problem", errorStr: diagnostic }
     onVideoStateChanged({ getData: errorState })
@@ -51,7 +57,7 @@ sub main()
     check(m.dialogMessage = "", "Capacity dialog is consumed only once")
     onPlayerPlaybackError({ getData: genericMessage })
     onPlayerExitRequested({ getData: trueValue })
-    check(m.dialogMessage = "" and m.detailScreen.playbackError = "Other error", "Other errors keep their original card notification")
+    check(m.dialogMessage = "Other error", "Other errors also appear in a persistent dialog")
     print "Buffer capacity error tests passed."
 end sub
 
@@ -71,7 +77,7 @@ sub closePlayerScreen()
     m.cardClosed = true
 end sub
 
-sub showPlaybackBufferErrorDialog(message as String)
+sub showPlaybackErrorDialog(message as String)
     m.dialogMessage = message
 end sub
 
@@ -96,4 +102,12 @@ end function
 
 sub exitPlayer()
     m.exitCount++
+    m.playbackFailurePending = false
+end sub
+
+sub clearPendingSeek()
+end sub
+
+sub sendProgressUpdate(reason as String)
+    if reason = "error" then finishPlaybackFailure(true)
 end sub

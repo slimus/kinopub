@@ -135,29 +135,28 @@ end sub
 sub onPlayerExitRequested(event as Object)
     if event.getData() <> true then return
     closePlayerScreen()
-    if m.playbackBufferErrorMessage <> invalid and m.playbackBufferErrorMessage <> ""
-        message = m.playbackBufferErrorMessage
-        m.playbackBufferErrorMessage = ""
-        showPlaybackBufferErrorDialog(message)
+    if m.playbackErrorMessage <> invalid and m.playbackErrorMessage <> ""
+        message = m.playbackErrorMessage
+        m.playbackErrorMessage = ""
+        showPlaybackErrorDialog(message)
     end if
 end sub
 
 sub onPlayerPlaybackError(event as Object)
     message = event.getData()
-    if m.detailScreen <> invalid and message <> invalid and message <> "" then m.detailScreen.playbackError = message
-    if message = "Disable 4K in KinoPub device settings, then try again." then m.playbackBufferErrorMessage = message
+    if message <> invalid and message <> "" then m.playbackErrorMessage = message
 end sub
 
-sub showPlaybackBufferErrorDialog(message as String)
+sub showPlaybackErrorDialog(message as String)
     dialog = CreateObject("roSGNode", "Dialog")
-    dialog.title = "Playback buffer limit"
+    dialog.title = "Playback error"
     dialog.message = message
     dialog.buttons = ["OK"]
-    dialog.observeField("buttonSelected", "onPlaybackBufferErrorDialogButton")
+    dialog.observeField("buttonSelected", "onPlaybackErrorDialogButton")
     m.top.dialog = dialog
 end sub
 
-sub onPlaybackBufferErrorDialogButton()
+sub onPlaybackErrorDialogButton()
     if m.top.dialog <> invalid then m.top.dialog.close = true
 end sub
 

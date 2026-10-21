@@ -8,7 +8,8 @@ import subprocess
 import tempfile
 
 source = Path('components/screens/PlayerScreen.brs').read_text()
-names = ['onVideoStateChanged', 'videoErrorDetails']
+names = ['onVideoStateChanged', 'videoErrorDetails', 'handlePlaybackFailure',
+         'finishPlaybackFailure', 'failureProgressSeconds', 'currentPositionSeconds', 'redactPlaybackErrorDetails']
 names += [name for name in ['isVideoBufferReservationError']
           if re.search(r'^function ' + name + r'\(', source, re.M)]
 functions = [re.search(r'^(?:sub|function) ' + name + r'\(.*?^end (?:sub|function)', source, re.M | re.S).group(0) for name in names]
