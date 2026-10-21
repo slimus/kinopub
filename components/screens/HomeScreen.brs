@@ -375,6 +375,7 @@ sub init()
     showSection("continue")
     setMenuExpanded(false)
     probeLiveTv()
+    initUpdates()
     m.top.setFocus(true)
 end sub
 
@@ -4176,6 +4177,7 @@ sub showSection(section as String)
     else if section = "bookmarks"
         loadBookmarkFoldersIfNeeded(false)
     else if section = "account"
+        m.accountAction = "updates"
         loadAccountInfo(false)
         loadDeviceSettings(false)
     end if
@@ -4186,6 +4188,7 @@ sub showSection(section as String)
 end sub
 
 sub updateSelectedContentFocusVisuals()
+    renderUpdateState()
     renderDeviceSettings()
     if m.selectedSection = "settings" then renderAppSettings()
     updateContinueFocusVisuals()
@@ -4255,6 +4258,7 @@ sub updateMenuLayout()
         end if
     end for
     m.menuIndex = menuIndexForSection(m.selectedSection)
+    renderUpdateState()
 end sub
 
 sub updateMenuVisuals()
@@ -4778,11 +4782,7 @@ function onKeyEvent(key as String, press as Boolean) as Boolean
                 end if
             end if
         else if m.selectedSection = "account"
-            if key = "OK" and m.accountErrorGroup.visible
-                loadAccountInfo(true)
-                return true
-            end if
-            return handleDeviceSettingsKey(key)
+            return handleAccountKey(key)
         else if key = "left" or key = "back"
             setMenuExpanded(true)
             return true

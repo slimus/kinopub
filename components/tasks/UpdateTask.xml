@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<component name="UpdateTask" extends="Task">
+  <interface>
+    <field id="manual" type="boolean" />
+    <field id="response" type="assocarray" alwaysNotify="true" />
+  </interface>
+  <script type="text/brightscript" uri="pkg:/source/services/UpdateService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/UpdateFetchService.brs" />
+  <script type="text/brightscript" uri="pkg:/source/services/KinoApiClient.brs" />
+  <script type="text/brightscript" uri="pkg:/components/tasks/UpdateTask.brs" />
+</component>
