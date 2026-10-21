@@ -90,6 +90,9 @@ sub init()
     m.playbackStarted = false
     m.savedAudioPreferenceApplied = false
     m.lastSavedSeconds = -1
+    m.lastPlaybackPosition = 0
+    m.progressSavePending = false
+    m.playbackFailurePending = false
     m.completed = false
     m.seekStepSeconds = 30
     m.seekHoldKey = ""
@@ -178,6 +181,7 @@ sub resetNextEpisodeState()
 end sub
 
 sub onNextPlaybackChanged(event as Object)
+    if m.playbackFailurePending = true then return
     response = event.getData()
     if m.seasonCarouselRequestPending = true
         if response = invalid or response.reason <> "seasonCarousel"
@@ -230,9 +234,9 @@ end function
 
 sub startPlayback()
     if m.playback = invalid then return
+    m.lastPlaybackPosition = 0
     if m.playback.streamUrl = invalid or m.playback.streamUrl = ""
-        m.top.playbackError = "No playable video is available."
-        m.top.exitRequested = true
+        handlePlaybackFailure("No playable video is available.")
         return
     end if
 
@@ -1183,6 +1187,7 @@ function formatTime(seconds as Integer) as String
 end function
 
 sub onVideoStateChanged(event as Object)
+    if m.playbackFailurePending = true then return
     state = event.getData()
     print "PlayerScreen: video state="; state
     if state = "playing"
@@ -1216,9 +1221,7 @@ sub onVideoStateChanged(event as Object)
         m.progressTimer.control = "stop"
         if m.playbackStarted <> true
             print "PlayerScreen: stream finished before playback started"
-            if tryNextPlaybackStream() then return
-            m.top.playbackError = "Unable to play this video. Stream ended before playback started."
-            exitPlayer()
+            handlePlaybackFailure("Unable to play this video. Stream ended before playback started.", true)
             return
         end if
         if m.nextEpisodePromptOpen
@@ -1236,13 +1239,9 @@ sub onVideoStateChanged(event as Object)
     else if state = "error"
         hideStreamLoader()
         printVideoErrorDiagnostics()
-        if isVideoBufferReservationError() <> true
-            if tryNextPlaybackStream() then return
-        end if
         details = videoErrorDetails()
         print "PlayerScreen: video error "; details
-        m.top.playbackError = details
-        exitPlayer()
+        handlePlaybackFailure(details, isVideoBufferReservationError() <> true)
     else if state = "stopped"
         hideStreamLoader()
     end if
@@ -1446,6 +1445,11 @@ function clampStreamLoaderPercent(percent as Integer) as Integer
 end function
 
 function tryNextPlaybackStream() as Boolean
+    ' HLS4 is one adaptive master; its qualities are not alternate sources.
+    stream = currentPlaybackStream()
+    if stream.url <> invalid
+        if Instr(1, LCase(stream.url), "/hls4/") > 0 then return false
+    end if
     if m.playbackOptions = invalid then return false
     if m.playbackOptionIndex >= m.playbackOptions.Count() - 1 then return false
 
@@ -1478,8 +1482,67 @@ function videoErrorDetails() as String
     details = "Unable to play this video. code=" + StrI(code).Trim()
     if message <> "" then details = details + " msg=" + message
     if diagnostic <> "" then details = details + " diag=" + diagnostic
-    return details
+    if m.videoNode <> invalid
+        if m.videoNode.errorInfo <> invalid then details = details + " info=" + FormatJson(m.videoNode.errorInfo)
+    end if
+    return "Please create an issue and attach a photo of this error." + Chr(10) + Chr(10) + redactPlaybackErrorDetails(details)
 end function
+
+function redactPlaybackErrorDetails(details as String) as String
+    ' Signed KinoPub URLs contain credentials in the path as well as the query.
+    urls = CreateObject("roRegex", "https?://[^\s""<>]+", "i")
+    details = urls.ReplaceAll(details, "[URL removed]")
+    quotedCredentials = CreateObject("roRegex", """(access_token|refresh_token|token|authorization|client_secret)""\s*:\s*""[^""]*""", "i")
+    details = quotedCredentials.ReplaceAll(details, """credentials"":""[removed]""")
+    authorization = CreateObject("roRegex", "authorization\s*[:=]\s*[^""\r\n,}]+", "i")
+    details = authorization.ReplaceAll(details, "Authorization: [removed]")
+    credentials = CreateObject("roRegex", "(access_token|refresh_token|token|authorization|client_secret)([""\s:=]+)[^""\s,;&}]+", "i")
+    return credentials.ReplaceAll(details, "[credentials removed]")
+end function
+
+function failureProgressSeconds() as Integer
+    if m.playbackStarted = true
+        position = currentPositionSeconds()
+        if position > 0 then return position
+        if m.lastPlaybackPosition <> invalid then return m.lastPlaybackPosition
+        return 0
+    end if
+    if m.playback <> invalid
+        if m.playback.progressSeconds <> invalid and m.playback.progressSeconds > 0 then return Int(m.playback.progressSeconds)
+    end if
+    return -1
+end function
+
+sub handlePlaybackFailure(message as String, allowFallback = false as Boolean)
+    if m.playbackFailurePending = true then return
+    m.playbackFailurePending = true
+    m.playbackFailureMessage = message
+    m.retryPlaybackAfterFailure = allowFallback
+    m.errorProgressPosition = failureProgressSeconds()
+    m.isPlaying = false
+    m.progressTimer.control = "stop"
+    m.railHideTimer.control = "stop"
+    m.resumePromptTimer.control = "stop"
+    m.nextEpisodeCountdownTimer.control = "stop"
+    m.bufferingDebounceTimer.control = "stop"
+    m.seekDebounceTimer.control = "stop"
+    clearPendingSeek()
+    m.videoNode.control = "stop"
+    sendProgressUpdate("error")
+end sub
+
+sub finishPlaybackFailure(progressSaved as Boolean)
+    if m.retryPlaybackAfterFailure = true
+        if tryNextPlaybackStream()
+            m.playbackFailurePending = false
+            return
+        end if
+    end if
+    message = m.playbackFailureMessage
+    if progressSaved <> true then message = message + Chr(10) + Chr(10) + "Unable to save progress."
+    m.top.playbackError = message
+    exitPlayer()
+end sub
 
 function isVideoBufferReservationError() as Boolean
     if m.videoNode = invalid then return false
@@ -1509,6 +1572,10 @@ sub printVideoErrorDiagnostics()
 end sub
 
 sub onVideoPositionChanged()
+    if m.playbackFailurePending = true then return
+    if m.playbackStarted = true and m.videoNode.state <> "error" and m.videoNode.state <> "stopped"
+        m.lastPlaybackPosition = currentPositionSeconds()
+    end if
     updateSeekSettle()
     updateProgressVisuals()
     maybeRequestNextEpisodePrompt("threshold")
@@ -1558,13 +1625,23 @@ sub onResumePromptTimer()
 end sub
 
 sub sendProgressUpdate(reason as String)
+    if m.playbackFailurePending = true and reason <> "error" then return
+    ' Serialize saves so an older request cannot overwrite the final position.
+    if m.progressSavePending = true then return
+    if reason = "error"
+        if m.playback = invalid or isLivePlayback() or m.errorProgressPosition < 0
+            finishPlaybackFailure(true)
+            return
+        end if
+    end if
     if m.playback = invalid then return
     if isLivePlayback() then return
 
     position = currentPositionSeconds()
+    if reason = "error" then position = m.errorProgressPosition
     if position < 0 then position = 0
     if reason = "start" and position < 15 then return
-    if reason <> "exit" and m.lastSavedSeconds >= 0
+    if reason <> "exit" and reason <> "error" and m.lastSavedSeconds >= 0
         delta = position - m.lastSavedSeconds
         if delta < 0 then delta = 0 - delta
         if delta < 5 then return
@@ -1579,18 +1656,29 @@ sub sendProgressUpdate(reason as String)
         timeSeconds: position
     }
     task.observeField("response", "onProgressSaveResponse")
-    task.control = "RUN"
     m.progressTask = task
+    m.progressSavePending = true
+    m.progressSaveReason = reason
+    task.control = "RUN"
     setStatusMessage("Saving progress...", false)
 end sub
 
 sub onProgressSaveResponse(event as Object)
     result = event.getData()
+    reason = m.progressSaveReason
+    m.progressSavePending = false
     if result <> invalid and result.ok = true
         m.lastSavedSeconds = result.timeSeconds
         setStatusMessage("Progress saved", true)
     else
         setStatusMessage("Unable to save progress", false)
+    end if
+    if m.playbackFailurePending = true
+        if reason = "error"
+            finishPlaybackFailure(result <> invalid and result.ok = true)
+        else
+            sendProgressUpdate("error")
+        end if
     end if
 end sub
 
@@ -1627,6 +1715,7 @@ sub onMarkWatchedResponse(event as Object)
 end sub
 
 function onKeyEvent(key as String, press as Boolean) as Boolean
+    if m.playbackFailurePending = true then return true
     if press <> true
         if key = m.seekHoldKey then m.seekHoldKey = ""
         return false
