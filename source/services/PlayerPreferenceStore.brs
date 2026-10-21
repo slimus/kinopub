@@ -19,7 +19,14 @@ function playerPreferenceLoad(media as Dynamic) as Object
 
     seriesPreferences = m.loadKey(seriesKey)
     mediaPreferences = m.loadKey(mediaKey)
-    return m.mergePreferences(seriesPreferences, mediaPreferences)
+    preferences = m.mergePreferences(seriesPreferences, mediaPreferences)
+    ' The latest series subtitle selection also applies to previously watched episodes.
+    if seriesPreferences.DoesExist("subtitleTrackId")
+        for each key in ["subtitleTrackId", "subtitleTrackLabel", "subtitleTrackLanguage", "subtitleTrackName"]
+            preferences[key] = m.stringField(seriesPreferences, key, "")
+        end for
+    end if
+    return preferences
 end function
 
 function playerPreferenceLoadKey(key as String) as Object

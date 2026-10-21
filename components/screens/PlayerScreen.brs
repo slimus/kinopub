@@ -257,7 +257,7 @@ sub startPlayback()
 end sub
 
 function autoApplySavedPlaybackPreferencesEnabled() as Boolean
-    return false
+    return true
 end function
 
 function autoApplySavedAudioPreferenceEnabled() as Boolean
@@ -279,7 +279,7 @@ end sub
 
 function savedPreferredSubtitleTrackNameForPlayback() as String
     if autoApplySavedPlaybackPreferencesEnabled() <> true then return ""
-    return savedPreferredSubtitleTrackName()
+    return savedPreferredSubtitleTrackName(false)
 end function
 
 function playbackContentNode(preferredSubtitleTrackName as String) as Object
@@ -294,6 +294,14 @@ function playbackContentNode(preferredSubtitleTrackName as String) as Object
     subtitleTracks = contentSubtitleTracksForPreferred(preferredSubtitleTrackName)
     if subtitleTracks.Count() > 0 then content.SubtitleTracks = subtitleTracks
     if preferredSubtitleTrackName <> "" then content.SubtitleConfig = { TrackName: preferredSubtitleTrackName }
+    if m.videoNode <> invalid and m.preferenceStore.stringField(m.preferences, "subtitleTrackId", "") <> ""
+        if preferredSubtitleTrackName <> ""
+            m.videoNode.globalCaptionMode = "On"
+        else
+            m.videoNode.globalCaptionMode = "Off"
+        end if
+        m.videoNode.subtitleTrack = ""
+    end if
     if stream.streamFormat = "hls"
         content.streamFormat = "hls"
     else
@@ -2129,9 +2137,9 @@ function isSelectedMenuItem(item as Object) as Boolean
         if current = invalid then return false
         return trackDedupeKey(item) = trackDedupeKey(current)
     else if m.menuType = "subtitles"
-        selectedId = m.preferenceStore.stringField(m.preferences, "subtitleTrackId", "")
-        if selectedId = "" then selectedId = "off"
-        return menuItemId(item) = selectedId
+        selectedTrackName = savedPreferredSubtitleTrackName()
+        if selectedTrackName = "" then return menuItemId(item) = "off"
+        return subtitleTrackName(item) = selectedTrackName
     else if m.menuType = "quality"
         current = currentQualityMenuItem()
         if current = invalid then return false
@@ -2295,12 +2303,12 @@ function currentAudioMenuItem() as Dynamic
 end function
 
 function selectedSubtitleLabel() as String
-    subtitleId = m.preferenceStore.stringField(m.preferences, "subtitleTrackId", "")
-    if subtitleId = "" or subtitleId = "off" then return "Off"
+    selectedTrackName = savedPreferredSubtitleTrackName()
+    if selectedTrackName = "" then return "Off"
 
     items = subtitleMenuItems()
     for each item in items
-        if menuItemId(item) = subtitleId then return trackLabel(item)
+        if subtitleTrackName(item) = selectedTrackName then return trackLabel(item)
     end for
     return "On"
 end function
@@ -2629,26 +2637,52 @@ function findSavedAudioTrack() as Dynamic
     return invalid
 end function
 
-function savedPreferredSubtitleTrackName() as String
+function savedPreferredSubtitleTrackName(useAvailableTracks = true as Boolean) as String
     if m.preferences = invalid then return ""
 
     subtitleId = m.preferenceStore.stringField(m.preferences, "subtitleTrackId", "")
     if subtitleId = "" or subtitleId = "off" then return ""
 
-    if m.playback <> invalid and m.playback.subtitleTracks <> invalid
-        for each item in m.playback.subtitleTracks
-            if menuItemId(item) = subtitleId then return subtitleTrackName(item)
+    savedLabel = m.preferenceStore.stringField(m.preferences, "subtitleTrackLabel", "")
+    savedLanguage = m.preferenceStore.stringField(m.preferences, "subtitleTrackLanguage", "")
+    items = subtitleMenuItems()
+    ' Roku can still expose the previous episode's tracks while replacing content.
+    if useAvailableTracks <> true
+        items = []
+        if m.playback <> invalid and m.playback.subtitleTracks <> invalid then items = m.playback.subtitleTracks
+    end if
+    for each item in items
+        if menuItemId(item) = subtitleId then return subtitleTrackName(item)
+    end for
+    if savedLabel <> "" and savedLanguage <> ""
+        for each item in items
+            if LCase(trackLabel(item)) = LCase(savedLabel) and LCase(trackLanguage(item)) = LCase(savedLanguage) then return subtitleTrackName(item)
         end for
     end if
-
-    return m.preferenceStore.stringField(m.preferences, "subtitleTrackName", "")
+    if savedLabel <> ""
+        for each item in items
+            if LCase(trackLabel(item)) = LCase(savedLabel) then return subtitleTrackName(item)
+        end for
+    end if
+    if savedLanguage <> ""
+        for each item in items
+            if LCase(trackLanguage(item)) = LCase(savedLanguage) then return subtitleTrackName(item)
+        end for
+    end if
+    return ""
 end function
 
 sub applySavedSubtitlePreference()
     if autoApplySavedPlaybackPreferencesEnabled() <> true then return
-    trackName = savedPreferredSubtitleTrackName()
-    if trackName = "" then return
     if m.videoNode = invalid then return
+    subtitleId = m.preferenceStore.stringField(m.preferences, "subtitleTrackId", "")
+    if subtitleId = "" then return
+    trackName = savedPreferredSubtitleTrackName()
+    if trackName = ""
+        m.videoNode.globalCaptionMode = "Off"
+        m.videoNode.subtitleTrack = ""
+        return
+    end if
 
     m.videoNode.globalCaptionMode = "On"
     if hasAvailableSubtitleTracks() then m.videoNode.subtitleTrack = trackName

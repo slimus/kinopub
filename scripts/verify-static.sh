@@ -1025,6 +1025,7 @@ if [[ -n "${BRS_BIN:-}" ]] || command -v brs >/dev/null 2>&1; then
   bash scripts/tests/app-theme.sh
   bash scripts/tests/player-playback-info.sh
   bash scripts/tests/player-current-selection.sh
+  bash scripts/tests/player-subtitle-preferences.sh
   bash scripts/tests/player-hls4-sources.sh
   bash scripts/tests/player-buffer-capacity-error.sh
   bash scripts/tests/player-error-handling.sh
